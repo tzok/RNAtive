@@ -24,7 +24,7 @@ import org.apache.commons.math3.util.FastMath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
-import pl.poznan.put.model.Structure2D;
+import pl.poznan.put.model.BaseInteractions;
 import pl.poznan.put.notation.LeontisWesthof;
 import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
 import pl.poznan.put.pdb.analysis.PdbParser;
@@ -190,7 +190,7 @@ public class App {
       var jsonContent = Files.readString(jsonFile.toPath(), Charset.defaultCharset());
       var objectMapper = new ObjectMapper();
       objectMapper.registerModule(new Jdk8Module());
-      var structure2D = objectMapper.readValue(jsonContent, Structure2D.class);
+      var structure2D = objectMapper.readValue(jsonContent, BaseInteractions.class);
       analyzedModels.add(new AnalyzedModel(pdbFile.getName(), structure3D.get(0), structure2D));
     } catch (IOException e) {
       throw new RuntimeException("Failed to process file", e);

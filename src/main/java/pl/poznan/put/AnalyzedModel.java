@@ -16,7 +16,7 @@ import pl.poznan.put.structure.AnalyzedBasePair;
 import pl.poznan.put.structure.ImmutableAnalyzedBasePair;
 import pl.poznan.put.structure.ImmutableBasePair;
 
-public record AnalyzedModel(String name, PdbModel structure3D, Structure2D structure2D) {
+public record AnalyzedModel(String name, PdbModel structure3D, BaseInteractions structure2D) {
   public Stream<AnalyzedBasePair> streamBasePairs(final ConsensusMode mode) {
     return switch (mode) {
       case CANONICAL -> canonicalBasePairs().stream();
