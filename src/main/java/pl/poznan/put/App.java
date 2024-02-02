@@ -152,16 +152,6 @@ public class App {
             .collect(Collectors.toCollection(HashBag::new));
     totalModelCount = analyzedModels.size();
 
-    /* TODO: implement it in a better way
-    // each reference base pair will have 200% coverage to distinguish from other base pairs
-    if (!referenceStructure.isEmpty()) {
-      referenceStructure.forEach(
-          classifiedBasePair ->
-              canonicalBasePairs.add(
-                  classifiedBasePair,
-                  (2 * totalModelCount) - canonicalBasePairs.getCount(classifiedBasePair)));
-    }*/
-
     int threshold = (int) FastMath.ceil(confidenceLevel * totalModelCount);
     writeVerboseResults();
     writeVerboseResultsForEveryModel();
@@ -225,6 +215,10 @@ public class App {
     }
   }
 
+  /**
+   * Read reference secondary structure from dot-bracket notation. By default it will read all pairs
+   * and assume they are canonical.
+   */
   private void readReferenceSecondaryStructure() {
     if (dotBracket != null) {
       AnalyzedModel firstModel = analyzedModels.get(0);
@@ -309,10 +303,12 @@ public class App {
                       classifiedBasePair.basePair().left(),
                       classifiedBasePair.basePair().right(),
                       classifiedBasePair.leontisWesthof(),
-                      String.format(Locale.US, "%.3f", basePairConfidence(classifiedBasePair))
+                      String.format(Locale.US, "%.3f", basePairConfidence(classifiedBasePair)),
+                      referenceStructure.contains(classifiedBasePair)
                     })
             .toArray(Object[][]::new);
-    Object[] columnNames = new String[] {"Nt1", "Nt2", "Leontis-Westhof", "Confidence"};
+    Object[] columnNames =
+        new String[] {"Nt1", "Nt2", "Leontis-Westhof", "Confidence", "Is reference?"};
     return new DefaultTableModel(data, columnNames);
   }
 
@@ -443,7 +439,10 @@ public class App {
 
     Set<AnalyzedBasePair> candidates =
         allInteractions.stream()
-            .filter(classifiedBasePair -> allInteractions.getCount(classifiedBasePair) >= threshold)
+            .filter(
+                classifiedBasePair ->
+                    referenceStructure.contains(classifiedBasePair)
+                        || allInteractions.getCount(classifiedBasePair) >= threshold)
             .collect(Collectors.toSet());
 
     if (consensusMode != ConsensusMode.STACKING) {
