@@ -3,10 +3,7 @@ package pl.poznan.put.api.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import pl.poznan.put.api.dto.ComputeRequest;
-import pl.poznan.put.api.dto.ComputeResponse;
-import pl.poznan.put.api.dto.TaskResultResponse;
-import pl.poznan.put.api.dto.TaskStatusResponse;
+import pl.poznan.put.api.dto.*;
 import pl.poznan.put.api.model.Task;
 import pl.poznan.put.api.model.TaskStatus;
 import pl.poznan.put.api.repository.TaskRepository;
@@ -90,5 +87,61 @@ public class ComputeService {
         .filter(file -> file.name().equals(filename))
         .findFirst()
         .orElseThrow(() -> new IllegalArgumentException("File not found: " + filename));
+  }
+
+  public CsvTablesResponse getCsvTables(String taskId) throws Exception {
+    Task task = taskRepository.findById(taskId).orElseThrow();
+    
+    if (task.getStatus() != TaskStatus.COMPLETED) {
+      throw new IllegalStateException("Task is not completed yet");
+    }
+
+    TaskResultResponse result = getTaskResult(taskId);
+    if (result.results() == null || result.results().isEmpty()) {
+      throw new IllegalStateException("No results available");
+    }
+
+    // Get the best ranked model
+    RankedModel bestModel = result.results().get(0);
+    
+    // Generate CSV for canonical pairs
+    StringBuilder canonicalCsv = new StringBuilder("Nt1,Nt2,Leontis-Westhof,Confidence\n");
+    bestModel.getAnalyzedModel().canonicalBasePairs().forEach(pair -> 
+        canonicalCsv.append(String.format("%s,%s,%s,%.2f\n",
+            formatResidue(pair.nt1()),
+            formatResidue(pair.nt2()),
+            pair.type(),
+            pair.confidence())));
+
+    // Generate CSV for non-canonical pairs
+    StringBuilder nonCanonicalCsv = new StringBuilder("Nt1,Nt2,Leontis-Westhof,Confidence\n");
+    bestModel.getAnalyzedModel().nonCanonicalBasePairs().forEach(pair ->
+        nonCanonicalCsv.append(String.format("%s,%s,%s,%.2f\n",
+            formatResidue(pair.nt1()),
+            formatResidue(pair.nt2()),
+            pair.type(),
+            pair.confidence())));
+
+    // Generate CSV for stackings
+    StringBuilder stackingsCsv = new StringBuilder("Nt1,Nt2,Confidence\n");
+    bestModel.getAnalyzedModel().stackings().forEach(stacking ->
+        stackingsCsv.append(String.format("%s,%s,%.2f\n",
+            formatResidue(stacking.nt1()),
+            formatResidue(stacking.nt2()),
+            stacking.confidence())));
+
+    return new CsvTablesResponse(
+        canonicalCsv.toString(),
+        nonCanonicalCsv.toString(),
+        stackingsCsv.toString());
+  }
+
+  private String formatResidue(Residue residue) {
+    return residue.auth()
+        .map(auth -> String.format("%s%d%s",
+            auth.chain(),
+            auth.number(),
+            auth.icode().orElse("")))
+        .orElse(residue.label().chain() + residue.label().number());
   }
 }

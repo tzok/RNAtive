@@ -57,4 +57,7 @@ if [ "$STATUS" = "COMPLETED" ]; then
   
   echo "Getting original file..."
   curl -s -X GET "$API_URL/$TASK_ID/file?filename=sample.pdb" | jq .
+  
+  echo "Getting CSV tables..."
+  curl -s -X GET "$API_URL/$TASK_ID/csv-tables" | jq .
 fi
