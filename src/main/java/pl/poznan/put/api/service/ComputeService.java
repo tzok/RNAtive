@@ -65,7 +65,6 @@ public class ComputeService {
     return new TaskStatusResponse(task.getId(), task.getStatus(), task.getCreatedAt());
   }
 
-
   public String getTaskSvg(String taskId) throws Exception {
     Task task = taskRepository.findById(taskId).orElseThrow();
 
@@ -88,12 +87,12 @@ public class ComputeService {
     }
 
     String resultJson = task.getResult();
-    List<RankedModel> results = objectMapper.readValue(resultJson, new TypeReference<List<RankedModel>>() {});
+    List<RankedModel> results = objectMapper.readValue(resultJson, new TypeReference<>() {});
     if (results == null || results.isEmpty()) {
       throw new IllegalStateException("No results available");
     }
 
-    int totalModelCount = result.results().size();
+    int totalModelCount = results.size();
     var allInteractions =
         results.stream()
             .map(RankedModel::getAnalyzedModel)
@@ -117,7 +116,7 @@ public class ComputeService {
             .collect(Collectors.toList());
 
     var allStackings =
-        result.results().stream()
+        results.stream()
             .map(RankedModel::getAnalyzedModel)
             .map(AnalyzedModel::stackings)
             .flatMap(List::stream)
@@ -125,14 +124,12 @@ public class ComputeService {
 
     String rankingCsv = csvGenerationService.generateRankingCsv(results);
     String canonicalCsv =
-        csvGenerationService.generatePairsCsv(
-            allCanonicalPairs, allInteractions, totalModelCount);
+        csvGenerationService.generatePairsCsv(allCanonicalPairs, allInteractions, totalModelCount);
     String nonCanonicalCsv =
         csvGenerationService.generatePairsCsv(
             allNonCanonicalPairs, allInteractions, totalModelCount);
     String stackingsCsv =
-        csvGenerationService.generateStackingsCsv(
-            allStackings, allInteractions, totalModelCount);
+        csvGenerationService.generateStackingsCsv(allStackings, allInteractions, totalModelCount);
 
     return new CsvTablesResponse(rankingCsv, canonicalCsv, nonCanonicalCsv, stackingsCsv);
   }
@@ -144,21 +141,22 @@ public class ComputeService {
       throw new IllegalStateException("Task is not completed yet");
     }
 
-    TaskResultResponse result = getTaskResult(taskId);
-    if (result.results() == null || result.results().isEmpty()) {
+    String resultJson = task.getResult();
+    List<RankedModel> results = objectMapper.readValue(resultJson, new TypeReference<>() {});
+    if (results == null || results.isEmpty()) {
       throw new IllegalStateException("No results available");
     }
 
     // Find the model with matching filename
     RankedModel targetModel =
-        result.results().stream()
+        results.stream()
             .filter(model -> model.getName().equals(filename))
             .findFirst()
             .orElseThrow(() -> new IllegalArgumentException("Model not found: " + filename));
 
-    int totalModelCount = result.results().size();
+    int totalModelCount = results.size();
     var allInteractions =
-        result.results().stream()
+        results.stream()
             .map(RankedModel::getAnalyzedModel)
             .map(AnalyzedModel::basePairsAndStackings)
             .flatMap(List::stream)
