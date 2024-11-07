@@ -1,5 +1,7 @@
 package pl.poznan.put.api.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -8,6 +10,7 @@ import pl.poznan.put.api.model.VisualizationTool;
 
 @Service
 public class VisualizationClient {
+  private static final Logger logger = LoggerFactory.getLogger(VisualizationClient.class);
   private final String baseUrl;
   private final RestClient restClient;
 
@@ -19,6 +22,7 @@ public class VisualizationClient {
   }
 
   public String visualize(String jsonContent, VisualizationTool tool) {
+    logger.info("Generating visualization using {}", tool);
     String endpoint =
         switch (tool) {
           case PSEUDOVIEWER -> "pseudoviewer";

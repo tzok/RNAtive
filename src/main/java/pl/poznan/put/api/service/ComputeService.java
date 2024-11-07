@@ -1,6 +1,8 @@
 package pl.poznan.put.api.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Objects;
@@ -13,6 +15,7 @@ import pl.poznan.put.AnalyzedModel;
 import pl.poznan.put.InteractionNetworkFidelity;
 import pl.poznan.put.RankedModel;
 import pl.poznan.put.api.dto.*;
+import pl.poznan.put.api.exception.TaskNotFoundException;
 import pl.poznan.put.api.model.Task;
 import pl.poznan.put.api.model.TaskStatus;
 import pl.poznan.put.api.repository.TaskRepository;
@@ -24,6 +27,7 @@ import pl.poznan.put.structure.AnalyzedBasePair;
 
 @Service
 public class ComputeService {
+  private static final Logger logger = LoggerFactory.getLogger(ComputeService.class);
   private final TaskRepository taskRepository;
   private final ObjectMapper objectMapper;
   private final CsvGenerationService csvGenerationService;
@@ -44,6 +48,7 @@ public class ComputeService {
   }
 
   public ComputeResponse submitComputation(ComputeRequest request) throws Exception {
+    logger.info("Submitting new computation task with {} files", request.files().size());
     Task task = new Task();
     task.setRequest(objectMapper.writeValueAsString(request));
     task = taskRepository.save(task);
@@ -56,8 +61,9 @@ public class ComputeService {
 
   @Async
   public void processTaskAsync(String taskId) {
-    Task task = taskRepository.findById(taskId)
-        .orElseThrow(() -> new TaskNotFoundException(taskId));
+    logger.info("Starting async processing of task {}", taskId);
+    Task task =
+        taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
     try {
       task.setStatus(TaskStatus.PROCESSING);
       taskRepository.save(task);
@@ -128,6 +134,7 @@ public class ComputeService {
 
       task.setStatus(TaskStatus.COMPLETED);
     } catch (Exception e) {
+      logger.error("Task {} failed with error", taskId, e);
       task.setStatus(TaskStatus.FAILED);
       task.setMessage("Error processing task: " + e.getMessage());
     }
@@ -135,15 +142,15 @@ public class ComputeService {
   }
 
   public TaskStatusResponse getTaskStatus(String taskId) {
-    Task task = taskRepository.findById(taskId)
-        .orElseThrow(() -> new TaskNotFoundException(taskId));
+    Task task =
+        taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
     return new TaskStatusResponse(
         task.getId(), task.getStatus(), task.getCreatedAt(), task.getMessage());
   }
 
   public String getTaskSvg(String taskId) throws Exception {
-    Task task = taskRepository.findById(taskId)
-        .orElseThrow(() -> new TaskNotFoundException(taskId));
+    Task task =
+        taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
 
     if (task.getStatus() != TaskStatus.COMPLETED) {
       throw new IllegalStateException("Task is not completed yet");
@@ -157,8 +164,8 @@ public class ComputeService {
   }
 
   public CsvTablesResponse getCsvTables(String taskId) throws Exception {
-    Task task = taskRepository.findById(taskId)
-        .orElseThrow(() -> new TaskNotFoundException(taskId));
+    Task task =
+        taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
 
     if (task.getStatus() != TaskStatus.COMPLETED) {
       throw new IllegalStateException("Task is not completed yet");
@@ -218,8 +225,8 @@ public class ComputeService {
   }
 
   public ModelCsvTablesResponse getModelCsvTables(String taskId, String filename) throws Exception {
-    Task task = taskRepository.findById(taskId)
-        .orElseThrow(() -> new TaskNotFoundException(taskId));
+    Task task =
+        taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
 
     if (task.getStatus() != TaskStatus.COMPLETED) {
       throw new IllegalStateException("Task is not completed yet");
