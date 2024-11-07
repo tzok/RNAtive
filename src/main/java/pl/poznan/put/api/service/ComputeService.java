@@ -1,5 +1,6 @@
 package pl.poznan.put.api.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -64,16 +65,6 @@ public class ComputeService {
     return new TaskStatusResponse(task.getId(), task.getStatus(), task.getCreatedAt());
   }
 
-  public TaskResultResponse getTaskResult(String taskId) throws Exception {
-    Task task = taskRepository.findById(taskId).orElseThrow();
-
-    if (task.getStatus() != TaskStatus.COMPLETED) {
-      throw new IllegalStateException("Task is not completed yet");
-    }
-
-    // TODO: Convert result string to actual result object
-    return new TaskResultResponse(task.getId(), null);
-  }
 
   public String getTaskSvg(String taskId) throws Exception {
     Task task = taskRepository.findById(taskId).orElseThrow();
@@ -96,14 +87,15 @@ public class ComputeService {
       throw new IllegalStateException("Task is not completed yet");
     }
 
-    TaskResultResponse result = getTaskResult(taskId);
-    if (result.results() == null || result.results().isEmpty()) {
+    String resultJson = task.getResult();
+    List<RankedModel> results = objectMapper.readValue(resultJson, new TypeReference<List<RankedModel>>() {});
+    if (results == null || results.isEmpty()) {
       throw new IllegalStateException("No results available");
     }
 
     int totalModelCount = result.results().size();
     var allInteractions =
-        result.results().stream()
+        results.stream()
             .map(RankedModel::getAnalyzedModel)
             .map(AnalyzedModel::basePairsAndStackings)
             .flatMap(List::stream)
@@ -111,14 +103,14 @@ public class ComputeService {
 
     // Collect all interactions from all models
     var allCanonicalPairs =
-        result.results().stream()
+        results.stream()
             .map(RankedModel::getAnalyzedModel)
             .map(AnalyzedModel::canonicalBasePairs)
             .flatMap(List::stream)
             .collect(Collectors.toList());
 
     var allNonCanonicalPairs =
-        result.results().stream()
+        results.stream()
             .map(RankedModel::getAnalyzedModel)
             .map(AnalyzedModel::nonCanonicalBasePairs)
             .flatMap(List::stream)
@@ -131,7 +123,7 @@ public class ComputeService {
             .flatMap(List::stream)
             .collect(Collectors.toList());
 
-    String rankingCsv = csvGenerationService.generateRankingCsv(result.results());
+    String rankingCsv = csvGenerationService.generateRankingCsv(results);
     String canonicalCsv =
         csvGenerationService.generatePairsCsv(
             allCanonicalPairs, allInteractions, totalModelCount);

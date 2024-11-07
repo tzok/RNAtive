@@ -24,8 +24,8 @@ public class ComputeController {
   }
 
   @GetMapping("/{taskId}/result")
-  public TaskResultResponse getResult(@PathVariable String taskId) throws Exception {
-    return computeService.getTaskResult(taskId);
+  public CsvTablesResponse getResult(@PathVariable String taskId) throws Exception {
+    return computeService.getCsvTables(taskId);
   }
 
   @GetMapping(value = "/{taskId}/svg", produces = "image/svg+xml")
