@@ -65,7 +65,7 @@ public class ComputeService {
             var structure3D = new PdbParser(false).parse(file.content()).get(0);
             return new AnalyzedModel(file.name(), structure3D, structure2D);
           })
-          .collect(Collectors.toList());
+          .toList();
 
       // Get sequence from first model for reference structure
       var firstModel = analyzedModels.get(0);
