@@ -28,16 +28,19 @@ public class ComputeService {
   private final ObjectMapper objectMapper;
   private final CsvGenerationService csvGenerationService;
   private final AnalysisClient analysisClient;
+  private final VisualizationClient visualizationClient;
 
   public ComputeService(
       TaskRepository taskRepository,
       ObjectMapper objectMapper,
       CsvGenerationService csvGenerationService,
-      AnalysisClient analysisClient) {
+      AnalysisClient analysisClient,
+      VisualizationClient visualizationClient) {
     this.taskRepository = taskRepository;
     this.objectMapper = objectMapper;
     this.csvGenerationService = csvGenerationService;
     this.analysisClient = analysisClient;
+    this.visualizationClient = visualizationClient;
   }
 
   public ComputeResponse submitComputation(ComputeRequest request) throws Exception {
@@ -110,7 +113,19 @@ public class ComputeService {
                   })
               .collect(Collectors.toList());
       var taskResult = new TaskResult(results, referenceStructure);
-      task.setResult(objectMapper.writeValueAsString(taskResult));
+      // Store the computation result
+      String resultJson = objectMapper.writeValueAsString(taskResult);
+      task.setResult(resultJson);
+      
+      // Generate visualization if possible
+      try {
+        String svg = visualizationClient.visualize(resultJson, request.visualizationTool());
+        task.setSvg(svg);
+      } catch (Exception e) {
+        // Log but don't fail the task if visualization fails
+        task.setMessage("Warning: Visualization generation failed: " + e.getMessage());
+      }
+      
       task.setStatus(TaskStatus.COMPLETED);
     } catch (Exception e) {
       task.setStatus(TaskStatus.FAILED);
