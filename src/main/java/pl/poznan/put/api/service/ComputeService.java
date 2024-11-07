@@ -67,4 +67,18 @@ public class ComputeService {
     // TODO: Convert result string to actual result object
     return new TaskResultResponse(task.getId(), null);
   }
+
+  public String getTaskSvg(String taskId) throws Exception {
+    Task task = taskRepository.findById(taskId).orElseThrow();
+
+    if (task.getStatus() != TaskStatus.COMPLETED) {
+      throw new IllegalStateException("Task is not completed yet");
+    }
+
+    if (task.getSvg() == null) {
+      throw new IllegalStateException("SVG visualization not available");
+    }
+
+    return task.getSvg();
+  }
 }

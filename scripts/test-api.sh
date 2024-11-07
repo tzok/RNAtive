@@ -51,4 +51,7 @@ done
 if [ "$STATUS" = "COMPLETED" ]; then
   echo "Getting results..."
   curl -s -X GET "$API_URL/$TASK_ID/result" | json_pp
+  
+  echo "Getting SVG visualization..."
+  curl -s -X GET "$API_URL/$TASK_ID/svg" > result.svg
 fi
