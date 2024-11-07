@@ -1,39 +1,81 @@
 package pl.poznan.put;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
+import pl.poznan.put.structure.ImmutableAnalyzedBasePair;
 
 public class RankedModel implements Comparable<RankedModel> {
-  @JsonProperty("analyzedModel")
-  private AnalyzedModel analyzedModel;
+  private String name;
 
-  @JsonProperty("interactionNetworkFidelity")
+  private List<AnalyzedBasePair> basePairsAndStackings;
+
+  private List<AnalyzedBasePair> canonicalBasePairs;
+
+  private List<AnalyzedBasePair> nonCanonicalBasePairs;
+
+  private List<AnalyzedBasePair> stackings;
+
   private double interactionNetworkFidelity;
 
-  @JsonProperty("rank")
   private int rank = -1;
 
   // Default constructor for Jackson
   public RankedModel() {}
 
   public RankedModel(AnalyzedModel analyzedModel, double interactionNetworkFidelity) {
-    this.analyzedModel = analyzedModel;
+    this.name = analyzedModel.name();
+    this.basePairsAndStackings = analyzedModel.basePairsAndStackings();
+    this.canonicalBasePairs = analyzedModel.canonicalBasePairs();
+    this.nonCanonicalBasePairs = analyzedModel.nonCanonicalBasePairs();
+    this.stackings = analyzedModel.stackings();
     this.interactionNetworkFidelity = interactionNetworkFidelity;
   }
 
-  public void setAnalyzedModel(AnalyzedModel analyzedModel) {
-    this.analyzedModel = analyzedModel;
+  public String getName() {
+    return name;
   }
 
-  public void setInteractionNetworkFidelity(double interactionNetworkFidelity) {
-    this.interactionNetworkFidelity = interactionNetworkFidelity;
+  public void setName(String name) {
+    this.name = name;
   }
 
-  public AnalyzedModel getAnalyzedModel() {
-    return analyzedModel;
+  public List<AnalyzedBasePair> getBasePairsAndStackings() {
+    return basePairsAndStackings;
+  }
+
+  public void setBasePairsAndStackings(List<AnalyzedBasePair> basePairsAndStackings) {
+    this.basePairsAndStackings = basePairsAndStackings;
+  }
+
+  public List<AnalyzedBasePair> getCanonicalBasePairs() {
+    return canonicalBasePairs;
+  }
+
+  public void setCanonicalBasePairs(List<AnalyzedBasePair> canonicalBasePairs) {
+    this.canonicalBasePairs = canonicalBasePairs;
+  }
+
+  public List<AnalyzedBasePair> getNonCanonicalBasePairs() {
+    return nonCanonicalBasePairs;
+  }
+
+  public void setNonCanonicalBasePairs(List<AnalyzedBasePair> nonCanonicalBasePairs) {
+    this.nonCanonicalBasePairs = nonCanonicalBasePairs;
+  }
+
+  public List<AnalyzedBasePair> getStackings() {
+    return stackings;
+  }
+
+  public void setStackings(List<AnalyzedBasePair> stackings) {
+    this.stackings = stackings;
   }
 
   public double getInteractionNetworkFidelity() {
     return interactionNetworkFidelity;
+  }
+
+  public void setInteractionNetworkFidelity(double interactionNetworkFidelity) {
+    this.interactionNetworkFidelity = interactionNetworkFidelity;
   }
 
   public int getRank() {
@@ -42,10 +84,6 @@ public class RankedModel implements Comparable<RankedModel> {
 
   public void setRank(int rank) {
     this.rank = rank;
-  }
-
-  public String getName() {
-    return analyzedModel.name();
   }
 
   @Override

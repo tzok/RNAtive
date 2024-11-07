@@ -23,7 +23,7 @@ import pl.poznan.put.api.util.ReferenceStructureUtil;
 import pl.poznan.put.model.BaseInteractions;
 import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
 import pl.poznan.put.pdb.analysis.PdbParser;
-import pl.poznan.put.structure.AnalyzedBasePair;
+import pl.poznan.put.structure.ImmutableAnalyzedBasePair;
 
 @Service
 public class ComputeService {
@@ -182,30 +182,26 @@ public class ComputeService {
     int totalModelCount = results.size();
     var allInteractions =
         results.stream()
-            .map(RankedModel::getAnalyzedModel)
-            .map(AnalyzedModel::basePairsAndStackings)
+            .map(RankedModel::getBasePairsAndStackings)
             .flatMap(List::stream)
             .collect(Collectors.toCollection(HashBag::new));
 
     // Collect all interactions from all models
     var allCanonicalPairs =
         results.stream()
-            .map(RankedModel::getAnalyzedModel)
-            .map(AnalyzedModel::canonicalBasePairs)
+            .map(RankedModel::getCanonicalBasePairs)
             .flatMap(List::stream)
             .collect(Collectors.toList());
 
     var allNonCanonicalPairs =
         results.stream()
-            .map(RankedModel::getAnalyzedModel)
-            .map(AnalyzedModel::nonCanonicalBasePairs)
+            .map(RankedModel::getNonCanonicalBasePairs)
             .flatMap(List::stream)
             .collect(Collectors.toList());
 
     var allStackings =
         results.stream()
-            .map(RankedModel::getAnalyzedModel)
-            .map(AnalyzedModel::stackings)
+            .map(RankedModel::getStackings)
             .flatMap(List::stream)
             .collect(Collectors.toList());
 
@@ -250,26 +246,25 @@ public class ComputeService {
     int totalModelCount = results.size();
     var allInteractions =
         results.stream()
-            .map(RankedModel::getAnalyzedModel)
-            .map(AnalyzedModel::basePairsAndStackings)
+            .map(RankedModel::getBasePairsAndStackings)
             .flatMap(List::stream)
             .collect(Collectors.toCollection(HashBag::new));
 
     String canonicalCsv =
         csvGenerationService.generatePairsCsv(
-            targetModel.getAnalyzedModel().canonicalBasePairs(),
+            targetModel.getCanonicalBasePairs(),
             allInteractions,
             totalModelCount,
             taskResult.referenceStructure());
     String nonCanonicalCsv =
         csvGenerationService.generatePairsCsv(
-            targetModel.getAnalyzedModel().nonCanonicalBasePairs(),
+            targetModel.getNonCanonicalBasePairs(),
             allInteractions,
             totalModelCount,
             taskResult.referenceStructure());
     String stackingsCsv =
         csvGenerationService.generateStackingsCsv(
-            targetModel.getAnalyzedModel().stackings(), allInteractions, totalModelCount);
+            targetModel.getStackings(), allInteractions, totalModelCount);
 
     return new ModelCsvTablesResponse(canonicalCsv, nonCanonicalCsv, stackingsCsv);
   }
