@@ -101,7 +101,8 @@ public class ComputeService {
           analyzedModels.stream()
               .map(model -> new RankedModel(model, 1.0)) // TODO: Calculate proper INF
               .collect(Collectors.toList());
-      task.setResult(objectMapper.writeValueAsString(results));
+      var taskResult = new TaskResult(results, referenceStructure);
+      task.setResult(objectMapper.writeValueAsString(taskResult));
       task.setStatus(TaskStatus.COMPLETED);
     } catch (Exception e) {
       task.setStatus(TaskStatus.FAILED);
@@ -136,7 +137,8 @@ public class ComputeService {
     }
 
     String resultJson = task.getResult();
-    List<RankedModel> results = objectMapper.readValue(resultJson, new TypeReference<>() {});
+    TaskResult taskResult = objectMapper.readValue(resultJson, TaskResult.class);
+    List<RankedModel> results = taskResult.rankedModels();
     if (results == null || results.isEmpty()) {
       throw new IllegalStateException("No results available");
     }
@@ -191,7 +193,8 @@ public class ComputeService {
     }
 
     String resultJson = task.getResult();
-    List<RankedModel> results = objectMapper.readValue(resultJson, new TypeReference<>() {});
+    TaskResult taskResult = objectMapper.readValue(resultJson, TaskResult.class);
+    List<RankedModel> results = taskResult.rankedModels();
     if (results == null || results.isEmpty()) {
       throw new IllegalStateException("No results available");
     }
