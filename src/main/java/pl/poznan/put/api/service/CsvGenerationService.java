@@ -8,8 +8,8 @@ import org.apache.commons.collections4.bag.HashBag;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.springframework.stereotype.Service;
-import pl.poznan.put.AnalyzedModel;
 import pl.poznan.put.RankedModel;
+import pl.poznan.put.structure.AnalyzedBasePair;
 
 @Service
 public class CsvGenerationService {
@@ -39,8 +39,8 @@ public class CsvGenerationService {
   }
 
   public String generatePairsCsv(
-      List<? extends AnalyzedModel.AnalyzedBasePair> pairs,
-      HashBag<AnalyzedModel.AnalyzedBasePair> allInteractions,
+      List<? extends AnalyzedBasePair> pairs,
+      HashBag<AnalyzedBasePair> allInteractions,
       int totalModelCount) {
     StringWriter writer = new StringWriter();
     try (CSVPrinter printer =
@@ -65,8 +65,8 @@ public class CsvGenerationService {
   }
 
   public String generateStackingsCsv(
-      List<? extends AnalyzedModel.AnalyzedBasePair> stackings,
-      HashBag<AnalyzedModel.AnalyzedBasePair> allInteractions,
+      List<? extends AnalyzedBasePair> stackings,
+      HashBag<AnalyzedBasePair> allInteractions,
       int totalModelCount) {
     StringWriter writer = new StringWriter();
     try (CSVPrinter printer =
