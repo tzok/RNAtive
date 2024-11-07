@@ -1,12 +1,19 @@
 package pl.poznan.put.api.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.StringWriter;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import pl.poznan.put.RankedModel;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import pl.poznan.put.api.dto.*;
 import pl.poznan.put.api.model.Task;
 import pl.poznan.put.api.model.TaskStatus;
 import pl.poznan.put.api.repository.TaskRepository;
+import pl.poznan.put.model.Residue;
 
 @Service
 public class ComputeService {
@@ -104,36 +111,61 @@ public class ComputeService {
     // Get the best ranked model
     RankedModel bestModel = result.results().get(0);
     
+    // Define CSV headers
+    String[] pairHeaders = {"Nt1", "Nt2", "Leontis-Westhof", "Confidence"};
+    String[] stackingHeaders = {"Nt1", "Nt2", "Confidence"};
+
     // Generate CSV for canonical pairs
-    StringBuilder canonicalCsv = new StringBuilder("Nt1,Nt2,Leontis-Westhof,Confidence\n");
-    bestModel.getAnalyzedModel().canonicalBasePairs().forEach(pair -> 
-        canonicalCsv.append(String.format("%s,%s,%s,%.2f\n",
-            formatResidue(pair.nt1()),
-            formatResidue(pair.nt2()),
-            pair.type(),
-            pair.confidence())));
+    StringWriter canonicalWriter = new StringWriter();
+    try (CSVPrinter printer = new CSVPrinter(canonicalWriter, CSVFormat.DEFAULT.withHeader(pairHeaders))) {
+      bestModel.getAnalyzedModel().canonicalBasePairs().forEach(pair -> {
+        try {
+          printer.printRecord(
+              formatResidue(pair.nt1()),
+              formatResidue(pair.nt2()),
+              pair.type(),
+              pair.confidence());
+        } catch (IOException e) {
+          throw new UncheckedIOException(e);
+        }
+      });
+    }
 
     // Generate CSV for non-canonical pairs
-    StringBuilder nonCanonicalCsv = new StringBuilder("Nt1,Nt2,Leontis-Westhof,Confidence\n");
-    bestModel.getAnalyzedModel().nonCanonicalBasePairs().forEach(pair ->
-        nonCanonicalCsv.append(String.format("%s,%s,%s,%.2f\n",
-            formatResidue(pair.nt1()),
-            formatResidue(pair.nt2()),
-            pair.type(),
-            pair.confidence())));
+    StringWriter nonCanonicalWriter = new StringWriter();
+    try (CSVPrinter printer = new CSVPrinter(nonCanonicalWriter, CSVFormat.DEFAULT.withHeader(pairHeaders))) {
+      bestModel.getAnalyzedModel().nonCanonicalBasePairs().forEach(pair -> {
+        try {
+          printer.printRecord(
+              formatResidue(pair.nt1()),
+              formatResidue(pair.nt2()),
+              pair.type(),
+              pair.confidence());
+        } catch (IOException e) {
+          throw new UncheckedIOException(e);
+        }
+      });
+    }
 
     // Generate CSV for stackings
-    StringBuilder stackingsCsv = new StringBuilder("Nt1,Nt2,Confidence\n");
-    bestModel.getAnalyzedModel().stackings().forEach(stacking ->
-        stackingsCsv.append(String.format("%s,%s,%.2f\n",
-            formatResidue(stacking.nt1()),
-            formatResidue(stacking.nt2()),
-            stacking.confidence())));
+    StringWriter stackingsWriter = new StringWriter();
+    try (CSVPrinter printer = new CSVPrinter(stackingsWriter, CSVFormat.DEFAULT.withHeader(stackingHeaders))) {
+      bestModel.getAnalyzedModel().stackings().forEach(stacking -> {
+        try {
+          printer.printRecord(
+              formatResidue(stacking.nt1()),
+              formatResidue(stacking.nt2()),
+              stacking.confidence());
+        } catch (IOException e) {
+          throw new UncheckedIOException(e);
+        }
+      });
+    }
 
     return new CsvTablesResponse(
-        canonicalCsv.toString(),
-        nonCanonicalCsv.toString(),
-        stackingsCsv.toString());
+        canonicalWriter.toString(),
+        nonCanonicalWriter.toString(),
+        stackingsWriter.toString());
   }
 
   private String formatResidue(Residue residue) {
