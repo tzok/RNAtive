@@ -1,8 +1,16 @@
 package pl.poznan.put;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class RankedModel implements Comparable<RankedModel> {
+  @JsonProperty("analyzedModel")
   private AnalyzedModel analyzedModel;
+  
+  @JsonProperty("interactionNetworkFidelity")
   private double interactionNetworkFidelity;
+  
+  @JsonProperty("rank")
   private int rank = -1;
 
   // Default constructor for Jackson
@@ -15,10 +23,6 @@ public class RankedModel implements Comparable<RankedModel> {
 
   public void setAnalyzedModel(AnalyzedModel analyzedModel) {
     this.analyzedModel = analyzedModel;
-  }
-
-  public AnalyzedModel getAnalyzedModel() {
-    return analyzedModel;
   }
 
   public void setInteractionNetworkFidelity(double interactionNetworkFidelity) {
