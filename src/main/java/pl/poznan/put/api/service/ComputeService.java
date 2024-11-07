@@ -136,3 +136,42 @@ public class ComputeService {
     return new CsvTablesResponse(rankingCsv, canonicalCsv, nonCanonicalCsv, stackingsCsv);
   }
 }
+  public ModelCsvTablesResponse getModelCsvTables(String taskId, String filename) throws Exception {
+    Task task = taskRepository.findById(taskId).orElseThrow();
+
+    if (task.getStatus() != TaskStatus.COMPLETED) {
+      throw new IllegalStateException("Task is not completed yet");
+    }
+
+    TaskResultResponse result = getTaskResult(taskId);
+    if (result.results() == null || result.results().isEmpty()) {
+      throw new IllegalStateException("No results available");
+    }
+
+    // Find the model with matching filename
+    RankedModel targetModel =
+        result.results().stream()
+            .filter(model -> model.getName().equals(filename))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("Model not found: " + filename));
+
+    int totalModelCount = result.results().size();
+    var allInteractions =
+        result.results().stream()
+            .map(RankedModel::getAnalyzedModel)
+            .map(AnalyzedModel::basePairsAndStackings)
+            .flatMap(List::stream)
+            .collect(Collectors.toCollection(HashBag::new));
+
+    String canonicalCsv =
+        csvGenerationService.generatePairsCsv(
+            targetModel.getAnalyzedModel().canonicalBasePairs(), allInteractions, totalModelCount);
+    String nonCanonicalCsv =
+        csvGenerationService.generatePairsCsv(
+            targetModel.getAnalyzedModel().nonCanonicalBasePairs(), allInteractions, totalModelCount);
+    String stackingsCsv =
+        csvGenerationService.generateStackingsCsv(
+            targetModel.getAnalyzedModel().stackings(), allInteractions, totalModelCount);
+
+    return new ModelCsvTablesResponse(canonicalCsv, nonCanonicalCsv, stackingsCsv);
+  }

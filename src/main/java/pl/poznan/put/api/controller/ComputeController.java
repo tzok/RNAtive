@@ -39,8 +39,9 @@ public class ComputeController {
     return computeService.getTaskFile(taskId, filename);
   }
 
-  @GetMapping("/{taskId}/csv-tables")
-  public CsvTablesResponse getCsvTables(@PathVariable String taskId) throws Exception {
-    return computeService.getCsvTables(taskId);
+  @GetMapping("/{taskId}/model-csv-tables")
+  public ModelCsvTablesResponse getModelCsvTables(
+      @PathVariable String taskId, @RequestParam String filename) throws Exception {
+    return computeService.getModelCsvTables(taskId, filename);
   }
 }
