@@ -1,14 +1,14 @@
 package pl.poznan.put.api.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.collections4.bag.HashBag;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import pl.poznan.put.AnalyzedModel;
@@ -81,6 +81,7 @@ public class ComputeService {
                       var structure3D = new PdbParser(false).parse(file.content()).get(0);
                       return new AnalyzedModel(file.name(), structure3D, structure2D);
                     } catch (JsonProcessingException e) {
+                      logger.error("Failed to parse analysis result for file: {}", file.name(), e);
                       return null;
                     }
                   })
