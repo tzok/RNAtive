@@ -1,12 +1,9 @@
 package pl.poznan.put.api.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.StringWriter;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.commons.collections4.bag.HashBag;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import pl.poznan.put.AnalyzedModel;
@@ -22,10 +19,15 @@ import pl.poznan.put.api.repository.TaskRepository;
 public class ComputeService {
   private final TaskRepository taskRepository;
   private final ObjectMapper objectMapper;
+  private final CsvGenerationService csvGenerationService;
 
-  public ComputeService(TaskRepository taskRepository, ObjectMapper objectMapper) {
+  public ComputeService(
+      TaskRepository taskRepository,
+      ObjectMapper objectMapper,
+      CsvGenerationService csvGenerationService) {
     this.taskRepository = taskRepository;
     this.objectMapper = objectMapper;
+    this.csvGenerationService = csvGenerationService;
   }
 
   public ComputeResponse submitComputation(ComputeRequest request) throws Exception {
@@ -114,77 +116,22 @@ public class ComputeService {
     // Get the best ranked model
     RankedModel bestModel = result.results().get(0);
     
-    // Define CSV headers
-    String[] pairHeaders = {"Nt1", "Nt2", "Leontis-Westhof", "Confidence"};
-    String[] stackingHeaders = {"Nt1", "Nt2", "Confidence"};
-
-    // Calculate total model count
     int totalModelCount = result.results().size();
-
-    // Collect all interactions to calculate frequencies
     var allInteractions = result.results().stream()
         .map(RankedModel::getAnalyzedModel)
         .map(AnalyzedModel::basePairsAndStackings)
         .flatMap(List::stream)
         .collect(Collectors.toCollection(HashBag::new));
 
-    // Generate CSV for canonical pairs
-    StringWriter canonicalWriter = new StringWriter();
-    try (CSVPrinter printer = new CSVPrinter(canonicalWriter, 
-        CSVFormat.Builder.create().setHeader(pairHeaders).build())) {
-      bestModel.getAnalyzedModel().canonicalBasePairs().forEach(pair -> {
-        try {
-          double confidence = allInteractions.getCount(pair) / (double) totalModelCount;
-          printer.printRecord(
-              pair.basePair().left(),
-              pair.basePair().right(),
-              pair.leontisWesthof(),
-              confidence);
-        } catch (IOException e) {
-          throw new UncheckedIOException(e);
-        }
-      });
-    }
+    String rankingCsv = csvGenerationService.generateRankingCsv(result.results());
+    String canonicalCsv = csvGenerationService.generatePairsCsv(
+        bestModel.getAnalyzedModel().canonicalBasePairs(), allInteractions, totalModelCount);
+    String nonCanonicalCsv = csvGenerationService.generatePairsCsv(
+        bestModel.getAnalyzedModel().nonCanonicalBasePairs(), allInteractions, totalModelCount);
+    String stackingsCsv = csvGenerationService.generateStackingsCsv(
+        bestModel.getAnalyzedModel().stackings(), allInteractions, totalModelCount);
 
-    // Generate CSV for non-canonical pairs
-    StringWriter nonCanonicalWriter = new StringWriter();
-    try (CSVPrinter printer = new CSVPrinter(nonCanonicalWriter,
-        CSVFormat.Builder.create().setHeader(pairHeaders).build())) {
-      bestModel.getAnalyzedModel().nonCanonicalBasePairs().forEach(pair -> {
-        try {
-          double confidence = allInteractions.getCount(pair) / (double) totalModelCount;
-          printer.printRecord(
-              pair.basePair().left(),
-              pair.basePair().right(),
-              pair.leontisWesthof(),
-              confidence);
-        } catch (IOException e) {
-          throw new UncheckedIOException(e);
-        }
-      });
-    }
-
-    // Generate CSV for stackings
-    StringWriter stackingsWriter = new StringWriter();
-    try (CSVPrinter printer = new CSVPrinter(stackingsWriter,
-        CSVFormat.Builder.create().setHeader(stackingHeaders).build())) {
-      bestModel.getAnalyzedModel().stackings().forEach(stacking -> {
-        try {
-          double confidence = allInteractions.getCount(stacking) / (double) totalModelCount;
-          printer.printRecord(
-              stacking.basePair().left(),
-              stacking.basePair().right(),
-              confidence);
-        } catch (IOException e) {
-          throw new UncheckedIOException(e);
-        }
-      });
-    }
-
-    return new CsvTablesResponse(
-        canonicalWriter.toString(),
-        nonCanonicalWriter.toString(),
-        stackingsWriter.toString());
+    return new CsvTablesResponse(rankingCsv, canonicalCsv, nonCanonicalCsv, stackingsCsv);
   }
 
 }
