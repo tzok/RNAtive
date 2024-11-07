@@ -56,7 +56,8 @@ public class ComputeService {
 
   @Async
   public void processTaskAsync(String taskId) {
-    Task task = taskRepository.findById(taskId).orElseThrow();
+    Task task = taskRepository.findById(taskId)
+        .orElseThrow(() -> new TaskNotFoundException(taskId));
     try {
       task.setStatus(TaskStatus.PROCESSING);
       taskRepository.save(task);
@@ -134,13 +135,15 @@ public class ComputeService {
   }
 
   public TaskStatusResponse getTaskStatus(String taskId) {
-    Task task = taskRepository.findById(taskId).orElseThrow();
+    Task task = taskRepository.findById(taskId)
+        .orElseThrow(() -> new TaskNotFoundException(taskId));
     return new TaskStatusResponse(
         task.getId(), task.getStatus(), task.getCreatedAt(), task.getMessage());
   }
 
   public String getTaskSvg(String taskId) throws Exception {
-    Task task = taskRepository.findById(taskId).orElseThrow();
+    Task task = taskRepository.findById(taskId)
+        .orElseThrow(() -> new TaskNotFoundException(taskId));
 
     if (task.getStatus() != TaskStatus.COMPLETED) {
       throw new IllegalStateException("Task is not completed yet");
@@ -154,7 +157,8 @@ public class ComputeService {
   }
 
   public CsvTablesResponse getCsvTables(String taskId) throws Exception {
-    Task task = taskRepository.findById(taskId).orElseThrow();
+    Task task = taskRepository.findById(taskId)
+        .orElseThrow(() -> new TaskNotFoundException(taskId));
 
     if (task.getStatus() != TaskStatus.COMPLETED) {
       throw new IllegalStateException("Task is not completed yet");
@@ -214,7 +218,8 @@ public class ComputeService {
   }
 
   public ModelCsvTablesResponse getModelCsvTables(String taskId, String filename) throws Exception {
-    Task task = taskRepository.findById(taskId).orElseThrow();
+    Task task = taskRepository.findById(taskId)
+        .orElseThrow(() -> new TaskNotFoundException(taskId));
 
     if (task.getStatus() != TaskStatus.COMPLETED) {
       throw new IllegalStateException("Task is not completed yet");
