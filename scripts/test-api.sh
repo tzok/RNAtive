@@ -66,33 +66,33 @@ if [ ${#FILES[@]} -eq 0 ]; then
 	print_usage
 fi
 
-# Prepare files array for JSON using jq
-FILES_JSON=$(
-	for file in "${FILES[@]}"; do
-		jq -n \
-			--arg name "$(basename "$file")" \
-			--arg content "$(cat "$file")" \
-			'{name: $name, content: $content}'
-	done | jq -s '.'
-)
+# Create initial request JSON without files
+REQUEST_DATA=$(jq -n \
+    --arg confidenceLevel "$CONFIDENCE_LEVEL" \
+    --arg analyzer "$ANALYZER" \
+    --arg consensusMode "$CONSENSUS_MODE" \
+    --argjson molProbityFilter "$MOL_PROBITY_FILTER" \
+    --arg visualizationTool "$VISUALIZATION_TOOL" \
+    '{
+        files: [],
+        confidenceLevel: ($confidenceLevel | tonumber),
+        analyzer: $analyzer,
+        consensusMode: $consensusMode,
+        applyMolProbityFilter: $molProbityFilter,
+        visualizationTool: $visualizationTool
+    }')
 
-# Create base request JSON
-REQUEST_DATA=$(jq -n '{
-    files: [],
-    confidenceLevel: 0,
-    analyzer: "",
-    consensusMode: "",
-    applyMolProbityFilter: false,
-    visualizationTool: ""
-}')
-
-# Add each field one at a time
-REQUEST_DATA=$(echo "$REQUEST_DATA" | jq --argjson files "$FILES_JSON" '.files = $files')
-REQUEST_DATA=$(echo "$REQUEST_DATA" | jq --arg val "$CONFIDENCE_LEVEL" '.confidenceLevel = ($val | tonumber)')
-REQUEST_DATA=$(echo "$REQUEST_DATA" | jq --arg val "$ANALYZER" '.analyzer = $val')
-REQUEST_DATA=$(echo "$REQUEST_DATA" | jq --arg val "$CONSENSUS_MODE" '.consensusMode = $val')
-REQUEST_DATA=$(echo "$REQUEST_DATA" | jq --argjson val "$MOL_PROBITY_FILTER" '.applyMolProbityFilter = $val')
-REQUEST_DATA=$(echo "$REQUEST_DATA" | jq --arg val "$VISUALIZATION_TOOL" '.visualizationTool = $val')
+# Add files one at a time
+for file in "${FILES[@]}"; do
+    # Create single file JSON
+    FILE_JSON=$(jq -n \
+        --arg name "$(basename "$file")" \
+        --arg content "$(cat "$file")" \
+        '{name: $name, content: $content}')
+    
+    # Append to files array
+    REQUEST_DATA=$(echo "$REQUEST_DATA" | jq --argjson file "$FILE_JSON" '.files += [$file]')
+done
 
 # Submit computation request
 echo "Submitting computation request..."
