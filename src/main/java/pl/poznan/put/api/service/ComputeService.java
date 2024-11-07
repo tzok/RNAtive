@@ -1,9 +1,10 @@
 package pl.poznan.put.api.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.Set;
+import pl.poznan.put.InteractionNetworkFidelity;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import org.apache.commons.collections4.bag.HashBag;
@@ -94,12 +95,18 @@ public class ComputeService {
       List<AnalyzedBasePair> referenceStructure =
           ReferenceStructureUtil.readReferenceStructure(request.dotBracket(), sequence, firstModel);
 
-      // TODO: Use referenceStructure in the analysis
-
       // Convert to ranked models and store result
       var results =
           analyzedModels.stream()
-              .map(model -> new RankedModel(model, 1.0)) // TODO: Calculate proper INF
+              .map(
+                  model -> {
+                    Set<AnalyzedBasePair> modelInteractions =
+                        model.streamBasePairs(request.consensusMode())
+                            .collect(Collectors.toSet());
+                    double inf =
+                        InteractionNetworkFidelity.calculate(referenceStructure, modelInteractions);
+                    return new RankedModel(model, inf);
+                  })
               .collect(Collectors.toList());
       var taskResult = new TaskResult(results, referenceStructure);
       task.setResult(objectMapper.writeValueAsString(taskResult));
@@ -175,10 +182,14 @@ public class ComputeService {
 
     String rankingCsv = csvGenerationService.generateRankingCsv(results);
     String canonicalCsv =
-        csvGenerationService.generatePairsCsv(allCanonicalPairs, allInteractions, totalModelCount, referenceStructure);
+        csvGenerationService.generatePairsCsv(
+            allCanonicalPairs, allInteractions, totalModelCount, taskResult.referenceStructure());
     String nonCanonicalCsv =
         csvGenerationService.generatePairsCsv(
-            allNonCanonicalPairs, allInteractions, totalModelCount, referenceStructure);
+            allNonCanonicalPairs,
+            allInteractions,
+            totalModelCount,
+            taskResult.referenceStructure());
     String stackingsCsv =
         csvGenerationService.generateStackingsCsv(allStackings, allInteractions, totalModelCount);
 
@@ -216,13 +227,16 @@ public class ComputeService {
 
     String canonicalCsv =
         csvGenerationService.generatePairsCsv(
-            targetModel.getAnalyzedModel().canonicalBasePairs(), allInteractions, totalModelCount, referenceStructure);
+            targetModel.getAnalyzedModel().canonicalBasePairs(),
+            allInteractions,
+            totalModelCount,
+            taskResult.referenceStructure());
     String nonCanonicalCsv =
         csvGenerationService.generatePairsCsv(
             targetModel.getAnalyzedModel().nonCanonicalBasePairs(),
             allInteractions,
             totalModelCount,
-            referenceStructure);
+            taskResult.referenceStructure());
     String stackingsCsv =
         csvGenerationService.generateStackingsCsv(
             targetModel.getAnalyzedModel().stackings(), allInteractions, totalModelCount);
