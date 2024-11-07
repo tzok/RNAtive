@@ -1,12 +1,27 @@
 package pl.poznan.put;
 
 public class RankedModel implements Comparable<RankedModel> {
-  private final AnalyzedModel analyzedModel;
-  private final double interactionNetworkFidelity;
+  private AnalyzedModel analyzedModel;
+  private double interactionNetworkFidelity;
   private int rank = -1;
+
+  // Default constructor for Jackson
+  public RankedModel() {}
 
   public RankedModel(AnalyzedModel analyzedModel, double interactionNetworkFidelity) {
     this.analyzedModel = analyzedModel;
+    this.interactionNetworkFidelity = interactionNetworkFidelity;
+  }
+
+  public void setAnalyzedModel(AnalyzedModel analyzedModel) {
+    this.analyzedModel = analyzedModel;
+  }
+
+  public AnalyzedModel getAnalyzedModel() {
+    return analyzedModel;
+  }
+
+  public void setInteractionNetworkFidelity(double interactionNetworkFidelity) {
     this.interactionNetworkFidelity = interactionNetworkFidelity;
   }
 
