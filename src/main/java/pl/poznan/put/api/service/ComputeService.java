@@ -4,11 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
-import pl.poznan.put.api.util.ReferenceStructureUtil;
-import pl.poznan.put.model.BaseInteractions;
-import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
-import pl.poznan.put.pdb.analysis.PdbParser;
-import pl.poznan.put.structure.AnalyzedBasePair;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import org.apache.commons.collections4.bag.HashBag;
 import org.springframework.scheduling.annotation.Async;
@@ -19,6 +15,11 @@ import pl.poznan.put.api.dto.*;
 import pl.poznan.put.api.model.Task;
 import pl.poznan.put.api.model.TaskStatus;
 import pl.poznan.put.api.repository.TaskRepository;
+import pl.poznan.put.api.util.ReferenceStructureUtil;
+import pl.poznan.put.model.BaseInteractions;
+import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
+import pl.poznan.put.pdb.analysis.PdbParser;
+import pl.poznan.put.structure.AnalyzedBasePair;
 
 @Service
 public class ComputeService {
@@ -57,46 +58,49 @@ public class ComputeService {
       taskRepository.save(task);
 
       ComputeRequest request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
-      
+
       // Process each file through the analysis service and build models
-      var analyzedModels = request.files().stream()
-          .map(file -> {
-            String jsonResult = analysisClient.analyze(file.content(), request.analyzer());
-            try {
-              var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
-              var structure3D = new PdbParser(false).parse(file.content()).get(0);
-              return new AnalyzedModel(file.name(), structure3D, structure2D);
-            } catch (JsonProcessingException e) {
-              return null;
-            }
-          })
-          .toList();
+      var analyzedModels =
+          request.files().stream()
+              .map(
+                  file -> {
+                    String jsonResult = analysisClient.analyze(file.content(), request.analyzer());
+                    try {
+                      var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
+                      var structure3D = new PdbParser(false).parse(file.content()).get(0);
+                      return new AnalyzedModel(file.name(), structure3D, structure2D);
+                    } catch (JsonProcessingException e) {
+                      return null;
+                    }
+                  })
+              .toList();
 
       // Check if any model failed to parse
-      if (analyzedModels.stream().anyMatch(model -> model == null)) {
+      if (analyzedModels.stream().anyMatch(Objects::isNull)) {
         task.setStatus(TaskStatus.FAILED);
         taskRepository.save(task);
         return;
       }
 
-      // Get sequence from first model for reference structure  
+      // Get sequence from first model for reference structure
       var firstModel = analyzedModels.get(0);
-      String sequence = firstModel.residueIdentifiers().stream()
-          .map(PdbNamedResidueIdentifier::oneLetterName)
-          .map(String::valueOf)
-          .collect(Collectors.joining());
+      String sequence =
+          firstModel.residueIdentifiers().stream()
+              .map(PdbNamedResidueIdentifier::oneLetterName)
+              .map(String::valueOf)
+              .collect(Collectors.joining());
 
       // Read reference structure if dot-bracket is provided
-      List<AnalyzedBasePair> referenceStructure = 
-          ReferenceStructureUtil.readReferenceStructure(
-              request.dotBracket(), sequence, firstModel);
+      List<AnalyzedBasePair> referenceStructure =
+          ReferenceStructureUtil.readReferenceStructure(request.dotBracket(), sequence, firstModel);
 
       // TODO: Use referenceStructure in the analysis
 
       // Convert to ranked models and store result
-      var results = analyzedModels.stream()
-          .map(model -> new RankedModel(model, 1.0)) // TODO: Calculate proper INF
-          .collect(Collectors.toList());
+      var results =
+          analyzedModels.stream()
+              .map(model -> new RankedModel(model, 1.0)) // TODO: Calculate proper INF
+              .collect(Collectors.toList());
       task.setResult(objectMapper.writeValueAsString(results));
       task.setStatus(TaskStatus.COMPLETED);
     } catch (Exception e) {
