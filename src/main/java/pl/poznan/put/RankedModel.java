@@ -2,14 +2,13 @@ package pl.poznan.put;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class RankedModel implements Comparable<RankedModel> {
   @JsonProperty("analyzedModel")
   private AnalyzedModel analyzedModel;
-  
+
   @JsonProperty("interactionNetworkFidelity")
   private double interactionNetworkFidelity;
-  
+
   @JsonProperty("rank")
   private int rank = -1;
 
