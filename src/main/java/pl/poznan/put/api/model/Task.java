@@ -22,7 +22,7 @@ public class Task {
   @Lob private String result;
 
   @Lob private String svg;
-  
+
   @Lob private String message;
 
   public Task() {

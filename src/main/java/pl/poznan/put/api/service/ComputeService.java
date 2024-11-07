@@ -3,14 +3,14 @@ package pl.poznan.put.api.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
-import java.util.Set;
-import pl.poznan.put.InteractionNetworkFidelity;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.collections4.bag.HashBag;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import pl.poznan.put.AnalyzedModel;
+import pl.poznan.put.InteractionNetworkFidelity;
 import pl.poznan.put.RankedModel;
 import pl.poznan.put.api.dto.*;
 import pl.poznan.put.api.model.Task;
@@ -105,8 +105,7 @@ public class ComputeService {
               .map(
                   model -> {
                     Set<AnalyzedBasePair> modelInteractions =
-                        model.streamBasePairs(request.consensusMode())
-                            .collect(Collectors.toSet());
+                        model.streamBasePairs(request.consensusMode()).collect(Collectors.toSet());
                     double inf =
                         InteractionNetworkFidelity.calculate(referenceStructure, modelInteractions);
                     return new RankedModel(model, inf);
@@ -116,7 +115,7 @@ public class ComputeService {
       // Store the computation result
       String resultJson = objectMapper.writeValueAsString(taskResult);
       task.setResult(resultJson);
-      
+
       // Generate visualization if possible
       try {
         String svg = visualizationClient.visualize(resultJson, request.visualizationTool());
@@ -125,7 +124,7 @@ public class ComputeService {
         // Log but don't fail the task if visualization fails
         task.setMessage("Warning: Visualization generation failed: " + e.getMessage());
       }
-      
+
       task.setStatus(TaskStatus.COMPLETED);
     } catch (Exception e) {
       task.setStatus(TaskStatus.FAILED);
@@ -136,7 +135,8 @@ public class ComputeService {
 
   public TaskStatusResponse getTaskStatus(String taskId) {
     Task task = taskRepository.findById(taskId).orElseThrow();
-    return new TaskStatusResponse(task.getId(), task.getStatus(), task.getCreatedAt(), task.getMessage());
+    return new TaskStatusResponse(
+        task.getId(), task.getStatus(), task.getCreatedAt(), task.getMessage());
   }
 
   public String getTaskSvg(String taskId) throws Exception {

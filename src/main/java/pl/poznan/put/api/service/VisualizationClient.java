@@ -19,12 +19,14 @@ public class VisualizationClient {
   }
 
   public String visualize(String jsonContent, VisualizationTool tool) {
-    String endpoint = switch (tool) {
-      case PSEUDOVIEWER -> "pseudoviewer";
-      case RCHIE -> "rchie"; 
-      case RNAPUZZLER -> "rnapuzzler";
-      case VARNA -> throw new UnsupportedOperationException("VARNA visualization not supported");
-    };
+    String endpoint =
+        switch (tool) {
+          case PSEUDOVIEWER -> "pseudoviewer";
+          case RCHIE -> "rchie";
+          case RNAPUZZLER -> "rnapuzzler";
+          case VARNA -> throw new UnsupportedOperationException(
+              "VARNA visualization not supported");
+        };
 
     return restClient
         .post()

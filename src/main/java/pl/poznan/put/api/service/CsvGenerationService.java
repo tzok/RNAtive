@@ -13,7 +13,9 @@ import pl.poznan.put.structure.AnalyzedBasePair;
 
 @Service
 public class CsvGenerationService {
-  private static final String[] PAIR_HEADERS = {"Nt1", "Nt2", "Leontis-Westhof", "Confidence", "Is reference?"};
+  private static final String[] PAIR_HEADERS = {
+    "Nt1", "Nt2", "Leontis-Westhof", "Confidence", "Is reference?"
+  };
   private static final String[] STACKING_HEADERS = {"Nt1", "Nt2", "Confidence"};
   private static final String[] RANKING_HEADERS = {"Rank", "File name", "INF"};
 

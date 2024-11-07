@@ -3,6 +3,7 @@ package pl.poznan.put.api.dto;
 import java.util.List;
 import pl.poznan.put.Analyzer;
 import pl.poznan.put.ConsensusMode;
+import pl.poznan.put.api.model.VisualizationTool;
 
 public record ComputeRequest(
     List<FileData> files,
