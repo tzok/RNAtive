@@ -13,7 +13,7 @@ import pl.poznan.put.structure.AnalyzedBasePair;
 
 @Service
 public class CsvGenerationService {
-  private static final String[] PAIR_HEADERS = {"Nt1", "Nt2", "Leontis-Westhof", "Confidence"};
+  private static final String[] PAIR_HEADERS = {"Nt1", "Nt2", "Leontis-Westhof", "Confidence", "Is reference?"};
   private static final String[] STACKING_HEADERS = {"Nt1", "Nt2", "Confidence"};
   private static final String[] RANKING_HEADERS = {"Rank", "File name", "INF"};
 
@@ -41,7 +41,8 @@ public class CsvGenerationService {
   public String generatePairsCsv(
       List<? extends AnalyzedBasePair> pairs,
       HashBag<AnalyzedBasePair> allInteractions,
-      int totalModelCount) {
+      int totalModelCount,
+      List<AnalyzedBasePair> referenceStructure) {
     StringWriter writer = new StringWriter();
     try (CSVPrinter printer =
         new CSVPrinter(writer, CSVFormat.Builder.create().setHeader(PAIR_HEADERS).build())) {
@@ -53,7 +54,8 @@ public class CsvGenerationService {
                   pair.basePair().left(),
                   pair.basePair().right(),
                   pair.leontisWesthof(),
-                  String.format("%.3f", confidence));
+                  String.format("%.3f", confidence),
+                  referenceStructure.contains(pair));
             } catch (IOException e) {
               throw new UncheckedIOException(e);
             }

@@ -173,10 +173,10 @@ public class ComputeService {
 
     String rankingCsv = csvGenerationService.generateRankingCsv(results);
     String canonicalCsv =
-        csvGenerationService.generatePairsCsv(allCanonicalPairs, allInteractions, totalModelCount);
+        csvGenerationService.generatePairsCsv(allCanonicalPairs, allInteractions, totalModelCount, referenceStructure);
     String nonCanonicalCsv =
         csvGenerationService.generatePairsCsv(
-            allNonCanonicalPairs, allInteractions, totalModelCount);
+            allNonCanonicalPairs, allInteractions, totalModelCount, referenceStructure);
     String stackingsCsv =
         csvGenerationService.generateStackingsCsv(allStackings, allInteractions, totalModelCount);
 
@@ -213,12 +213,13 @@ public class ComputeService {
 
     String canonicalCsv =
         csvGenerationService.generatePairsCsv(
-            targetModel.getAnalyzedModel().canonicalBasePairs(), allInteractions, totalModelCount);
+            targetModel.getAnalyzedModel().canonicalBasePairs(), allInteractions, totalModelCount, referenceStructure);
     String nonCanonicalCsv =
         csvGenerationService.generatePairsCsv(
             targetModel.getAnalyzedModel().nonCanonicalBasePairs(),
             allInteractions,
-            totalModelCount);
+            totalModelCount,
+            referenceStructure);
     String stackingsCsv =
         csvGenerationService.generateStackingsCsv(
             targetModel.getAnalyzedModel().stackings(), allInteractions, totalModelCount);
