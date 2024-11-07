@@ -40,4 +40,9 @@ public class ComputeController {
   public String getSvg(@PathVariable String taskId) throws Exception {
     return computeService.getTaskSvg(taskId);
   }
+
+  @GetMapping("/{taskId}/file")
+  public FileData getFile(@PathVariable String taskId, @RequestParam String filename) throws Exception {
+    return computeService.getTaskFile(taskId, filename);
+  }
 }

@@ -54,4 +54,7 @@ if [ "$STATUS" = "COMPLETED" ]; then
   
   echo "Getting SVG visualization..."
   curl -s -X GET "$API_URL/$TASK_ID/svg" > result.svg
+  
+  echo "Getting original file..."
+  curl -s -X GET "$API_URL/$TASK_ID/file?filename=sample.pdb" | jq .
 fi

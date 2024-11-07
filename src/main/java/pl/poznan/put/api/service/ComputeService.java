@@ -81,4 +81,14 @@ public class ComputeService {
 
     return task.getSvg();
   }
+
+  public FileData getTaskFile(String taskId, String filename) throws Exception {
+    Task task = taskRepository.findById(taskId).orElseThrow();
+    ComputeRequest request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
+    
+    return request.files().stream()
+        .filter(file -> file.name().equals(filename))
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("File not found: " + filename));
+  }
 }
