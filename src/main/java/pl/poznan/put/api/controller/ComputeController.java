@@ -1,6 +1,5 @@
 package pl.poznan.put.api.controller;
 
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,8 +18,7 @@ public class ComputeController {
   }
 
   @PostMapping
-  public ResponseEntity<ComputeResponse> compute(@RequestBody ComputeRequest request) {
-    ComputeResponse response = computeService.compute(request);
-    return ResponseEntity.ok(response);
+  public ComputeResponse compute(@RequestBody ComputeRequest request) {
+    return computeService.compute(request);
   }
 }
