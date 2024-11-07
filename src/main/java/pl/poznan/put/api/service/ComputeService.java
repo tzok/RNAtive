@@ -19,14 +19,17 @@ public class ComputeService {
   private final TaskRepository taskRepository;
   private final ObjectMapper objectMapper;
   private final CsvGenerationService csvGenerationService;
+  private final AnalysisClient analysisClient;
 
   public ComputeService(
       TaskRepository taskRepository,
       ObjectMapper objectMapper,
-      CsvGenerationService csvGenerationService) {
+      CsvGenerationService csvGenerationService,
+      AnalysisClient analysisClient) {
     this.taskRepository = taskRepository;
     this.objectMapper = objectMapper;
     this.csvGenerationService = csvGenerationService;
+    this.analysisClient = analysisClient;
   }
 
   public ComputeResponse submitComputation(ComputeRequest request) throws Exception {
@@ -47,13 +50,16 @@ public class ComputeService {
       task.setStatus(TaskStatus.PROCESSING);
       taskRepository.save(task);
 
-      // TODO: Implement actual computation logic
-      // For now, just simulate processing
-      Thread.sleep(5000);
-
+      ComputeRequest request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
+      
+      // Process each file through the analysis service
+      var results = request.files().stream()
+          .map(file -> analysisClient.analyze(file.content(), request.analyzer()))
+          .collect(Collectors.toList());
+      
+      // TODO: Process results and create final output
+      task.setResult(objectMapper.writeValueAsString(results));
       task.setStatus(TaskStatus.COMPLETED);
-      // TODO: Set actual result
-      task.setResult("{}");
     } catch (Exception e) {
       task.setStatus(TaskStatus.FAILED);
     }
