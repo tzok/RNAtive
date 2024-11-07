@@ -4,13 +4,14 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.apache.commons.collections4.bag.HashBag;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
+import org.springframework.stereotype.Service;
 import pl.poznan.put.AnalyzedModel;
 import pl.poznan.put.RankedModel;
 
+@Service
 public class CsvGenerationService {
   private static final String[] PAIR_HEADERS = {"Nt1", "Nt2", "Leontis-Westhof", "Confidence"};
   private static final String[] STACKING_HEADERS = {"Nt1", "Nt2", "Confidence"};

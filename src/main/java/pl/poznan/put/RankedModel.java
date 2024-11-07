@@ -10,6 +10,10 @@ public class RankedModel implements Comparable<RankedModel> {
     this.interactionNetworkFidelity = interactionNetworkFidelity;
   }
 
+  public AnalyzedModel getAnalyzedModel() {
+    return analyzedModel;
+  }
+
   public double getInteractionNetworkFidelity() {
     return interactionNetworkFidelity;
   }

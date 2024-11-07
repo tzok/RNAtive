@@ -8,8 +8,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import pl.poznan.put.AnalyzedModel;
 import pl.poznan.put.RankedModel;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import pl.poznan.put.api.dto.*;
 import pl.poznan.put.api.model.Task;
 import pl.poznan.put.api.model.TaskStatus;
@@ -94,7 +92,7 @@ public class ComputeService {
   public FileData getTaskFile(String taskId, String filename) throws Exception {
     Task task = taskRepository.findById(taskId).orElseThrow();
     ComputeRequest request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
-    
+
     return request.files().stream()
         .filter(file -> file.name().equals(filename))
         .findFirst()
@@ -103,7 +101,7 @@ public class ComputeService {
 
   public CsvTablesResponse getCsvTables(String taskId) throws Exception {
     Task task = taskRepository.findById(taskId).orElseThrow();
-    
+
     if (task.getStatus() != TaskStatus.COMPLETED) {
       throw new IllegalStateException("Task is not completed yet");
     }
@@ -115,23 +113,26 @@ public class ComputeService {
 
     // Get the best ranked model
     RankedModel bestModel = result.results().get(0);
-    
+
     int totalModelCount = result.results().size();
-    var allInteractions = result.results().stream()
-        .map(RankedModel::getAnalyzedModel)
-        .map(AnalyzedModel::basePairsAndStackings)
-        .flatMap(List::stream)
-        .collect(Collectors.toCollection(HashBag::new));
+    var allInteractions =
+        result.results().stream()
+            .map(RankedModel::getAnalyzedModel)
+            .map(AnalyzedModel::basePairsAndStackings)
+            .flatMap(List::stream)
+            .collect(Collectors.toCollection(HashBag::new));
 
     String rankingCsv = csvGenerationService.generateRankingCsv(result.results());
-    String canonicalCsv = csvGenerationService.generatePairsCsv(
-        bestModel.getAnalyzedModel().canonicalBasePairs(), allInteractions, totalModelCount);
-    String nonCanonicalCsv = csvGenerationService.generatePairsCsv(
-        bestModel.getAnalyzedModel().nonCanonicalBasePairs(), allInteractions, totalModelCount);
-    String stackingsCsv = csvGenerationService.generateStackingsCsv(
-        bestModel.getAnalyzedModel().stackings(), allInteractions, totalModelCount);
+    String canonicalCsv =
+        csvGenerationService.generatePairsCsv(
+            bestModel.getAnalyzedModel().canonicalBasePairs(), allInteractions, totalModelCount);
+    String nonCanonicalCsv =
+        csvGenerationService.generatePairsCsv(
+            bestModel.getAnalyzedModel().nonCanonicalBasePairs(), allInteractions, totalModelCount);
+    String stackingsCsv =
+        csvGenerationService.generateStackingsCsv(
+            bestModel.getAnalyzedModel().stackings(), allInteractions, totalModelCount);
 
     return new CsvTablesResponse(rankingCsv, canonicalCsv, nonCanonicalCsv, stackingsCsv);
   }
-
 }

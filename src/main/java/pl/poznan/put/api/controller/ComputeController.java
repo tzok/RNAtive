@@ -34,7 +34,8 @@ public class ComputeController {
   }
 
   @GetMapping("/{taskId}/file")
-  public FileData getFile(@PathVariable String taskId, @RequestParam String filename) throws Exception {
+  public FileData getFile(@PathVariable String taskId, @RequestParam String filename)
+      throws Exception {
     return computeService.getTaskFile(taskId, filename);
   }
 

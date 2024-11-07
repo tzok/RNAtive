@@ -20,7 +20,7 @@ public class Task {
   @Lob private String request;
 
   @Lob private String result;
-  
+
   @Lob private String svg;
 
   public Task() {
