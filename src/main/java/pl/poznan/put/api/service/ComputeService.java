@@ -1,5 +1,6 @@
 package pl.poznan.put.api.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
@@ -61,9 +62,15 @@ public class ComputeService {
       var analyzedModels = request.files().stream()
           .map(file -> {
             String jsonResult = analysisClient.analyze(file.content(), request.analyzer());
-            var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
-            var structure3D = new PdbParser(false).parse(file.content()).get(0);
-            return new AnalyzedModel(file.name(), structure3D, structure2D);
+            try {
+              var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
+              var structure3D = new PdbParser(false).parse(file.content()).get(0);
+              return new AnalyzedModel(file.name(), structure3D, structure2D);
+            } catch (JsonProcessingException e) {
+              task.setStatus(TaskStatus.FAILED);
+              taskRepository.save(task);
+              throw e;
+            }
           })
           .toList();
 
