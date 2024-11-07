@@ -1,25 +1,90 @@
 #!/bin/bash
 
-# Configuration
+# Default values
 API_URL="http://localhost:8080/api/compute"
+CONFIDENCE_LEVEL=0.95
+ANALYZER="BPNET"
+CONSENSUS_MODE="CANONICAL"
+MOL_PROBITY_FILTER=true
+VISUALIZATION_TOOL="RNAPUZZLER"
 
-# Sample PDB file content (truncated for example)
-PDB_CONTENT="ATOM      1  P     A A   1      -3.201   5.069   3.617  1.00 17.85           P"
+# Help function
+print_usage() {
+    echo "Usage: $0 [options] file1 [file2 ...]"
+    echo "Options:"
+    echo "  -c, --confidence LEVEL    Confidence level (0-1), default: 0.95"
+    echo "  -a, --analyzer TOOL       Analyzer tool (BARNABA|BPNET|FR3D|MCANNOTATE|RNAPOLIS|RNAVIEW), default: BPNET"
+    echo "  -m, --consensus MODE      Consensus mode (CANONICAL|NON_CANONICAL|STACKING|ALL), default: CANONICAL"
+    echo "  --no-molprobity          Disable MolProbity filter"
+    echo "  -v, --visualization TOOL  Visualization tool (RNAPUZZLER|VARNA|PSEUDOVIEWER|RCHIE), default: RNAPUZZLER"
+    echo "  -h, --help               Show this help message"
+    exit 1
+}
 
-# Create a JSON request with a sample file
+# Parse command line arguments
+FILES=()
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -c|--confidence)
+            CONFIDENCE_LEVEL="$2"
+            shift 2
+            ;;
+        -a|--analyzer)
+            ANALYZER="$2"
+            shift 2
+            ;;
+        -m|--consensus)
+            CONSENSUS_MODE="$2"
+            shift 2
+            ;;
+        --no-molprobity)
+            MOL_PROBITY_FILTER=false
+            shift
+            ;;
+        -v|--visualization)
+            VISUALIZATION_TOOL="$2"
+            shift 2
+            ;;
+        -h|--help)
+            print_usage
+            ;;
+        *)
+            if [[ -f "$1" ]]; then
+                FILES+=("$1")
+            else
+                echo "Error: File not found: $1"
+                exit 1
+            fi
+            shift
+            ;;
+    esac
+done
+
+# Check if at least one file was provided
+if [ ${#FILES[@]} -eq 0 ]; then
+    echo "Error: No input files provided"
+    print_usage
+fi
+
+# Prepare files array for JSON
+FILES_JSON=""
+for file in "${FILES[@]}"; do
+    if [ -n "$FILES_JSON" ]; then
+        FILES_JSON="$FILES_JSON,"
+    fi
+    CONTENT=$(cat "$file" | sed 's/"/\\"/g')
+    FILES_JSON="$FILES_JSON{\"name\": \"$(basename "$file")\", \"content\": \"$CONTENT\"}"
+done
+
+# Create JSON request
 REQUEST_DATA=$(cat <<EOF
 {
-  "files": [
-    {
-      "name": "sample.pdb",
-      "content": "$PDB_CONTENT"
-    }
-  ],
-  "confidenceLevel": 0.95,
-  "analyzer": "BPNET",
-  "consensusMode": "CANONICAL",
-  "applyMolProbityFilter": true,
-  "visualizationTool": "RNAPUZZLER"
+  "files": [$FILES_JSON],
+  "confidenceLevel": $CONFIDENCE_LEVEL,
+  "analyzer": "$ANALYZER",
+  "consensusMode": "$CONSENSUS_MODE",
+  "applyMolProbityFilter": $MOL_PROBITY_FILTER,
+  "visualizationTool": "$VISUALIZATION_TOOL"
 }
 EOF
 )
