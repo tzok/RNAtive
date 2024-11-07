@@ -2,12 +2,14 @@ package pl.poznan.put.api.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.StringWriter;
+import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.commons.collections4.bag.HashBag;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import pl.poznan.put.AnalyzedModel;
 import pl.poznan.put.RankedModel;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -122,7 +124,7 @@ public class ComputeService {
     // Collect all interactions to calculate frequencies
     var allInteractions = result.results().stream()
         .map(RankedModel::getAnalyzedModel)
-        .map(model -> model.basePairsAndStackings())
+        .map(AnalyzedModel::basePairsAndStackings)
         .flatMap(List::stream)
         .collect(Collectors.toCollection(HashBag::new));
 
@@ -136,7 +138,7 @@ public class ComputeService {
               pair.basePair().left(),
               pair.basePair().right(),
               pair.leontisWesthof(),
-              String.format("%.3f", confidence));
+              confidence);
         } catch (IOException e) {
           throw new UncheckedIOException(e);
         }
@@ -153,7 +155,7 @@ public class ComputeService {
               pair.basePair().left(),
               pair.basePair().right(),
               pair.leontisWesthof(),
-              String.format("%.3f", confidence));
+              confidence);
         } catch (IOException e) {
           throw new UncheckedIOException(e);
         }
@@ -169,7 +171,7 @@ public class ComputeService {
           printer.printRecord(
               stacking.basePair().left(),
               stacking.basePair().right(),
-              String.format("%.3f", confidence));
+              confidence);
         } catch (IOException e) {
           throw new UncheckedIOException(e);
         }
