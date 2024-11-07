@@ -94,11 +94,18 @@ for file in "${FILES[@]}"; do
     REQUEST_DATA=$(echo "$REQUEST_DATA" | jq --argjson file "$FILE_JSON" '.files += [$file]')
 done
 
+# Write request data to temporary file
+REQUEST_FILE=$(mktemp)
+echo "$REQUEST_DATA" > "$REQUEST_FILE"
+
 # Submit computation request
 echo "Submitting computation request..."
 RESPONSE=$(curl -s -X POST "$API_URL" \
 	-H "Content-Type: application/json" \
-	-d "$REQUEST_DATA")
+	-d "@$REQUEST_FILE")
+
+# Clean up temporary file
+rm "$REQUEST_FILE"
 
 # Extract task ID from response
 TASK_ID=$(echo $RESPONSE | jq -r '.taskId')
