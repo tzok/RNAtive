@@ -79,6 +79,7 @@ public class ComputeService {
       // Check if any model failed to parse
       if (analyzedModels.stream().anyMatch(Objects::isNull)) {
         task.setStatus(TaskStatus.FAILED);
+        task.setMessage("Failed to parse one or more models");
         taskRepository.save(task);
         return;
       }
@@ -113,13 +114,14 @@ public class ComputeService {
       task.setStatus(TaskStatus.COMPLETED);
     } catch (Exception e) {
       task.setStatus(TaskStatus.FAILED);
+      task.setMessage("Error processing task: " + e.getMessage());
     }
     taskRepository.save(task);
   }
 
   public TaskStatusResponse getTaskStatus(String taskId) {
     Task task = taskRepository.findById(taskId).orElseThrow();
-    return new TaskStatusResponse(task.getId(), task.getStatus(), task.getCreatedAt());
+    return new TaskStatusResponse(task.getId(), task.getStatus(), task.getCreatedAt(), task.getMessage());
   }
 
   public String getTaskSvg(String taskId) throws Exception {

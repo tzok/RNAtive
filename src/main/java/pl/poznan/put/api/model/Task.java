@@ -22,6 +22,8 @@ public class Task {
   @Lob private String result;
 
   @Lob private String svg;
+  
+  @Lob private String message;
 
   public Task() {
     this.id = UUID.randomUUID().toString();
@@ -68,5 +70,13 @@ public class Task {
 
   public void setSvg(String svg) {
     this.svg = svg;
+  }
+
+  public String getMessage() {
+    return message;
+  }
+
+  public void setMessage(String message) {
+    this.message = message;
   }
 }
