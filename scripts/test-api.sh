@@ -18,7 +18,8 @@ REQUEST_DATA=$(cat <<EOF
   "confidenceLevel": 0.95,
   "analyzer": "BPNET",
   "consensusMode": "CANONICAL",
-  "applyMolProbityFilter": true
+  "applyMolProbityFilter": true,
+  "visualizationTool": "RNAPUZZLER"
 }
 EOF
 )

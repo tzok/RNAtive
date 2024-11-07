@@ -10,7 +10,8 @@ public record ComputeRequest(
     Analyzer analyzer,
     ConsensusMode consensusMode,
     String dotBracket,
-    Boolean applyMolProbityFilter) {
+    Boolean applyMolProbityFilter,
+    VisualizationTool visualizationTool) {
   public ComputeRequest {
     // Set defaults if null
     if (analyzer == null) {
@@ -21,6 +22,9 @@ public record ComputeRequest(
     }
     if (applyMolProbityFilter == null) {
       applyMolProbityFilter = true;
+    }
+    if (visualizationTool == null) {
+      visualizationTool = VisualizationTool.RNAPUZZLER;
     }
 
     // Validate confidence level
