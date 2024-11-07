@@ -16,6 +16,7 @@ public class JacksonConfig {
     module.addDeserializer(PdbModel.class, new PdbModelDeserializer());
     mapper.registerModule(module);
     mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+    mapper.registerModule(new com.fasterxml.jackson.datatype.jdk8.Jdk8Module());
     return mapper;
   }
 }
