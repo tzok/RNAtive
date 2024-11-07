@@ -66,27 +66,32 @@ if [ ${#FILES[@]} -eq 0 ]; then
     print_usage
 fi
 
-# Prepare files array for JSON
-FILES_JSON=""
-for file in "${FILES[@]}"; do
-    if [ -n "$FILES_JSON" ]; then
-        FILES_JSON="$FILES_JSON,"
-    fi
-    CONTENT=$(cat "$file" | sed 's/"/\\"/g')
-    FILES_JSON="$FILES_JSON{\"name\": \"$(basename "$file")\", \"content\": \"$CONTENT\"}"
-done
+# Prepare files array for JSON using jq
+FILES_JSON=$(
+    for file in "${FILES[@]}"; do
+        jq -n \
+            --arg name "$(basename "$file")" \
+            --arg content "$(cat "$file")" \
+            '{name: $name, content: $content}'
+    done | jq -s '.'
+)
 
-# Create JSON request
-REQUEST_DATA=$(cat <<EOF
-{
-  "files": [$FILES_JSON],
-  "confidenceLevel": $CONFIDENCE_LEVEL,
-  "analyzer": "$ANALYZER",
-  "consensusMode": "$CONSENSUS_MODE",
-  "applyMolProbityFilter": $MOL_PROBITY_FILTER,
-  "visualizationTool": "$VISUALIZATION_TOOL"
-}
-EOF
+# Create JSON request using jq
+REQUEST_DATA=$(jq -n \
+    --argjson files "$FILES_JSON" \
+    --arg confidenceLevel "$CONFIDENCE_LEVEL" \
+    --arg analyzer "$ANALYZER" \
+    --arg consensusMode "$CONSENSUS_MODE" \
+    --argjson molProbityFilter "$MOL_PROBITY_FILTER" \
+    --arg visualizationTool "$VISUALIZATION_TOOL" \
+    '{
+        files: $files,
+        confidenceLevel: ($confidenceLevel | tonumber),
+        analyzer: $analyzer,
+        consensusMode: $consensusMode,
+        applyMolProbityFilter: $molProbityFilter,
+        visualizationTool: $visualizationTool
+    }'
 )
 
 # Submit computation request
