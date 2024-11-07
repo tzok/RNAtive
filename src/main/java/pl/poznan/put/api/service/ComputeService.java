@@ -130,7 +130,8 @@ public class ComputeService {
 
     // Generate CSV for canonical pairs
     StringWriter canonicalWriter = new StringWriter();
-    try (CSVPrinter printer = new CSVPrinter(canonicalWriter, CSVFormat.DEFAULT.withHeader(pairHeaders))) {
+    try (CSVPrinter printer = new CSVPrinter(canonicalWriter, 
+        CSVFormat.Builder.create().setHeader(pairHeaders).build())) {
       bestModel.getAnalyzedModel().canonicalBasePairs().forEach(pair -> {
         try {
           double confidence = allInteractions.getCount(pair) / (double) totalModelCount;
@@ -147,7 +148,8 @@ public class ComputeService {
 
     // Generate CSV for non-canonical pairs
     StringWriter nonCanonicalWriter = new StringWriter();
-    try (CSVPrinter printer = new CSVPrinter(nonCanonicalWriter, CSVFormat.DEFAULT.withHeader(pairHeaders))) {
+    try (CSVPrinter printer = new CSVPrinter(nonCanonicalWriter,
+        CSVFormat.Builder.create().setHeader(pairHeaders).build())) {
       bestModel.getAnalyzedModel().nonCanonicalBasePairs().forEach(pair -> {
         try {
           double confidence = allInteractions.getCount(pair) / (double) totalModelCount;
@@ -164,7 +166,8 @@ public class ComputeService {
 
     // Generate CSV for stackings
     StringWriter stackingsWriter = new StringWriter();
-    try (CSVPrinter printer = new CSVPrinter(stackingsWriter, CSVFormat.DEFAULT.withHeader(stackingHeaders))) {
+    try (CSVPrinter printer = new CSVPrinter(stackingsWriter,
+        CSVFormat.Builder.create().setHeader(stackingHeaders).build())) {
       bestModel.getAnalyzedModel().stackings().forEach(stacking -> {
         try {
           double confidence = allInteractions.getCount(stacking) / (double) totalModelCount;
