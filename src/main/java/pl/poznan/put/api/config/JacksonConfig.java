@@ -9,12 +9,13 @@ import pl.poznan.put.pdb.analysis.PdbModelDeserializer;
 
 @Configuration
 public class JacksonConfig {
-    @Bean
-    public ObjectMapper objectMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-        SimpleModule module = new SimpleModule();
-        module.addDeserializer(PdbModel.class, new PdbModelDeserializer());
-        mapper.registerModule(module);
-        return mapper;
-    }
+  @Bean
+  public ObjectMapper objectMapper() {
+    ObjectMapper mapper = new ObjectMapper();
+    SimpleModule module = new SimpleModule();
+    module.addDeserializer(PdbModel.class, new PdbModelDeserializer());
+    mapper.registerModule(module);
+    mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+    return mapper;
+  }
 }
