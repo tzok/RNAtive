@@ -30,14 +30,14 @@ RESPONSE=$(curl -s -X POST "$API_URL" \
   -d "$REQUEST_DATA")
 
 # Extract task ID from response
-TASK_ID=$(echo $RESPONSE | sed 's/.*"taskId":"\([^"]*\)".*/\1/')
+TASK_ID=$(echo $RESPONSE | jq -r '.taskId')
 echo "Task ID: $TASK_ID"
 
 # Poll for task status
 echo "Polling for task status..."
 while true; do
   STATUS_RESPONSE=$(curl -s -X GET "$API_URL/$TASK_ID/status")
-  STATUS=$(echo $STATUS_RESPONSE | sed 's/.*"status":"\([^"]*\)".*/\1/')
+  STATUS=$(echo $STATUS_RESPONSE | jq -r '.status')
   echo "Current status: $STATUS"
   
   if [ "$STATUS" = "COMPLETED" ] || [ "$STATUS" = "FAILED" ]; then
