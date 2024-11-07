@@ -2,6 +2,8 @@ package pl.poznan.put.api.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.StringWriter;
+import java.util.stream.Collectors;
+import org.apache.commons.collections4.bag.HashBag;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.springframework.scheduling.annotation.Async;
@@ -13,7 +15,6 @@ import pl.poznan.put.api.dto.*;
 import pl.poznan.put.api.model.Task;
 import pl.poznan.put.api.model.TaskStatus;
 import pl.poznan.put.api.repository.TaskRepository;
-import pl.poznan.put.model.Residue;
 
 @Service
 public class ComputeService {
@@ -115,16 +116,27 @@ public class ComputeService {
     String[] pairHeaders = {"Nt1", "Nt2", "Leontis-Westhof", "Confidence"};
     String[] stackingHeaders = {"Nt1", "Nt2", "Confidence"};
 
+    // Calculate total model count
+    int totalModelCount = result.results().size();
+
+    // Collect all interactions to calculate frequencies
+    var allInteractions = result.results().stream()
+        .map(RankedModel::getAnalyzedModel)
+        .map(model -> model.basePairsAndStackings())
+        .flatMap(List::stream)
+        .collect(Collectors.toCollection(HashBag::new));
+
     // Generate CSV for canonical pairs
     StringWriter canonicalWriter = new StringWriter();
     try (CSVPrinter printer = new CSVPrinter(canonicalWriter, CSVFormat.DEFAULT.withHeader(pairHeaders))) {
       bestModel.getAnalyzedModel().canonicalBasePairs().forEach(pair -> {
         try {
+          double confidence = allInteractions.getCount(pair) / (double) totalModelCount;
           printer.printRecord(
-              formatResidue(pair.nt1()),
-              formatResidue(pair.nt2()),
-              pair.type(),
-              pair.confidence());
+              pair.basePair().left(),
+              pair.basePair().right(),
+              pair.leontisWesthof(),
+              String.format("%.3f", confidence));
         } catch (IOException e) {
           throw new UncheckedIOException(e);
         }
@@ -136,11 +148,12 @@ public class ComputeService {
     try (CSVPrinter printer = new CSVPrinter(nonCanonicalWriter, CSVFormat.DEFAULT.withHeader(pairHeaders))) {
       bestModel.getAnalyzedModel().nonCanonicalBasePairs().forEach(pair -> {
         try {
+          double confidence = allInteractions.getCount(pair) / (double) totalModelCount;
           printer.printRecord(
-              formatResidue(pair.nt1()),
-              formatResidue(pair.nt2()),
-              pair.type(),
-              pair.confidence());
+              pair.basePair().left(),
+              pair.basePair().right(),
+              pair.leontisWesthof(),
+              String.format("%.3f", confidence));
         } catch (IOException e) {
           throw new UncheckedIOException(e);
         }
@@ -152,10 +165,11 @@ public class ComputeService {
     try (CSVPrinter printer = new CSVPrinter(stackingsWriter, CSVFormat.DEFAULT.withHeader(stackingHeaders))) {
       bestModel.getAnalyzedModel().stackings().forEach(stacking -> {
         try {
+          double confidence = allInteractions.getCount(stacking) / (double) totalModelCount;
           printer.printRecord(
-              formatResidue(stacking.nt1()),
-              formatResidue(stacking.nt2()),
-              stacking.confidence());
+              stacking.basePair().left(),
+              stacking.basePair().right(),
+              String.format("%.3f", confidence));
         } catch (IOException e) {
           throw new UncheckedIOException(e);
         }
@@ -168,12 +182,4 @@ public class ComputeService {
         stackingsWriter.toString());
   }
 
-  private String formatResidue(Residue residue) {
-    return residue.auth()
-        .map(auth -> String.format("%s%d%s",
-            auth.chain(),
-            auth.number(),
-            auth.icode().orElse("")))
-        .orElse(residue.label().chain() + residue.label().number());
-  }
 }
