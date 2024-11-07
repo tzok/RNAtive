@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 # Default values
 API_URL="http://localhost:8080/api/compute"
@@ -68,12 +68,12 @@ fi
 
 # Create initial request JSON without files
 REQUEST_DATA=$(jq -n \
-    --arg confidenceLevel "$CONFIDENCE_LEVEL" \
-    --arg analyzer "$ANALYZER" \
-    --arg consensusMode "$CONSENSUS_MODE" \
-    --argjson molProbityFilter "$MOL_PROBITY_FILTER" \
-    --arg visualizationTool "$VISUALIZATION_TOOL" \
-    '{
+	--arg confidenceLevel "$CONFIDENCE_LEVEL" \
+	--arg analyzer "$ANALYZER" \
+	--arg consensusMode "$CONSENSUS_MODE" \
+	--argjson molProbityFilter "$MOL_PROBITY_FILTER" \
+	--arg visualizationTool "$VISUALIZATION_TOOL" \
+	'{
         files: [],
         confidenceLevel: ($confidenceLevel | tonumber),
         analyzer: $analyzer,
@@ -84,19 +84,19 @@ REQUEST_DATA=$(jq -n \
 
 # Add files one at a time
 for file in "${FILES[@]}"; do
-    # Create single file JSON
-    FILE_JSON=$(jq -n \
-        --arg name "$(basename "$file")" \
-        --arg content "$(cat "$file")" \
-        '{name: $name, content: $content}')
-    
-    # Append to files array
-    REQUEST_DATA=$(echo "$REQUEST_DATA" | jq --argjson file "$FILE_JSON" '.files += [$file]')
+	# Create single file JSON
+	FILE_JSON=$(jq -n \
+		--arg name "$(basename "$file")" \
+		--arg content "$(cat "$file")" \
+		'{name: $name, content: $content}')
+
+	# Append to files array
+	REQUEST_DATA=$(echo "$REQUEST_DATA" | jq --argjson file "$FILE_JSON" '.files += [$file]')
 done
 
 # Write request data to temporary file
 REQUEST_FILE=$(mktemp)
-echo "$REQUEST_DATA" > "$REQUEST_FILE"
+echo "$REQUEST_DATA" >"$REQUEST_FILE"
 
 # Submit computation request
 echo "Submitting computation request..."
@@ -118,8 +118,12 @@ while true; do
 	STATUS=$(echo $STATUS_RESPONSE | jq -r '.status')
 	echo "Current status: $STATUS"
 
-	if [ "$STATUS" = "COMPLETED" ] || [ "$STATUS" = "FAILED" ]; then
+	if [ "$STATUS" = "COMPLETED" ]; then
 		break
+	elif [ "$STATUS" = "FAILED" ]; then
+		MESSAGE=$(echo $STATUS_RESPONSE | jq -r '.message')
+		echo "Task failed: $MESSAGE"
+		exit 1
 	fi
 
 	sleep 2
