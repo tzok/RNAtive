@@ -67,14 +67,19 @@ public class ComputeService {
               var structure3D = new PdbParser(false).parse(file.content()).get(0);
               return new AnalyzedModel(file.name(), structure3D, structure2D);
             } catch (JsonProcessingException e) {
-              task.setStatus(TaskStatus.FAILED);
-              taskRepository.save(task);
-              throw e;
+              return null;
             }
           })
           .toList();
 
-      // Get sequence from first model for reference structure
+      // Check if any model failed to parse
+      if (analyzedModels.stream().anyMatch(model -> model == null)) {
+        task.setStatus(TaskStatus.FAILED);
+        taskRepository.save(task);
+        return;
+      }
+
+      // Get sequence from first model for reference structure  
       var firstModel = analyzedModels.get(0);
       String sequence = firstModel.residueIdentifiers().stream()
           .map(PdbNamedResidueIdentifier::oneLetterName)
