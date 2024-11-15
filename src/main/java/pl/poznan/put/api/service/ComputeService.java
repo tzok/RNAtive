@@ -86,24 +86,27 @@ public class ComputeService {
     task = taskRepository.save(task);
 
     String taskId = task.getId();
-    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-      @Override
-      public void afterCommit() {
-        processTaskAsync(taskId);
-      }
-    });
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          @Override
+          public void afterCommit() {
+            processTaskAsync(taskId);
+          }
+        });
 
     return new ComputeResponse(taskId);
   }
 
   @Async
+  @Transactional
   public void processTaskAsync(String taskId) {
     logger.info("Starting async processing of task {}", taskId);
     Task task =
         taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
     try {
       task.setStatus(TaskStatus.PROCESSING);
-      taskRepository.save(task);
+      task = taskRepository.save(task);
+      taskRepository.flush();  // Force immediate flush
 
       ComputeRequest request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
 
@@ -218,8 +221,8 @@ public class ComputeService {
 
       // Generate visualization if possible
       try {
-        String svg = visualizationClient.visualize(resultJson, request.visualizationTool());
-        task.setSvg(svg);
+        // String svg = visualizationClient.visualize(resultJson, request.visualizationTool());
+        // task.setSvg(svg);
       } catch (Exception e) {
         // Log but don't fail the task if visualization fails
         task.setMessage("Warning: Visualization generation failed: " + e.getMessage());
