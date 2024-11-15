@@ -2,21 +2,22 @@ package pl.poznan.put.api.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.util.*;
 import java.util.List;
-
-import org.apache.commons.collections4.MultiValuedMap;
-import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
-import pl.poznan.put.ConsensusMode;
-import pl.poznan.put.notation.LeontisWesthof;
 import java.util.stream.Collectors;
+import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.bag.HashBag;
+import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
+import org.apache.commons.math3.util.FastMath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import pl.poznan.put.AnalyzedModel;
+import pl.poznan.put.ConsensusMode;
 import pl.poznan.put.InteractionNetworkFidelity;
 import pl.poznan.put.RankedModel;
 import pl.poznan.put.api.dto.*;
@@ -26,6 +27,7 @@ import pl.poznan.put.api.model.TaskStatus;
 import pl.poznan.put.api.repository.TaskRepository;
 import pl.poznan.put.api.util.ReferenceStructureUtil;
 import pl.poznan.put.model.BaseInteractions;
+import pl.poznan.put.notation.LeontisWesthof;
 import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
 import pl.poznan.put.pdb.analysis.PdbParser;
 import pl.poznan.put.structure.AnalyzedBasePair;
@@ -40,14 +42,17 @@ public class ComputeService {
   private final VisualizationClient visualizationClient;
 
   private List<AnalyzedBasePair> conflictingBasePairs(
-      Set<AnalyzedBasePair> candidates, LeontisWesthof leontisWesthof, HashBag<AnalyzedBasePair> allInteractions) {
-    MultiValuedMap<PdbNamedResidueIdentifier, AnalyzedBasePair> map = new ArrayListValuedHashMap<>();
+      Set<AnalyzedBasePair> candidates,
+      LeontisWesthof leontisWesthof,
+      HashBag<AnalyzedBasePair> allInteractions) {
+    MultiValuedMap<PdbNamedResidueIdentifier, AnalyzedBasePair> map =
+        new ArrayListValuedHashMap<>();
 
     candidates.stream()
         .filter(candidate -> candidate.leontisWesthof() == leontisWesthof)
         .forEach(
             candidate -> {
-              var basePair = candidate.basePair();
+              pl.poznan.put.structure.BasePair basePair = candidate.basePair();
               map.put(basePair.left(), candidate);
               map.put(basePair.right(), candidate);
             });
@@ -58,25 +63,6 @@ public class ComputeService {
         .distinct()
         .sorted(Comparator.comparingInt(allInteractions::getCount))
         .collect(Collectors.toList());
-  }
-
-  private Set<AnalyzedBasePair> resolveConflicts(Set<AnalyzedBasePair> candidates, HashBag<AnalyzedBasePair> allInteractions) {
-    if (candidates.isEmpty()) {
-      return candidates;
-    }
-
-    Set<AnalyzedBasePair> result = new HashSet<>(candidates);
-    
-    for (LeontisWesthof leontisWesthof : LeontisWesthof.values()) {
-      List<AnalyzedBasePair> conflicting = conflictingBasePairs(result, leontisWesthof, allInteractions);
-
-      while (!conflicting.isEmpty()) {
-        result.remove(conflicting.get(0));
-        conflicting = conflictingBasePairs(result, leontisWesthof, allInteractions);
-      }
-    }
-
-    return result;
   }
 
   public ComputeService(
@@ -92,16 +78,24 @@ public class ComputeService {
     this.visualizationClient = visualizationClient;
   }
 
+  @Transactional
   public ComputeResponse submitComputation(ComputeRequest request) throws Exception {
     logger.info("Submitting new computation task with {} files", request.files().size());
     Task task = new Task();
     task.setRequest(objectMapper.writeValueAsString(request));
     task = taskRepository.save(task);
 
-    // Start async computation
-    processTaskAsync(task.getId());
+    String taskId = task.getId();
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronizationAdapter() {
+            @Override
+            public void afterCommit() {
+                processTaskAsync(taskId);
+            }
+        }
+    );
 
-    return new ComputeResponse(task.getId());
+    return new ComputeResponse(taskId);
   }
 
   @Async
@@ -117,7 +111,7 @@ public class ComputeService {
 
       // Process each file through the analysis service and build models
       var analyzedModels =
-          request.files().stream()
+          request.files().parallelStream()
               .map(
                   file -> {
                     String jsonResult = analysisClient.analyze(file.content(), request.analyzer());
@@ -152,6 +146,59 @@ public class ComputeService {
       List<AnalyzedBasePair> referenceStructure =
           ReferenceStructureUtil.readReferenceStructure(request.dotBracket(), sequence, firstModel);
 
+      // Collect all interactions
+      var canonicalBasePairs =
+          analyzedModels.stream()
+              .map(AnalyzedModel::canonicalBasePairs)
+              .flatMap(Collection::stream)
+              .collect(Collectors.toCollection(HashBag::new));
+      var nonCanonicalBasePairs =
+          analyzedModels.stream()
+              .map(AnalyzedModel::nonCanonicalBasePairs)
+              .flatMap(Collection::stream)
+              .collect(Collectors.toCollection(HashBag::new));
+      var stackings =
+          analyzedModels.stream()
+              .map(AnalyzedModel::stackings)
+              .flatMap(Collection::stream)
+              .collect(Collectors.toCollection(HashBag::new));
+      var allInteractions =
+          analyzedModels.stream()
+              .map(AnalyzedModel::basePairsAndStackings)
+              .flatMap(Collection::stream)
+              .collect(Collectors.toCollection(HashBag::new));
+      var consideredInteractions =
+          switch (request.consensusMode()) {
+            case CANONICAL -> canonicalBasePairs;
+            case NON_CANONICAL -> nonCanonicalBasePairs;
+            case STACKING -> stackings;
+            case ALL -> allInteractions;
+          };
+
+      // Filter out only those in reference structure or those that meet the threshold
+      int threshold = (int) FastMath.ceil(request.confidenceLevel() * request.files().size());
+      Set<AnalyzedBasePair> correctInteractions =
+          consideredInteractions.stream()
+              .filter(
+                  classifiedBasePair ->
+                      referenceStructure.contains(classifiedBasePair)
+                          || consideredInteractions.getCount(classifiedBasePair) >= threshold)
+              .collect(Collectors.toSet());
+
+      // Filter out invalid combinations of Leontis-Westhof classifications
+      if (request.consensusMode() != ConsensusMode.STACKING) {
+        for (LeontisWesthof leontisWesthof : LeontisWesthof.values()) {
+          List<AnalyzedBasePair> conflicting =
+              conflictingBasePairs(correctInteractions, leontisWesthof, allInteractions);
+
+          while (!conflicting.isEmpty()) {
+            correctInteractions.remove(conflicting.get(0));
+            conflicting =
+                conflictingBasePairs(correctInteractions, leontisWesthof, allInteractions);
+          }
+        }
+      }
+
       // Convert to ranked models and store result
       var results =
           analyzedModels.stream()
@@ -159,25 +206,14 @@ public class ComputeService {
                   model -> {
                     Set<AnalyzedBasePair> modelInteractions =
                         model.streamBasePairs(request.consensusMode()).collect(Collectors.toSet());
-
-                    // Get all interactions that are either in reference or meet threshold
-                    var allInteractions = new HashBag<>(modelInteractions);
-                    Set<AnalyzedBasePair> candidates = modelInteractions.stream()
-                        .filter(interaction -> 
-                            referenceStructure.contains(interaction) || 
-                            allInteractions.getCount(interaction) >= 1)
-                        .collect(Collectors.toSet());
-
-                    // Resolve conflicts if not stacking
-                    if (request.consensusMode() != ConsensusMode.STACKING) {
-                      candidates = resolveConflicts(candidates, allInteractions);
-                    }
-                    
-                    double inf = InteractionNetworkFidelity.calculate(referenceStructure, candidates);
+                    double inf =
+                        InteractionNetworkFidelity.calculate(
+                            correctInteractions, modelInteractions);
                     return new RankedModel(model, inf);
                   })
               .collect(Collectors.toList());
       var taskResult = new TaskResult(results, referenceStructure);
+
       // Store the computation result
       String resultJson = objectMapper.writeValueAsString(taskResult);
       task.setResult(resultJson);
