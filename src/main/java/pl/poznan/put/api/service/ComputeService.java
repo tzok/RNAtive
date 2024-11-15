@@ -13,9 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import pl.poznan.put.AnalyzedModel;
 import pl.poznan.put.ConsensusMode;
 import pl.poznan.put.InteractionNetworkFidelity;
@@ -93,7 +90,6 @@ public class ComputeService {
   }
 
   @Async
-  @Transactional
   public void processTaskAsync(String taskId) {
     logger.info("Starting async processing of task {}", taskId);
     Task task =
@@ -195,7 +191,7 @@ public class ComputeService {
       }
 
       // Convert to ranked models and store result
-      var results =
+      var rankedModels =
           analyzedModels.stream()
               .map(
                   model -> {
@@ -207,7 +203,15 @@ public class ComputeService {
                     return new RankedModel(model, inf);
                   })
               .collect(Collectors.toList());
-      var taskResult = new TaskResult(results, referenceStructure);
+
+      List<Double> infs =
+          rankedModels.stream().map(RankedModel::getInteractionNetworkFidelity).sorted().toList();
+      rankedModels.forEach(
+          rankedModel ->
+              rankedModel.setRank(infs.indexOf(rankedModel.getInteractionNetworkFidelity()) + 1));
+      rankedModels.sort(Comparator.reverseOrder());
+
+      var taskResult = new TaskResult(rankedModels, referenceStructure);
 
       // Store the computation result
       String resultJson = objectMapper.writeValueAsString(taskResult);
