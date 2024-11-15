@@ -23,7 +23,7 @@ import pl.poznan.put.api.util.ReferenceStructureUtil;
 import pl.poznan.put.model.BaseInteractions;
 import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
 import pl.poznan.put.pdb.analysis.PdbParser;
-import pl.poznan.put.structure.ImmutableAnalyzedBasePair;
+import pl.poznan.put.structure.AnalyzedBasePair;
 
 @Service
 public class ComputeService {
@@ -218,7 +218,11 @@ public class ComputeService {
     String stackingsCsv =
         csvGenerationService.generateStackingsCsv(allStackings, allInteractions, totalModelCount);
 
-    return new CsvTablesResponse(rankingCsv, canonicalCsv, nonCanonicalCsv, stackingsCsv);
+    List<String> fileNames = results.stream()
+        .map(RankedModel::getName)
+        .collect(Collectors.toList());
+
+    return new CsvTablesResponse(rankingCsv, canonicalCsv, nonCanonicalCsv, stackingsCsv, fileNames);
   }
 
   public ModelCsvTablesResponse getModelCsvTables(String taskId, String filename) throws Exception {
