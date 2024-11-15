@@ -5,6 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.List;
+import java.util.Comparator;
+import org.apache.commons.collections4.MultiValuedMap;
+import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
+import pl.poznan.put.notation.LeontisWesthof;
 import java.util.stream.Collectors;
 import org.apache.commons.collections4.bag.HashBag;
 import org.slf4j.Logger;
@@ -33,6 +38,46 @@ public class ComputeService {
   private final CsvGenerationService csvGenerationService;
   private final AnalysisClient analysisClient;
   private final VisualizationClient visualizationClient;
+
+  private List<AnalyzedBasePair> conflictingBasePairs(
+      Set<AnalyzedBasePair> candidates, LeontisWesthof leontisWesthof, HashBag<AnalyzedBasePair> allInteractions) {
+    MultiValuedMap<PdbNamedResidueIdentifier, AnalyzedBasePair> map = new ArrayListValuedHashMap<>();
+
+    candidates.stream()
+        .filter(candidate -> candidate.leontisWesthof() == leontisWesthof)
+        .forEach(
+            candidate -> {
+              var basePair = candidate.basePair();
+              map.put(basePair.left(), candidate);
+              map.put(basePair.right(), candidate);
+            });
+
+    return map.keySet().stream()
+        .filter(key -> map.get(key).size() > 1)
+        .flatMap(key -> map.get(key).stream())
+        .distinct()
+        .sorted(Comparator.comparingInt(t -> allInteractions.getCount(t)))
+        .collect(Collectors.toList());
+  }
+
+  private Set<AnalyzedBasePair> resolveConflicts(Set<AnalyzedBasePair> candidates, HashBag<AnalyzedBasePair> allInteractions) {
+    if (candidates.isEmpty()) {
+      return candidates;
+    }
+
+    Set<AnalyzedBasePair> result = new HashSet<>(candidates);
+    
+    for (LeontisWesthof leontisWesthof : LeontisWesthof.values()) {
+      List<AnalyzedBasePair> conflicting = conflictingBasePairs(result, leontisWesthof, allInteractions);
+
+      while (!conflicting.isEmpty()) {
+        result.remove(conflicting.get(0));
+        conflicting = conflictingBasePairs(result, leontisWesthof, allInteractions);
+      }
+    }
+
+    return result;
+  }
 
   public ComputeService(
       TaskRepository taskRepository,
@@ -114,6 +159,13 @@ public class ComputeService {
                   model -> {
                     Set<AnalyzedBasePair> modelInteractions =
                         model.streamBasePairs(request.consensusMode()).collect(Collectors.toSet());
+                    
+                    // Resolve conflicts in model interactions if not stacking
+                    if (request.consensusMode() != ConsensusMode.STACKING) {
+                      var allModelInteractions = new HashBag<>(modelInteractions);
+                      modelInteractions = resolveConflicts(modelInteractions, allModelInteractions);
+                    }
+                    
                     double inf =
                         InteractionNetworkFidelity.calculate(referenceStructure, modelInteractions);
                     return new RankedModel(model, inf);
