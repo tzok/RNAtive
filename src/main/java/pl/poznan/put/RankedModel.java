@@ -1,7 +1,7 @@
 package pl.poznan.put;
 
 import java.util.List;
-import pl.poznan.put.structure.ImmutableAnalyzedBasePair;
+import pl.poznan.put.structure.AnalyzedBasePair;
 
 public class RankedModel implements Comparable<RankedModel> {
   private String name;

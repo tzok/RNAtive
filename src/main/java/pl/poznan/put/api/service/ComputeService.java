@@ -218,11 +218,11 @@ public class ComputeService {
     String stackingsCsv =
         csvGenerationService.generateStackingsCsv(allStackings, allInteractions, totalModelCount);
 
-    List<String> fileNames = results.stream()
-        .map(RankedModel::getName)
-        .collect(Collectors.toList());
+    List<String> fileNames =
+        results.stream().map(RankedModel::getName).collect(Collectors.toList());
 
-    return new CsvTablesResponse(rankingCsv, canonicalCsv, nonCanonicalCsv, stackingsCsv, fileNames);
+    return new CsvTablesResponse(
+        rankingCsv, canonicalCsv, nonCanonicalCsv, stackingsCsv, fileNames);
   }
 
   public ModelCsvTablesResponse getModelCsvTables(String taskId, String filename) throws Exception {

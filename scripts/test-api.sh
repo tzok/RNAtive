@@ -132,11 +132,12 @@ done
 # If task completed, get results
 if [ "$STATUS" = "COMPLETED" ]; then
 	echo "Getting results..."
-	curl -s -X GET "$API_URL/$TASK_ID/result" | json_pp
+	curl -s -X GET "$API_URL/$TASK_ID/result" | jq .
+
+	echo "Getting CSV tables..."
+	curl -s -X GET "$API_URL/$TASK_ID/result/$(basename ${FILES[0]})" | jq .
 
 	echo "Getting SVG visualization..."
 	curl -s -X GET "$API_URL/$TASK_ID/svg" >result.svg
 
-	echo "Getting CSV tables..."
-	curl -s -X GET "$API_URL/$TASK_ID/csv-tables" | jq .
 fi

@@ -33,14 +33,14 @@ public class ComputeController {
     return computeService.getCsvTables(taskId);
   }
 
+  @GetMapping("/{taskId}/result/{filename}")
+  public ModelCsvTablesResponse getModelCsvTables(
+      @PathVariable String taskId, @PathVariable String filename) throws Exception {
+    return computeService.getModelCsvTables(taskId, filename);
+  }
+
   @GetMapping(value = "/{taskId}/svg", produces = "image/svg+xml")
   public String getSvg(@PathVariable String taskId) throws Exception {
     return computeService.getTaskSvg(taskId);
-  }
-
-  @GetMapping("/{taskId}/model-csv-tables")
-  public ModelCsvTablesResponse getModelCsvTables(
-      @PathVariable String taskId, @RequestParam String filename) throws Exception {
-    return computeService.getModelCsvTables(taskId, filename);
   }
 }
