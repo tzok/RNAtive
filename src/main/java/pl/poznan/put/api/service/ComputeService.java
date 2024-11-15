@@ -78,7 +78,6 @@ public class ComputeService {
     this.visualizationClient = visualizationClient;
   }
 
-  @Transactional
   public ComputeResponse submitComputation(ComputeRequest request) throws Exception {
     logger.info("Submitting new computation task with {} files", request.files().size());
     Task task = new Task();
@@ -86,13 +85,9 @@ public class ComputeService {
     task.setStatus(TaskStatus.PENDING); // Explicitly set initial status
     task = taskRepository.save(task);
     String taskId = task.getId();
-    TransactionSynchronizationManager.registerSynchronization(
-        new TransactionSynchronization() {
-          @Override
-          public void afterCommit() {
-            processTaskAsync(taskId);
-          }
-        });
+
+    // Schedule async processing without waiting
+    processTaskAsync(taskId);
 
     return new ComputeResponse(taskId);
   }
