@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import pl.poznan.put.AnalyzedModel;
 import pl.poznan.put.ConsensusMode;
@@ -86,14 +86,12 @@ public class ComputeService {
     task = taskRepository.save(task);
 
     String taskId = task.getId();
-    TransactionSynchronizationManager.registerSynchronization(
-        new TransactionSynchronizationAdapter() {
-            @Override
-            public void afterCommit() {
-                processTaskAsync(taskId);
-            }
-        }
-    );
+    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+      @Override
+      public void afterCommit() {
+        processTaskAsync(taskId);
+      }
+    });
 
     return new ComputeResponse(taskId);
   }
