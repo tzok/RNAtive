@@ -83,10 +83,8 @@ public class ComputeService {
     logger.info("Submitting new computation task with {} files", request.files().size());
     Task task = new Task();
     task.setRequest(objectMapper.writeValueAsString(request));
-    task.setStatus(TaskStatus.PENDING);  // Explicitly set initial status
+    task.setStatus(TaskStatus.PENDING); // Explicitly set initial status
     task = taskRepository.save(task);
-    taskRepository.flush();  // Force immediate flush to database
-
     String taskId = task.getId();
     TransactionSynchronizationManager.registerSynchronization(
         new TransactionSynchronization() {
@@ -108,7 +106,6 @@ public class ComputeService {
     try {
       task.setStatus(TaskStatus.PROCESSING);
       task = taskRepository.save(task);
-      taskRepository.flush();  // Force immediate flush
 
       ComputeRequest request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
 
