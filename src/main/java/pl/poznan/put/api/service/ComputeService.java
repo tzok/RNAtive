@@ -2,13 +2,13 @@ package pl.poznan.put.api.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.util.*;
 import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.List;
-import java.util.Comparator;
+
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
+import pl.poznan.put.ConsensusMode;
 import pl.poznan.put.notation.LeontisWesthof;
 import java.util.stream.Collectors;
 import org.apache.commons.collections4.bag.HashBag;
@@ -56,7 +56,7 @@ public class ComputeService {
         .filter(key -> map.get(key).size() > 1)
         .flatMap(key -> map.get(key).stream())
         .distinct()
-        .sorted(Comparator.comparingInt(t -> allInteractions.getCount(t)))
+        .sorted(Comparator.comparingInt(allInteractions::getCount))
         .collect(Collectors.toList());
   }
 
@@ -159,15 +159,21 @@ public class ComputeService {
                   model -> {
                     Set<AnalyzedBasePair> modelInteractions =
                         model.streamBasePairs(request.consensusMode()).collect(Collectors.toSet());
-                    
-                    // Resolve conflicts in model interactions if not stacking
+
+                    // Get all interactions that are either in reference or meet threshold
+                    var allInteractions = new HashBag<>(modelInteractions);
+                    Set<AnalyzedBasePair> candidates = modelInteractions.stream()
+                        .filter(interaction -> 
+                            referenceStructure.contains(interaction) || 
+                            allInteractions.getCount(interaction) >= 1)
+                        .collect(Collectors.toSet());
+
+                    // Resolve conflicts if not stacking
                     if (request.consensusMode() != ConsensusMode.STACKING) {
-                      var allModelInteractions = new HashBag<>(modelInteractions);
-                      modelInteractions = resolveConflicts(modelInteractions, allModelInteractions);
+                      candidates = resolveConflicts(candidates, allInteractions);
                     }
                     
-                    double inf =
-                        InteractionNetworkFidelity.calculate(referenceStructure, modelInteractions);
+                    double inf = InteractionNetworkFidelity.calculate(referenceStructure, candidates);
                     return new RankedModel(model, inf);
                   })
               .collect(Collectors.toList());
