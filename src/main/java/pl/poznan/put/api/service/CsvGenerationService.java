@@ -2,6 +2,7 @@ package pl.poznan.put.api.service;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.Locale;
 import java.io.UncheckedIOException;
 import java.util.List;
 import org.apache.commons.collections4.bag.HashBag;
@@ -29,7 +30,7 @@ public class CsvGenerationService {
               printer.printRecord(
                   model.getRank(),
                   model.getName(),
-                  String.format("%.3f", model.getInteractionNetworkFidelity()));
+                  String.format(Locale.US, "%.3f", model.getInteractionNetworkFidelity()));
             } catch (IOException e) {
               throw new UncheckedIOException(e);
             }
@@ -56,7 +57,7 @@ public class CsvGenerationService {
                   pair.basePair().left(),
                   pair.basePair().right(),
                   pair.leontisWesthof(),
-                  String.format("%.3f", confidence),
+                  String.format(Locale.US, "%.3f", confidence),
                   referenceStructure.contains(pair));
             } catch (IOException e) {
               throw new UncheckedIOException(e);
@@ -82,7 +83,7 @@ public class CsvGenerationService {
               printer.printRecord(
                   stacking.basePair().left(),
                   stacking.basePair().right(),
-                  String.format("%.3f", confidence));
+                  String.format(Locale.US, "%.3f", confidence));
             } catch (IOException e) {
               throw new UncheckedIOException(e);
             }
