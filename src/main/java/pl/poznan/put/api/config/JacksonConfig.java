@@ -11,7 +11,8 @@ import pl.poznan.put.pdb.analysis.PdbModelDeserializer;
 public class JacksonConfig {
   @Bean
   public ObjectMapper objectMapper() {
-    ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = new ObjectMapper()
+        .configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     SimpleModule module = new SimpleModule();
     module.addDeserializer(PdbModel.class, new PdbModelDeserializer());
     mapper.registerModule(module);
