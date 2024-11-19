@@ -61,7 +61,7 @@ def wait_for_completion(task_id: str, interval: int = 5) -> None:
         time.sleep(interval)
 
 
-def get_results(task_id: str, save_svg: bool = True) -> None:
+def get_results(task_id: str) -> None:
     """Fetch and display results for a completed task."""
     # Get overall results
     response = requests.get(f"{API_BASE}/{task_id}/result")
@@ -165,11 +165,6 @@ def main():
         default="RNAPUZZLER",
         help="Visualization tool to use (default: RNAPUZZLER)",
     )
-    submit_parser.add_argument(
-        "--no-svg",
-        action="store_true",
-        help="Don't save SVG visualizations",
-    )
 
     # Status command
     status_parser = subparsers.add_parser("status", help="Check task status")
@@ -188,7 +183,7 @@ def main():
 
             if args.wait:
                 wait_for_completion(task_id)
-                get_results(task_id, not args.no_svg)
+                get_results(task_id)
 
         elif args.command == "status":
             status = get_status(args.task_id)
@@ -197,7 +192,7 @@ def main():
                 print(f"Message: {status['message']}")
 
         elif args.command == "results":
-            get_results(args.task_id, not args.no_svg)
+            get_results(args.task_id)
 
     except requests.exceptions.RequestException as e:
         print(f"API Error: {e}", file=sys.stderr)
