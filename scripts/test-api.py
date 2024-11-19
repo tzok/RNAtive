@@ -130,8 +130,8 @@ def main():
     submit_parser.add_argument(
         "--consensus-mode",
         choices=["ALL", "CANONICAL", "NON_CANONICAL", "STACKING"],
-        default="ALL",
-        help="Consensus mode for analysis (default: ALL)",
+        default="CANONICAL",
+        help="Consensus mode for analysis (default: CANONICAL)",
     )
     submit_parser.add_argument(
         "--confidence",
@@ -147,14 +147,14 @@ def main():
     submit_parser.add_argument(
         "--analyzer",
         choices=["BARNABA", "BPNET", "FR3D", "MCANNOTATE", "RNAPOLIS", "RNAVIEW"],
-        default="MCANNOTATE",
-        help="Analysis tool to use (default: MCANNOTATE)",
+        default="BPNET",
+        help="Analysis tool to use (default: BPNET)",
     )
     submit_parser.add_argument(
         "--visualization",
         choices=["PSEUDOVIEWER", "VARNA", "RCHIE", "RNAPUZZLER"],
-        default="VARNA",
-        help="Visualization tool to use (default: VARNA)",
+        default="RNAPUZZLER",
+        help="Visualization tool to use (default: RNAPUZZLER)",
     )
 
     # Status command
