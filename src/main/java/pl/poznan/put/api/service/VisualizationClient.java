@@ -33,8 +33,6 @@ public class VisualizationClient {
               "VARNA visualization not supported");
         };
 
-    java.nio.file.Files.writeString(java.nio.file.Path.of("/tmp/debug.json"), jsonContent);
-
     return restClient
         .post()
         .uri(baseUrl + "/" + endpoint)
