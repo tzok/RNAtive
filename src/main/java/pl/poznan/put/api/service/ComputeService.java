@@ -389,7 +389,7 @@ public class ComputeService {
             .map(
                 pair -> {
                   double confidence = allInteractions.getCount(pair) / (double) totalModelCount;
-                  return List.of(
+                  return List.<Object>of(
                       pair.basePair().left().toString(),
                       pair.basePair().right().toString(),
                       pair.leontisWesthof().toString(),
@@ -410,7 +410,7 @@ public class ComputeService {
             .map(
                 stacking -> {
                   double confidence = allInteractions.getCount(stacking) / (double) totalModelCount;
-                  return List.of(
+                  return List.<Object>of(
                       stacking.basePair().left().toString(),
                       stacking.basePair().right().toString(),
                       confidence);
