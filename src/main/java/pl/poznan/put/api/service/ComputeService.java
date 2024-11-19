@@ -18,6 +18,7 @@ import pl.poznan.put.ConsensusMode;
 import pl.poznan.put.InteractionNetworkFidelity;
 import pl.poznan.put.RankedModel;
 import pl.poznan.put.api.dto.*;
+import pl.poznan.put.api.exception.ResourceNotFoundException;
 import pl.poznan.put.api.exception.TaskNotFoundException;
 import pl.poznan.put.api.model.Task;
 import pl.poznan.put.api.model.TaskStatus;

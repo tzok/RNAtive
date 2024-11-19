@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import pl.poznan.put.api.dto.*;
+import pl.poznan.put.api.exception.ResourceNotFoundException;
 import pl.poznan.put.api.service.ComputeService;
 
 @RestController
