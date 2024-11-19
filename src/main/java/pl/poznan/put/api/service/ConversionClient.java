@@ -21,6 +21,9 @@ public class ConversionClient {
 
   public String convertBpseqToDotBracket(String bpseq) {
     logger.debug("Converting BPSEQ to dot-bracket notation");
-    return restTemplate.postForObject(conversionApiUrl, bpseq, String.class);
+    var headers = new org.springframework.http.HttpHeaders();
+    headers.setContentType(org.springframework.http.MediaType.TEXT_PLAIN);
+    var request = new org.springframework.http.HttpEntity<>(bpseq, headers);
+    return restTemplate.postForObject(conversionApiUrl, request, String.class);
   }
 }
