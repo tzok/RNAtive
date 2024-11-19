@@ -23,7 +23,7 @@ def submit_job(files: List[Path], dot_bracket: Optional[str] = None) -> str:
             }
             for f in files
         ],
-        "analyzer": "MC-Annotate",
+        "analyzer": "MCANNOTATE",
         "visualizationTool": "RNApdbee",
         "consensusMode": "ALL",
         "confidenceLevel": 0.9,
