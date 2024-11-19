@@ -150,6 +150,7 @@ public class ComputeService {
           ReferenceStructureUtil.readReferenceStructure(request.dotBracket(), sequence, firstModel);
 
       // Collect all interactions
+      // Collect all interactions
       var canonicalBasePairs =
           analyzedModels.stream()
               .map(AnalyzedModel::canonicalBasePairs)
@@ -170,34 +171,62 @@ public class ComputeService {
               .map(AnalyzedModel::basePairsAndStackings)
               .flatMap(Collection::stream)
               .collect(Collectors.toCollection(HashBag::new));
-      var consideredInteractions =
-          switch (request.consensusMode()) {
-            case CANONICAL -> canonicalBasePairs;
-            case NON_CANONICAL -> nonCanonicalBasePairs;
-            case STACKING -> stackings;
-            case ALL -> allInteractions;
-          };
 
-      // Filter out only those in reference structure or those that meet the threshold
+      // Calculate threshold for confidence filtering
       int threshold = (int) FastMath.ceil(request.confidenceLevel() * request.files().size());
-      Set<AnalyzedBasePair> correctInteractions =
-          consideredInteractions.stream()
+
+      // Compute correct interactions for each type
+      Set<AnalyzedBasePair> correctCanonicalBasePairs =
+          canonicalBasePairs.stream()
               .filter(
                   classifiedBasePair ->
                       referenceStructure.contains(classifiedBasePair)
-                          || consideredInteractions.getCount(classifiedBasePair) >= threshold)
+                          || canonicalBasePairs.getCount(classifiedBasePair) >= threshold)
               .collect(Collectors.toSet());
+
+      Set<AnalyzedBasePair> correctNonCanonicalBasePairs =
+          nonCanonicalBasePairs.stream()
+              .filter(
+                  classifiedBasePair ->
+                      referenceStructure.contains(classifiedBasePair)
+                          || nonCanonicalBasePairs.getCount(classifiedBasePair) >= threshold)
+              .collect(Collectors.toSet());
+
+      Set<AnalyzedBasePair> correctStackings =
+          stackings.stream()
+              .filter(
+                  classifiedBasePair ->
+                      referenceStructure.contains(classifiedBasePair)
+                          || stackings.getCount(classifiedBasePair) >= threshold)
+              .collect(Collectors.toSet());
+
+      Set<AnalyzedBasePair> correctAllInteractions =
+          allInteractions.stream()
+              .filter(
+                  classifiedBasePair ->
+                      referenceStructure.contains(classifiedBasePair)
+                          || allInteractions.getCount(classifiedBasePair) >= threshold)
+              .collect(Collectors.toSet());
+
+      // Select correct interactions based on consensus mode
+      Set<AnalyzedBasePair> correctConsideredInteractions =
+          switch (request.consensusMode()) {
+            case CANONICAL -> correctCanonicalBasePairs;
+            case NON_CANONICAL -> correctNonCanonicalBasePairs;
+            case STACKING -> correctStackings;
+            case ALL -> correctAllInteractions;
+          };
 
       // Filter out invalid combinations of Leontis-Westhof classifications
       if (request.consensusMode() != ConsensusMode.STACKING) {
         for (LeontisWesthof leontisWesthof : LeontisWesthof.values()) {
           List<AnalyzedBasePair> conflicting =
-              conflictingBasePairs(correctInteractions, leontisWesthof, allInteractions);
+              conflictingBasePairs(correctConsideredInteractions, leontisWesthof, allInteractions);
 
           while (!conflicting.isEmpty()) {
-            correctInteractions.remove(conflicting.get(0));
+            correctConsideredInteractions.remove(conflicting.get(0));
             conflicting =
-                conflictingBasePairs(correctInteractions, leontisWesthof, allInteractions);
+                conflictingBasePairs(correctConsideredInteractions, leontisWesthof, allInteractions);
           }
         }
       }
@@ -211,7 +240,7 @@ public class ComputeService {
                         model.streamBasePairs(request.consensusMode()).collect(Collectors.toSet());
                     double inf =
                         InteractionNetworkFidelity.calculate(
-                            correctInteractions, modelInteractions);
+                            correctConsideredInteractions, modelInteractions);
                     return new RankedModel(model, inf);
                   })
               .collect(Collectors.toList());
@@ -255,6 +284,11 @@ public class ComputeService {
                   correctInteractions.stream()
                       .filter(nonCanonicalBasePairs::contains)
                       .collect(Collectors.toList()));
+          System.out.println(
+              correctInteractions.stream()
+                  .filter(nonCanonicalBasePairs::contains)
+                  .collect(Collectors.toList()));
+          System.out.println(nonCanonicalBasePairs);
           var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
           svg = new String(svgBytes);
         } else {
