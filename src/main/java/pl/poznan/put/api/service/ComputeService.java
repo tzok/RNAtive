@@ -244,7 +244,12 @@ public class ComputeService {
         String svg;
         if (request.visualizationTool() == VisualizationTool.VARNA) {
           var dotBracketObj = DotBracket.fromString(dotBracket);
-          var svgDoc = drawerVarnaTz.drawSecondaryStructure(dotBracketObj);
+          var svgDoc = drawerVarnaTz.drawSecondaryStructure(
+              dotBracketObj, 
+              firstModel.structure3D(),
+              correctInteractions.stream()
+                  .filter(nonCanonicalBasePairs::contains)
+                  .collect(Collectors.toList()));
           svg = svgDoc.toString();
         } else {
           var visualizationInput =
