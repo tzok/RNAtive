@@ -37,6 +37,7 @@ public class ComputeService {
   private final AnalysisClient analysisClient;
   private final VisualizationClient visualizationClient;
   private final VisualizationService visualizationService;
+  private final ConversionClient conversionClient;
 
   private List<AnalyzedBasePair> conflictingBasePairs(
       Set<AnalyzedBasePair> candidates,
@@ -67,12 +68,14 @@ public class ComputeService {
       ObjectMapper objectMapper,
       AnalysisClient analysisClient,
       VisualizationClient visualizationClient,
-      VisualizationService visualizationService) {
+      VisualizationService visualizationService,
+      ConversionClient conversionClient) {
     this.taskRepository = taskRepository;
     this.objectMapper = objectMapper;
     this.analysisClient = analysisClient;
     this.visualizationClient = visualizationClient;
     this.visualizationService = visualizationService;
+    this.conversionClient = conversionClient;
   }
 
   public ComputeResponse submitComputation(ComputeRequest request) throws Exception {
