@@ -22,16 +22,18 @@ import pl.poznan.put.api.exception.ResourceNotFoundException;
 import pl.poznan.put.api.exception.TaskNotFoundException;
 import pl.poznan.put.api.model.Task;
 import pl.poznan.put.api.model.TaskStatus;
+import pl.poznan.put.api.model.VisualizationTool;
 import pl.poznan.put.api.repository.TaskRepository;
 import pl.poznan.put.api.util.DrawerVarnaTz;
 import pl.poznan.put.api.util.ReferenceStructureUtil;
-import pl.poznan.put.structure.formats.DotBracket;
 import pl.poznan.put.model.BaseInteractions;
 import pl.poznan.put.notation.LeontisWesthof;
 import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
 import pl.poznan.put.pdb.analysis.PdbParser;
 import pl.poznan.put.structure.AnalyzedBasePair;
-import pl.poznan.put.structure.formats.BpSeq;
+import pl.poznan.put.structure.formats.*;
+import pl.poznan.put.utility.svg.Format;
+import pl.poznan.put.utility.svg.SVGHelper;
 
 @Service
 public class ComputeService {
@@ -243,17 +245,21 @@ public class ComputeService {
       try {
         String svg;
         if (request.visualizationTool() == VisualizationTool.VARNA) {
-          var dotBracketObj = DotBracket.fromString(dotBracket);
-          var svgDoc = drawerVarnaTz.drawSecondaryStructure(
-              dotBracketObj, 
-              firstModel.structure3D(),
-              correctInteractions.stream()
-                  .filter(nonCanonicalBasePairs::contains)
-                  .collect(Collectors.toList()));
-          svg = svgDoc.toString();
+          var dotBracketObj =
+              ImmutableDefaultDotBracketFromPdb.of(
+                  sequence, dotBracket.split("\n")[1], firstModel.structure3D());
+          var svgDoc =
+              drawerVarnaTz.drawSecondaryStructure(
+                  dotBracketObj,
+                  firstModel.structure3D(),
+                  correctInteractions.stream()
+                      .filter(nonCanonicalBasePairs::contains)
+                      .collect(Collectors.toList()));
+          var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
+          svg = new String(svgBytes);
         } else {
           var visualizationInput =
-              visualizationService.prepareVisualizationInput(analyzedModels.get(0), dotBracket);
+              visualizationService.prepareVisualizationInput(firstModel, dotBracket);
           String visualizationJson = objectMapper.writeValueAsString(visualizationInput);
           svg = visualizationClient.visualize(visualizationJson, request.visualizationTool());
         }
