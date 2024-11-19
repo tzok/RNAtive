@@ -205,7 +205,10 @@ public class ComputeService {
               .collect(Collectors.toList());
 
       List<Double> infs =
-          rankedModels.stream().map(RankedModel::getInteractionNetworkFidelity).sorted().toList();
+          rankedModels.stream()
+              .map(RankedModel::getInteractionNetworkFidelity)
+              .sorted(Comparator.reverseOrder())
+              .toList();
       rankedModels.forEach(
           rankedModel ->
               rankedModel.setRank(infs.indexOf(rankedModel.getInteractionNetworkFidelity()) + 1));
@@ -219,6 +222,7 @@ public class ComputeService {
 
       // Generate visualization if possible
       try {
+        BaseInteractions
         // String svg = visualizationClient.visualize(resultJson, request.visualizationTool());
         // task.setSvg(svg);
       } catch (Exception e) {
