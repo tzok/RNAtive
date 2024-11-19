@@ -224,11 +224,23 @@ public class ComputeService {
       String resultJson = objectMapper.writeValueAsString(taskResult);
       task.setResult(resultJson);
 
+      // Generate dot-bracket from canonical interactions
+      String sequence = analyzedModels.get(0).residueIdentifiers().stream()
+          .map(PdbNamedResidueIdentifier::oneLetterName)
+          .map(String::valueOf)
+          .collect(Collectors.joining());
+      
+      var canonicalPairs = correctInteractions.stream()
+          .filter(interaction -> interaction.basePair().isCanonical())
+          .collect(Collectors.toSet());
+      var bpseq = BpSeq.fromBasePairs(canonicalPairs, sequence);
+      String dotBracket = conversionClient.convertBpseqToDotBracket(bpseq.toString());
+
       // Generate visualization input and SVG
       try {
         var visualizationInput =
             visualizationService.prepareVisualizationInput(
-                analyzedModels.get(0), request.dotBracket());
+                analyzedModels.get(0), dotBracket);
         String visualizationJson = objectMapper.writeValueAsString(visualizationInput);
         String svg = visualizationClient.visualize(visualizationJson, request.visualizationTool());
         task.setSvg(svg);
