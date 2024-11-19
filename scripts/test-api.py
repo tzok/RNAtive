@@ -13,7 +13,7 @@ from tabulate import tabulate
 API_BASE = "http://localhost:8080/api/compute"
 
 
-def submit_job(files: List[Path], dot_bracket: Optional[str] = None) -> str:
+def submit_job(files: List[Path], args, dot_bracket: Optional[str] = None) -> str:
     """Submit files for analysis and return the task ID."""
     payload = {
         "files": [
@@ -169,7 +169,7 @@ def main():
 
     try:
         if args.command == "submit":
-            task_id = submit_job(args.files, args.dot_bracket)
+            task_id = submit_job(args.files, args, args.dot_bracket)
             print(f"Submitted task: {task_id}")
 
             if args.wait:
