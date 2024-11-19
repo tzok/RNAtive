@@ -6,8 +6,6 @@ import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Locale;
 import org.apache.commons.collections4.bag.HashBag;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
 import org.springframework.stereotype.Service;
 import pl.poznan.put.RankedModel;
 import pl.poznan.put.structure.AnalyzedBasePair;
@@ -55,10 +53,7 @@ public class CsvGenerationService {
     try (CSVPrinter printer =
         new CSVPrinter(
             writer,
-            CSVFormat.Builder.create()
-                .setHeader(PAIR_HEADERS)
-                .setRecordSeparator("\n")
-                .build())) {
+            CSVFormat.Builder.create().setHeader(PAIR_HEADERS).setRecordSeparator("\n").build())) {
       pairs.forEach(
           pair -> {
             try {

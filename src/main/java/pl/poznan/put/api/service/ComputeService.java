@@ -34,7 +34,6 @@ public class ComputeService {
   private static final Logger logger = LoggerFactory.getLogger(ComputeService.class);
   private final TaskRepository taskRepository;
   private final ObjectMapper objectMapper;
-  private final CsvGenerationService csvGenerationService;
   private final AnalysisClient analysisClient;
   private final VisualizationClient visualizationClient;
 
@@ -65,12 +64,10 @@ public class ComputeService {
   public ComputeService(
       TaskRepository taskRepository,
       ObjectMapper objectMapper,
-      CsvGenerationService csvGenerationService,
       AnalysisClient analysisClient,
       VisualizationClient visualizationClient) {
     this.taskRepository = taskRepository;
     this.objectMapper = objectMapper;
-    this.csvGenerationService = csvGenerationService;
     this.analysisClient = analysisClient;
     this.visualizationClient = visualizationClient;
   }
@@ -302,25 +299,21 @@ public class ComputeService {
             .collect(Collectors.toList());
 
     // Convert CSV data to structured tables
-    TableData rankingTable = csvToTable(csvGenerationService.generateRankingCsv(results));
-    TableData canonicalTable =
-        csvToTable(
-            csvGenerationService.generatePairsCsv(
-                allCanonicalPairs,
-                allInteractions,
-                totalModelCount,
-                taskResult.referenceStructure()));
-    TableData nonCanonicalTable =
-        csvToTable(
-            csvGenerationService.generatePairsCsv(
-                allNonCanonicalPairs,
-                allInteractions,
-                totalModelCount,
-                taskResult.referenceStructure()));
-    TableData stackingsTable =
-        csvToTable(
-            csvGenerationService.generateStackingsCsv(
-                allStackings, allInteractions, totalModelCount));
+    TableData rankingTable = generateRankingTable(results);
+    TableData canonicalTable = generatePairsTable(
+        allCanonicalPairs,
+        allInteractions,
+        totalModelCount,
+        taskResult.referenceStructure());
+    TableData nonCanonicalTable = generatePairsTable(
+        allNonCanonicalPairs,
+        allInteractions,
+        totalModelCount,
+        taskResult.referenceStructure());
+    TableData stackingsTable = generateStackingsTable(
+        allStackings,
+        allInteractions,
+        totalModelCount);
 
     List<String> fileNames =
         results.stream().map(RankedModel::getName).collect(Collectors.toList());
@@ -380,19 +373,51 @@ public class ComputeService {
     return new ModelTablesResponse(canonicalTable, nonCanonicalTable, stackingsTable);
   }
 
-  private TableData csvToTable(String csv) {
-    String[] lines = csv.split("\n");
-    if (lines.length == 0) {
-      return new TableData(List.of(), List.of());
-    }
+  private TableData generateRankingTable(List<RankedModel> models) {
+    List<String> headers = List.of("Rank", "File name", "INF");
+    List<List<String>> rows = models.stream()
+        .map(model -> List.of(
+            String.valueOf(model.getRank()),
+            model.getName(),
+            String.format(Locale.US, "%.3f", model.getInteractionNetworkFidelity())))
+        .collect(Collectors.toList());
+    return new TableData(headers, rows);
+  }
 
-    List<String> headers = Arrays.asList(lines[0].split(","));
-    List<List<String>> rows =
-        Arrays.stream(lines)
-            .skip(1) // Skip header row
-            .map(line -> Arrays.asList(line.split(",")))
-            .collect(Collectors.toList());
+  private TableData generatePairsTable(
+      List<? extends AnalyzedBasePair> pairs,
+      HashBag<AnalyzedBasePair> allInteractions,
+      int totalModelCount,
+      List<AnalyzedBasePair> referenceStructure) {
+    List<String> headers = List.of("Nt1", "Nt2", "Leontis-Westhof", "Confidence", "Is reference?");
+    List<List<String>> rows = pairs.stream()
+        .map(pair -> {
+          double confidence = allInteractions.getCount(pair) / (double) totalModelCount;
+          return List.of(
+              pair.basePair().left().toString(),
+              pair.basePair().right().toString(),
+              pair.leontisWesthof().toString(),
+              String.format(Locale.US, "%.3f", confidence),
+              String.valueOf(referenceStructure.contains(pair)));
+        })
+        .collect(Collectors.toList());
+    return new TableData(headers, rows);
+  }
 
+  private TableData generateStackingsTable(
+      List<? extends AnalyzedBasePair> stackings,
+      HashBag<AnalyzedBasePair> allInteractions,
+      int totalModelCount) {
+    List<String> headers = List.of("Nt1", "Nt2", "Confidence");
+    List<List<String>> rows = stackings.stream()
+        .map(stacking -> {
+          double confidence = allInteractions.getCount(stacking) / (double) totalModelCount;
+          return List.of(
+              stacking.basePair().left().toString(),
+              stacking.basePair().right().toString(),
+              String.format(Locale.US, "%.3f", confidence));
+        })
+        .collect(Collectors.toList());
     return new TableData(headers, rows);
   }
 }
