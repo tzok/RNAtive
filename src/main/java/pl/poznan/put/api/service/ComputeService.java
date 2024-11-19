@@ -372,10 +372,8 @@ public class ComputeService {
         models.stream()
             .map(
                 model ->
-                    List.of(
-                        model.getRank(),
-                        model.getName(),
-                        model.getInteractionNetworkFidelity()))
+                    List.<Object>of(
+                        model.getRank(), model.getName(), model.getInteractionNetworkFidelity()))
             .collect(Collectors.toList());
     return new TableData(headers, rows);
   }
