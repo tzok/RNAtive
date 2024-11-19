@@ -24,7 +24,7 @@ def submit_job(files: List[Path], dot_bracket: Optional[str] = None) -> str:
             for f in files
         ],
         "analyzer": "MCANNOTATE",
-        "visualizationTool": "RNApdbee",
+        "visualizationTool": "VARNA",
         "consensusMode": "ALL",
         "confidenceLevel": 0.9,
     }
