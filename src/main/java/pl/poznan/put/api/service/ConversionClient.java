@@ -10,13 +10,14 @@ import org.springframework.web.client.RestTemplate;
 public class ConversionClient {
   private static final Logger logger = LoggerFactory.getLogger(ConversionClient.class);
   private final RestTemplate restTemplate;
-  private final String conversionApiUrl;
+  private final String serviceUrl;
 
   public ConversionClient(
       RestTemplate restTemplate,
-      @Value("${conversion.api.url:http://localhost:8000}") String baseUrl) {
+      @Value("${analysis.service.host}") String host,
+      @Value("${analysis.service.port}") int port) {
     this.restTemplate = restTemplate;
-    this.conversionApiUrl = baseUrl + "/conversion-api/v1/bpseq2dbn";
+    this.serviceUrl = String.format("http://%s:%d/conversion-api/v1/bpseq2dbn", host, port);
   }
 
   public String convertBpseqToDotBracket(String bpseq) {
@@ -24,6 +25,6 @@ public class ConversionClient {
     var headers = new org.springframework.http.HttpHeaders();
     headers.setContentType(org.springframework.http.MediaType.TEXT_PLAIN);
     var request = new org.springframework.http.HttpEntity<>(bpseq, headers);
-    return restTemplate.postForObject(conversionApiUrl, request, String.class);
+    return restTemplate.postForObject(serviceUrl, request, String.class);
   }
 }
