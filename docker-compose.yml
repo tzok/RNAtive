@@ -6,6 +6,9 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/rnative
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
       - POSTGRES_HOST=db
       - POSTGRES_DB=rnative
       - POSTGRES_USER=postgres
