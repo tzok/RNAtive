@@ -61,7 +61,7 @@ def wait_for_completion(task_id: str, interval: int = 5) -> None:
         time.sleep(interval)
 
 
-def get_results(task_id: str) -> None:
+def get_results(task_id: str, save_svg: bool = True) -> None:
     """Fetch and display results for a completed task."""
     # Get overall results
     response = requests.get(f"{API_BASE}/{task_id}/result")
@@ -113,6 +113,15 @@ def get_results(task_id: str) -> None:
             )
         )
 
+        if save_svg:
+            # Get and save SVG visualization
+            response = requests.get(f"{API_BASE}/{task_id}/svg")
+            response.raise_for_status()
+            svg_filename = f"{filename}_visualization.svg"
+            with open(svg_filename, "w") as f:
+                f.write(response.text)
+            print(f"\nSaved visualization to {svg_filename}")
+
 
 def main():
     parser = argparse.ArgumentParser(description="Test RNA structure analysis API")
@@ -156,6 +165,11 @@ def main():
         default="RNAPUZZLER",
         help="Visualization tool to use (default: RNAPUZZLER)",
     )
+    submit_parser.add_argument(
+        "--no-svg",
+        action="store_true",
+        help="Don't save SVG visualizations",
+    )
 
     # Status command
     status_parser = subparsers.add_parser("status", help="Check task status")
@@ -174,7 +188,7 @@ def main():
 
             if args.wait:
                 wait_for_completion(task_id)
-                get_results(task_id)
+                get_results(task_id, not args.no_svg)
 
         elif args.command == "status":
             status = get_status(args.task_id)
@@ -183,7 +197,7 @@ def main():
                 print(f"Message: {status['message']}")
 
         elif args.command == "results":
-            get_results(args.task_id)
+            get_results(args.task_id, not args.no_svg)
 
     except requests.exceptions.RequestException as e:
         print(f"API Error: {e}", file=sys.stderr)
