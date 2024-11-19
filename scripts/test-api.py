@@ -113,14 +113,13 @@ def get_results(task_id: str) -> None:
             )
         )
 
-        if save_svg:
-            # Get and save SVG visualization
-            response = requests.get(f"{API_BASE}/{task_id}/svg")
-            response.raise_for_status()
-            svg_filename = f"{filename}_visualization.svg"
-            with open(svg_filename, "w") as f:
-                f.write(response.text)
-            print(f"\nSaved visualization to {svg_filename}")
+    # Get and save SVG visualization
+    response = requests.get(f"{API_BASE}/{task_id}/svg")
+    response.raise_for_status()
+    svg_filename = f"visualization.svg"
+    with open(svg_filename, "w") as f:
+        f.write(response.text)
+    print(f"\nSaved visualization to {svg_filename}")
 
 
 def main():

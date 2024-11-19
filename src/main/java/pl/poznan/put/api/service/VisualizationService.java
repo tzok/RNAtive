@@ -47,7 +47,8 @@ public class VisualizationService {
                   .collect(Collectors.joining());
 
           // For now, using dot-bracket if provided, otherwise empty structure
-          String structure = dotBracket != null ? dotBracket : ".".repeat(sequence.length());
+          String structure =
+              dotBracket != null ? dotBracket.split("\n")[1] : ".".repeat(sequence.length());
           strands.add(new Strand(chainId, sequence, structure));
         });
 

@@ -1,5 +1,6 @@
 package pl.poznan.put.api.service;
 
+import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,7 +22,7 @@ public class VisualizationClient {
     this.restClient = RestClient.create();
   }
 
-  public String visualize(String jsonContent, VisualizationTool tool) {
+  public String visualize(String jsonContent, VisualizationTool tool) throws IOException {
     logger.info("Generating visualization using {}", tool);
     String endpoint =
         switch (tool) {
@@ -31,6 +32,8 @@ public class VisualizationClient {
           case VARNA -> throw new UnsupportedOperationException(
               "VARNA visualization not supported");
         };
+
+    java.nio.file.Files.writeString(java.nio.file.Path.of("/tmp/debug.json"), jsonContent);
 
     return restClient
         .post()
