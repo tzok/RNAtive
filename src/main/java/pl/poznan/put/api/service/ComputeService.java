@@ -303,16 +303,27 @@ public class ComputeService {
 
     // Convert CSV data to structured tables
     TableData rankingTable = csvToTable(csvGenerationService.generateRankingCsv(results));
-    TableData canonicalTable = csvToTable(csvGenerationService.generatePairsCsv(
-        allCanonicalPairs, allInteractions, totalModelCount, taskResult.referenceStructure()));
-    TableData nonCanonicalTable = csvToTable(csvGenerationService.generatePairsCsv(
-        allNonCanonicalPairs, allInteractions, totalModelCount, taskResult.referenceStructure()));
-    TableData stackingsTable = csvToTable(
-        csvGenerationService.generateStackingsCsv(allStackings, allInteractions, totalModelCount));
+    TableData canonicalTable =
+        csvToTable(
+            csvGenerationService.generatePairsCsv(
+                allCanonicalPairs,
+                allInteractions,
+                totalModelCount,
+                taskResult.referenceStructure()));
+    TableData nonCanonicalTable =
+        csvToTable(
+            csvGenerationService.generatePairsCsv(
+                allNonCanonicalPairs,
+                allInteractions,
+                totalModelCount,
+                taskResult.referenceStructure()));
+    TableData stackingsTable =
+        csvToTable(
+            csvGenerationService.generateStackingsCsv(
+                allStackings, allInteractions, totalModelCount));
 
-    List<String> fileNames = results.stream()
-        .map(RankedModel::getName)
-        .collect(Collectors.toList());
+    List<String> fileNames =
+        results.stream().map(RankedModel::getName).collect(Collectors.toList());
 
     return new TablesResponse(
         rankingTable, canonicalTable, nonCanonicalTable, stackingsTable, fileNames);
@@ -347,22 +358,28 @@ public class ComputeService {
             .flatMap(List::stream)
             .collect(Collectors.toCollection(HashBag::new));
 
-    TableData canonicalTable = csvToTable(csvGenerationService.generatePairsCsv(
-        targetModel.getCanonicalBasePairs(),
-        allInteractions,
-        totalModelCount,
-        taskResult.referenceStructure()));
-    TableData nonCanonicalTable = csvToTable(csvGenerationService.generatePairsCsv(
-        targetModel.getNonCanonicalBasePairs(),
-        allInteractions,
-        totalModelCount,
-        taskResult.referenceStructure()));
-    TableData stackingsTable = csvToTable(csvGenerationService.generateStackingsCsv(
-        targetModel.getStackings(), allInteractions, totalModelCount));
+    TableData canonicalTable =
+        csvToTable(
+            csvGenerationService.generatePairsCsv(
+                targetModel.getCanonicalBasePairs(),
+                allInteractions,
+                totalModelCount,
+                taskResult.referenceStructure()));
+    TableData nonCanonicalTable =
+        csvToTable(
+            csvGenerationService.generatePairsCsv(
+                targetModel.getNonCanonicalBasePairs(),
+                allInteractions,
+                totalModelCount,
+                taskResult.referenceStructure()));
+    TableData stackingsTable =
+        csvToTable(
+            csvGenerationService.generateStackingsCsv(
+                targetModel.getStackings(), allInteractions, totalModelCount));
 
     return new ModelTablesResponse(canonicalTable, nonCanonicalTable, stackingsTable);
   }
-}
+
   private TableData csvToTable(String csv) {
     String[] lines = csv.split("\n");
     if (lines.length == 0) {
@@ -370,10 +387,12 @@ public class ComputeService {
     }
 
     List<String> headers = Arrays.asList(lines[0].split(","));
-    List<List<String>> rows = Arrays.stream(lines)
-        .skip(1) // Skip header row
-        .map(line -> Arrays.asList(line.split(",")))
-        .collect(Collectors.toList());
+    List<List<String>> rows =
+        Arrays.stream(lines)
+            .skip(1) // Skip header row
+            .map(line -> Arrays.asList(line.split(",")))
+            .collect(Collectors.toList());
 
     return new TableData(headers, rows);
   }
+}
