@@ -33,5 +33,10 @@ services:
       timeout: 5s
       retries: 5
 
+  adapters:
+    image: rnapdbee-adapters-image
+    ports:
+      - "8000:80"
+
 volumes:
   postgres_data:
