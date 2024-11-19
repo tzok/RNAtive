@@ -49,7 +49,7 @@ def wait_for_completion(task_id: str, interval: int = 5) -> None:
     """Wait for a task to complete, showing status updates."""
     while True:
         status = get_status(task_id)
-        print(f"Status: {status['status']}", end="\r")
+        print(f"Status: {status['status']}")
 
         if status["status"] == "COMPLETED":
             print("\nTask completed successfully!")
