@@ -222,11 +222,10 @@ public class ComputeService {
 
       // Generate visualization if possible
       try {
-        BaseInteractions
-        // String svg = visualizationClient.visualize(resultJson, request.visualizationTool());
-        // task.setSvg(svg);
+        String svg = visualizationClient.visualize(resultJson, request.visualizationTool());
+        task.setSvg(svg);
       } catch (Exception e) {
-        // Log but don't fail the task if visualization fails
+        logger.warn("Visualization generation failed", e);
         task.setMessage("Warning: Visualization generation failed: " + e.getMessage());
       }
 
