@@ -36,6 +36,7 @@ public class ComputeService {
   private final ObjectMapper objectMapper;
   private final AnalysisClient analysisClient;
   private final VisualizationClient visualizationClient;
+  private final VisualizationService visualizationService;
 
   private List<AnalyzedBasePair> conflictingBasePairs(
       Set<AnalyzedBasePair> candidates,
@@ -65,11 +66,13 @@ public class ComputeService {
       TaskRepository taskRepository,
       ObjectMapper objectMapper,
       AnalysisClient analysisClient,
-      VisualizationClient visualizationClient) {
+      VisualizationClient visualizationClient,
+      VisualizationService visualizationService) {
     this.taskRepository = taskRepository;
     this.objectMapper = objectMapper;
     this.analysisClient = analysisClient;
     this.visualizationClient = visualizationClient;
+    this.visualizationService = visualizationService;
   }
 
   public ComputeResponse submitComputation(ComputeRequest request) throws Exception {
@@ -217,9 +220,12 @@ public class ComputeService {
       String resultJson = objectMapper.writeValueAsString(taskResult);
       task.setResult(resultJson);
 
-      // Generate visualization if possible
+      // Generate visualization input and SVG
       try {
-        String svg = visualizationClient.visualize(resultJson, request.visualizationTool());
+        var visualizationInput = visualizationService.prepareVisualizationInput(
+            analyzedModels.get(0), request.dotBracket());
+        String visualizationJson = objectMapper.writeValueAsString(visualizationInput);
+        String svg = visualizationClient.visualize(visualizationJson, request.visualizationTool());
         task.setSvg(svg);
       } catch (Exception e) {
         logger.warn("Visualization generation failed", e);
