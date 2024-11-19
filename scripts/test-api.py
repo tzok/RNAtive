@@ -25,8 +25,9 @@ def submit_job(files: List[Path], dot_bracket: Optional[str] = None) -> str:
         ],
         "analyzer": "MCANNOTATE",
         "visualizationTool": "VARNA",
-        "consensusMode": "ALL",
-        "confidenceLevel": 0.9,
+        "consensusMode": args.consensus_mode,
+        "confidenceLevel": args.confidence,
+        "molprobityFilter": args.molprobity_filter,
     }
 
     if dot_bracket:
@@ -125,6 +126,23 @@ def main():
     submit_parser.add_argument("--dot-bracket", help="Optional dot-bracket notation")
     submit_parser.add_argument(
         "--wait", action="store_true", help="Wait for completion"
+    )
+    submit_parser.add_argument(
+        "--consensus-mode",
+        choices=["ALL", "CANONICAL", "NON_CANONICAL", "STACKING"],
+        default="ALL",
+        help="Consensus mode for analysis (default: ALL)",
+    )
+    submit_parser.add_argument(
+        "--confidence",
+        type=float,
+        default=0.9,
+        help="Confidence level threshold (0.0-1.0, default: 0.9)",
+    )
+    submit_parser.add_argument(
+        "--molprobity-filter",
+        action="store_true",
+        help="Enable MolProbity filtering",
     )
 
     # Status command
