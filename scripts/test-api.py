@@ -23,8 +23,8 @@ def submit_job(files: List[Path], dot_bracket: Optional[str] = None) -> str:
             }
             for f in files
         ],
-        "analyzer": "MCANNOTATE",
-        "visualizationTool": "VARNA",
+        "analyzer": args.analyzer,
+        "visualizationTool": args.visualization,
         "consensusMode": args.consensus_mode,
         "confidenceLevel": args.confidence,
         "molprobityFilter": args.molprobity_filter,
@@ -143,6 +143,18 @@ def main():
         "--molprobity-filter",
         action="store_true",
         help="Enable MolProbity filtering",
+    )
+    submit_parser.add_argument(
+        "--analyzer",
+        choices=["BARNABA", "BPNET", "FR3D", "MCANNOTATE", "RNAPOLIS", "RNAVIEW"],
+        default="MCANNOTATE",
+        help="Analysis tool to use (default: MCANNOTATE)",
+    )
+    submit_parser.add_argument(
+        "--visualization",
+        choices=["PSEUDOVIEWER", "VARNA", "RCHIE", "RNAPUZZLER"],
+        default="VARNA",
+        help="Visualization tool to use (default: VARNA)",
     )
 
     # Status command
