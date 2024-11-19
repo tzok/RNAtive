@@ -28,6 +28,7 @@ import pl.poznan.put.notation.LeontisWesthof;
 import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
 import pl.poznan.put.pdb.analysis.PdbParser;
 import pl.poznan.put.structure.AnalyzedBasePair;
+import pl.poznan.put.structure.BpSeq;
 
 @Service
 public class ComputeService {
@@ -225,8 +226,9 @@ public class ComputeService {
 
       // Generate visualization input and SVG
       try {
-        var visualizationInput = visualizationService.prepareVisualizationInput(
-            analyzedModels.get(0), request.dotBracket());
+        var visualizationInput =
+            visualizationService.prepareVisualizationInput(
+                analyzedModels.get(0), request.dotBracket());
         String visualizationJson = objectMapper.writeValueAsString(visualizationInput);
         String svg = visualizationClient.visualize(visualizationJson, request.visualizationTool());
         task.setSvg(svg);
