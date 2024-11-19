@@ -23,7 +23,9 @@ import pl.poznan.put.api.exception.TaskNotFoundException;
 import pl.poznan.put.api.model.Task;
 import pl.poznan.put.api.model.TaskStatus;
 import pl.poznan.put.api.repository.TaskRepository;
+import pl.poznan.put.api.util.DrawerVarnaTz;
 import pl.poznan.put.api.util.ReferenceStructureUtil;
+import pl.poznan.put.structure.formats.DotBracket;
 import pl.poznan.put.model.BaseInteractions;
 import pl.poznan.put.notation.LeontisWesthof;
 import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
@@ -38,6 +40,7 @@ public class ComputeService {
   private final ObjectMapper objectMapper;
   private final AnalysisClient analysisClient;
   private final VisualizationClient visualizationClient;
+  private final DrawerVarnaTz drawerVarnaTz;
   private final VisualizationService visualizationService;
   private final ConversionClient conversionClient;
 
@@ -71,13 +74,15 @@ public class ComputeService {
       AnalysisClient analysisClient,
       VisualizationClient visualizationClient,
       VisualizationService visualizationService,
-      ConversionClient conversionClient) {
+      ConversionClient conversionClient,
+      DrawerVarnaTz drawerVarnaTz) {
     this.taskRepository = taskRepository;
     this.objectMapper = objectMapper;
     this.analysisClient = analysisClient;
     this.visualizationClient = visualizationClient;
     this.visualizationService = visualizationService;
     this.conversionClient = conversionClient;
+    this.drawerVarnaTz = drawerVarnaTz;
   }
 
   public ComputeResponse submitComputation(ComputeRequest request) throws Exception {
@@ -236,10 +241,17 @@ public class ComputeService {
 
       // Generate visualization input and SVG
       try {
-        var visualizationInput =
-            visualizationService.prepareVisualizationInput(analyzedModels.get(0), dotBracket);
-        String visualizationJson = objectMapper.writeValueAsString(visualizationInput);
-        String svg = visualizationClient.visualize(visualizationJson, request.visualizationTool());
+        String svg;
+        if (request.visualizationTool() == VisualizationTool.VARNA) {
+          var dotBracketObj = DotBracket.fromString(dotBracket);
+          var svgDoc = drawerVarnaTz.drawSecondaryStructure(dotBracketObj);
+          svg = svgDoc.toString();
+        } else {
+          var visualizationInput =
+              visualizationService.prepareVisualizationInput(analyzedModels.get(0), dotBracket);
+          String visualizationJson = objectMapper.writeValueAsString(visualizationInput);
+          svg = visualizationClient.visualize(visualizationJson, request.visualizationTool());
+        }
         task.setSvg(svg);
       } catch (Exception e) {
         logger.warn("Visualization generation failed", e);
