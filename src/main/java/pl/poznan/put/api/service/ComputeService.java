@@ -361,22 +361,21 @@ public class ComputeService {
             totalModelCount,
             taskResult.referenceStructure());
     TableData stackingsTable =
-        generateStackingsTable(
-            targetModel.getStackings(), allInteractions, totalModelCount);
+        generateStackingsTable(targetModel.getStackings(), allInteractions, totalModelCount);
 
     return new ModelTablesResponse(canonicalTable, nonCanonicalTable, stackingsTable);
   }
 
   private TableData generateRankingTable(List<RankedModel> models) {
     List<String> headers = List.of("Rank", "File name", "INF");
-    List<List<String>> rows =
+    List<List<Object>> rows =
         models.stream()
             .map(
                 model ->
                     List.of(
-                        String.valueOf(model.getRank()),
+                        model.getRank(),
                         model.getName(),
-                        String.format(Locale.US, "%.3f", model.getInteractionNetworkFidelity())))
+                        model.getInteractionNetworkFidelity()))
             .collect(Collectors.toList());
     return new TableData(headers, rows);
   }
@@ -387,7 +386,7 @@ public class ComputeService {
       int totalModelCount,
       List<AnalyzedBasePair> referenceStructure) {
     List<String> headers = List.of("Nt1", "Nt2", "Leontis-Westhof", "Confidence", "Is reference?");
-    List<List<String>> rows =
+    List<List<Object>> rows =
         pairs.stream()
             .map(
                 pair -> {
@@ -396,8 +395,8 @@ public class ComputeService {
                       pair.basePair().left().toString(),
                       pair.basePair().right().toString(),
                       pair.leontisWesthof().toString(),
-                      String.format(Locale.US, "%.3f", confidence),
-                      String.valueOf(referenceStructure.contains(pair)));
+                      confidence,
+                      referenceStructure.contains(pair));
                 })
             .collect(Collectors.toList());
     return new TableData(headers, rows);
@@ -408,7 +407,7 @@ public class ComputeService {
       HashBag<AnalyzedBasePair> allInteractions,
       int totalModelCount) {
     List<String> headers = List.of("Nt1", "Nt2", "Confidence");
-    List<List<String>> rows =
+    List<List<Object>> rows =
         stackings.stream()
             .map(
                 stacking -> {
@@ -416,7 +415,7 @@ public class ComputeService {
                   return List.of(
                       stacking.basePair().left().toString(),
                       stacking.basePair().right().toString(),
-                      String.format(Locale.US, "%.3f", confidence));
+                      confidence);
                 })
             .collect(Collectors.toList());
     return new TableData(headers, rows);
