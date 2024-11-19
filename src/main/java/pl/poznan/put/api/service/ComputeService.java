@@ -226,7 +226,8 @@ public class ComputeService {
           while (!conflicting.isEmpty()) {
             correctConsideredInteractions.remove(conflicting.get(0));
             conflicting =
-                conflictingBasePairs(correctConsideredInteractions, leontisWesthof, allInteractions);
+                conflictingBasePairs(
+                    correctConsideredInteractions, leontisWesthof, allInteractions);
           }
         }
       }
@@ -264,7 +265,7 @@ public class ComputeService {
       // Generate dot-bracket from canonical interactions
       var residues = analyzedModels.get(0).residueIdentifiers();
       var canonicalPairs =
-          correctInteractions.stream()
+          correctCanonicalBasePairs.stream()
               .filter(canonicalBasePairs::contains)
               .collect(Collectors.toSet());
       var bpseq = BpSeq.fromBasePairs(residues, canonicalPairs);
@@ -281,14 +282,7 @@ public class ComputeService {
               drawerVarnaTz.drawSecondaryStructure(
                   dotBracketObj,
                   firstModel.structure3D(),
-                  correctInteractions.stream()
-                      .filter(nonCanonicalBasePairs::contains)
-                      .collect(Collectors.toList()));
-          System.out.println(
-              correctInteractions.stream()
-                  .filter(nonCanonicalBasePairs::contains)
-                  .collect(Collectors.toList()));
-          System.out.println(nonCanonicalBasePairs);
+                  new ArrayList<>(correctNonCanonicalBasePairs));
           var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
           svg = new String(svgBytes);
         } else {
