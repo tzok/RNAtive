@@ -139,26 +139,17 @@
       </plugin>
 
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
-          <archive>
-            <manifest>
-              <addClasspath>true</addClasspath>
-              <mainClass>pl.poznan.put.App</mainClass>
-            </manifest>
-          </archive>
-          <descriptorRefs>
-            <descriptorRef>jar-with-dependencies</descriptorRef>
-          </descriptorRefs>
+          <mainClass>pl.poznan.put.api.Application</mainClass>
+          <layout>JAR</layout>
         </configuration>
         <executions>
           <execution>
-            <id>make-assembly</id>
             <goals>
-              <goal>single</goal>
+              <goal>repackage</goal>
             </goals>
-            <phase>package</phase>
           </execution>
         </executions>
       </plugin>
