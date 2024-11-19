@@ -23,7 +23,12 @@ public class CsvGenerationService {
   public String generateRankingCsv(List<RankedModel> models) {
     StringWriter writer = new StringWriter();
     try (CSVPrinter printer =
-        new CSVPrinter(writer, CSVFormat.Builder.create().setHeader(RANKING_HEADERS).build())) {
+        new CSVPrinter(
+            writer,
+            CSVFormat.Builder.create()
+                .setHeader(RANKING_HEADERS)
+                .setRecordSeparator("\n")
+                .build())) {
       models.forEach(
           model -> {
             try {
@@ -48,7 +53,12 @@ public class CsvGenerationService {
       List<AnalyzedBasePair> referenceStructure) {
     StringWriter writer = new StringWriter();
     try (CSVPrinter printer =
-        new CSVPrinter(writer, CSVFormat.Builder.create().setHeader(PAIR_HEADERS).build())) {
+        new CSVPrinter(
+            writer,
+            CSVFormat.Builder.create()
+                .setHeader(PAIR_HEADERS)
+                .setRecordSeparator("\n")
+                .build())) {
       pairs.forEach(
           pair -> {
             try {
@@ -75,7 +85,12 @@ public class CsvGenerationService {
       int totalModelCount) {
     StringWriter writer = new StringWriter();
     try (CSVPrinter printer =
-        new CSVPrinter(writer, CSVFormat.Builder.create().setHeader(STACKING_HEADERS).build())) {
+        new CSVPrinter(
+            writer,
+            CSVFormat.Builder.create()
+                .setHeader(STACKING_HEADERS)
+                .setRecordSeparator("\n")
+                .build())) {
       stackings.forEach(
           stacking -> {
             try {
