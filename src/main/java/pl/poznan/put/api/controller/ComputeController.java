@@ -2,7 +2,9 @@ package pl.poznan.put.api.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import pl.poznan.put.api.dto.*;
 import pl.poznan.put.api.service.ComputeService;
 
@@ -40,7 +42,11 @@ public class ComputeController {
   }
 
   @GetMapping(value = "/{taskId}/svg", produces = "image/svg+xml")
-  public String getSvg(@PathVariable String taskId) throws Exception {
-    return computeService.getTaskSvg(taskId);
+  public String getSvg(@PathVariable String taskId) {
+    try {
+      return computeService.getTaskSvg(taskId);
+    } catch (ResourceNotFoundException e) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
+    }
   }
 }

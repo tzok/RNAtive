@@ -261,7 +261,7 @@ public class ComputeService {
         task.getId(), task.getStatus(), task.getCreatedAt(), task.getMessage());
   }
 
-  public String getTaskSvg(String taskId) throws Exception {
+  public String getTaskSvg(String taskId) {
     Task task =
         taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
 
@@ -270,7 +270,7 @@ public class ComputeService {
     }
 
     if (task.getSvg() == null) {
-      throw new IllegalStateException("SVG visualization not available");
+      throw new ResourceNotFoundException("SVG visualization not available");
     }
 
     return task.getSvg();
