@@ -261,7 +261,7 @@ public class ComputeService {
     return task.getSvg();
   }
 
-  public CsvTablesResponse getCsvTables(String taskId) throws Exception {
+  public TablesResponse getTables(String taskId) throws Exception {
     Task task =
         taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
 
@@ -302,27 +302,24 @@ public class ComputeService {
             .flatMap(List::stream)
             .collect(Collectors.toList());
 
-    String rankingCsv = csvGenerationService.generateRankingCsv(results);
-    String canonicalCsv =
-        csvGenerationService.generatePairsCsv(
-            allCanonicalPairs, allInteractions, totalModelCount, taskResult.referenceStructure());
-    String nonCanonicalCsv =
-        csvGenerationService.generatePairsCsv(
-            allNonCanonicalPairs,
-            allInteractions,
-            totalModelCount,
-            taskResult.referenceStructure());
-    String stackingsCsv =
-        csvGenerationService.generateStackingsCsv(allStackings, allInteractions, totalModelCount);
+    // Convert CSV data to structured tables
+    TableData rankingTable = csvToTable(csvGenerationService.generateRankingCsv(results));
+    TableData canonicalTable = csvToTable(csvGenerationService.generatePairsCsv(
+        allCanonicalPairs, allInteractions, totalModelCount, taskResult.referenceStructure()));
+    TableData nonCanonicalTable = csvToTable(csvGenerationService.generatePairsCsv(
+        allNonCanonicalPairs, allInteractions, totalModelCount, taskResult.referenceStructure()));
+    TableData stackingsTable = csvToTable(
+        csvGenerationService.generateStackingsCsv(allStackings, allInteractions, totalModelCount));
 
-    List<String> fileNames =
-        results.stream().map(RankedModel::getName).collect(Collectors.toList());
+    List<String> fileNames = results.stream()
+        .map(RankedModel::getName)
+        .collect(Collectors.toList());
 
-    return new CsvTablesResponse(
-        rankingCsv, canonicalCsv, nonCanonicalCsv, stackingsCsv, fileNames);
+    return new TablesResponse(
+        rankingTable, canonicalTable, nonCanonicalTable, stackingsTable, fileNames);
   }
 
-  public ModelCsvTablesResponse getModelCsvTables(String taskId, String filename) throws Exception {
+  public ModelTablesResponse getModelTables(String taskId, String filename) throws Exception {
     Task task =
         taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
 
@@ -351,22 +348,33 @@ public class ComputeService {
             .flatMap(List::stream)
             .collect(Collectors.toCollection(HashBag::new));
 
-    String canonicalCsv =
-        csvGenerationService.generatePairsCsv(
-            targetModel.getCanonicalBasePairs(),
-            allInteractions,
-            totalModelCount,
-            taskResult.referenceStructure());
-    String nonCanonicalCsv =
-        csvGenerationService.generatePairsCsv(
-            targetModel.getNonCanonicalBasePairs(),
-            allInteractions,
-            totalModelCount,
-            taskResult.referenceStructure());
-    String stackingsCsv =
-        csvGenerationService.generateStackingsCsv(
-            targetModel.getStackings(), allInteractions, totalModelCount);
+    TableData canonicalTable = csvToTable(csvGenerationService.generatePairsCsv(
+        targetModel.getCanonicalBasePairs(),
+        allInteractions,
+        totalModelCount,
+        taskResult.referenceStructure()));
+    TableData nonCanonicalTable = csvToTable(csvGenerationService.generatePairsCsv(
+        targetModel.getNonCanonicalBasePairs(),
+        allInteractions,
+        totalModelCount,
+        taskResult.referenceStructure()));
+    TableData stackingsTable = csvToTable(csvGenerationService.generateStackingsCsv(
+        targetModel.getStackings(), allInteractions, totalModelCount));
 
-    return new ModelCsvTablesResponse(canonicalCsv, nonCanonicalCsv, stackingsCsv);
+    return new ModelTablesResponse(canonicalTable, nonCanonicalTable, stackingsTable);
   }
 }
+  private TableData csvToTable(String csv) {
+    String[] lines = csv.split("\n");
+    if (lines.length == 0) {
+      return new TableData(List.of(), List.of());
+    }
+
+    List<String> headers = Arrays.asList(lines[0].split(","));
+    List<List<String>> rows = Arrays.stream(lines)
+        .skip(1) // Skip header row
+        .map(line -> Arrays.asList(line.split(",")))
+        .collect(Collectors.toList());
+
+    return new TableData(headers, rows);
+  }

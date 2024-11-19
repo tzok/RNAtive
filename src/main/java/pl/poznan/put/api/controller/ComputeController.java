@@ -29,14 +29,14 @@ public class ComputeController {
   }
 
   @GetMapping("/{taskId}/result")
-  public CsvTablesResponse getResult(@PathVariable String taskId) throws Exception {
-    return computeService.getCsvTables(taskId);
+  public TablesResponse getResult(@PathVariable String taskId) throws Exception {
+    return computeService.getTables(taskId);
   }
 
   @GetMapping("/{taskId}/result/{filename}")
-  public ModelCsvTablesResponse getModelCsvTables(
+  public ModelTablesResponse getModelTables(
       @PathVariable String taskId, @PathVariable String filename) throws Exception {
-    return computeService.getModelCsvTables(taskId, filename);
+    return computeService.getModelTables(taskId, filename);
   }
 
   @GetMapping(value = "/{taskId}/svg", produces = "image/svg+xml")
