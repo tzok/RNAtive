@@ -10,10 +10,11 @@ WORKDIR /app
 # Copy the JAR file and wait-for-it script
 COPY target/*.jar app.jar
 COPY wait-for-it.sh /wait-for-it.sh
+COPY src/main/resources/application.properties /app/application.properties
 RUN chmod +x /wait-for-it.sh
 
 # Expose port 8080
 EXPOSE 8080
 
-# Run the application with wait-for-it
-CMD ["/wait-for-it.sh", "db", "java", "-jar", "app.jar"]
+# Run the application with wait-for-it and explicit properties file
+CMD ["/wait-for-it.sh", "db", "java", "-jar", "app.jar", "--spring.config.location=file:/app/application.properties"]
