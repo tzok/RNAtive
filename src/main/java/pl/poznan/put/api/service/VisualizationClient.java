@@ -16,8 +16,8 @@ public class VisualizationClient {
   private final RestClient restClient;
 
   public VisualizationClient(
-      @Value("${analysis.service.host:localhost}") String host,
-      @Value("${analysis.service.port:8000}") int port) {
+      @Value("${analysis.service.host}") String host,
+      @Value("${analysis.service.port}") int port) {
     this.baseUrl = String.format("http://%s:%d/visualization-api/v1", host, port);
     this.restClient = RestClient.create();
   }
