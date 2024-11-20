@@ -98,10 +98,7 @@ public class TaskProcessorService {
               threshold);
       var rankedModels =
           generateRankedModels(request, analyzedModels, correctConsideredInteractions);
-      var taskResult = new TaskResult(rankedModels, referenceStructure);
-      var resultJson = objectMapper.writeValueAsString(taskResult);
-      task.setResult(resultJson);
-
+      
       var dotBracket =
           generateDotBracket(
               firstModel,
@@ -111,6 +108,11 @@ public class TaskProcessorService {
                   referenceStructure,
                   allInteractions,
                   threshold));
+      
+      var taskResult = new TaskResult(rankedModels, referenceStructure, dotBracket);
+      var resultJson = objectMapper.writeValueAsString(taskResult);
+      task.setResult(resultJson);
+
       var svg =
           generateVisualization(request, firstModel, correctConsideredInteractions, dotBracket);
       task.setSvg(svg);
