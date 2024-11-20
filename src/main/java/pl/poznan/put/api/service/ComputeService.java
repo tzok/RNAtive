@@ -3,6 +3,8 @@ package pl.poznan.put.api.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.bag.HashBag;
@@ -137,20 +139,31 @@ public class ComputeService {
   }
 
   private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request) {
-    return request.files().parallelStream()
-        .map(
-            file -> {
-              var jsonResult = analysisClient.analyze(file.content(), request.analyzer());
-              try {
-                var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
-                var structure3D = new PdbParser(false).parse(file.content()).get(0);
-                return new AnalyzedModel(file.name(), structure3D, structure2D);
-              } catch (JsonProcessingException e) {
-                logger.error("Failed to parse analysis result for file: {}", file.name(), e);
-                return null;
-              }
-            })
-        .toList();
+    int numCores = Runtime.getRuntime().availableProcessors();
+    ForkJoinPool customThreadPool = new ForkJoinPool(numCores);
+    try {
+      return customThreadPool.submit(() ->
+          request.files().parallelStream()
+              .map(
+                  file -> {
+                    var jsonResult = analysisClient.analyze(file.content(), request.analyzer());
+                    try {
+                      var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
+                      var structure3D = new PdbParser(false).parse(file.content()).get(0);
+                      return new AnalyzedModel(file.name(), structure3D, structure2D);
+                    } catch (JsonProcessingException e) {
+                      logger.error("Failed to parse analysis result for file: {}", file.name(), e);
+                      return null;
+                    }
+                  })
+              .collect(Collectors.toList())
+      ).get();
+    } catch (InterruptedException | ExecutionException e) {
+      logger.error("Failed to process files", e);
+      return Collections.emptyList();
+    } finally {
+      customThreadPool.shutdown();
+    }
   }
 
   private String extractSequence(AnalyzedModel firstModel) {
