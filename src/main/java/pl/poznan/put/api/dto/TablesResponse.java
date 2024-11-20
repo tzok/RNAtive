@@ -7,4 +7,5 @@ public record TablesResponse(
     TableData canonicalPairs,
     TableData nonCanonicalPairs,
     TableData stackings,
-    List<String> fileNames) {}
+    List<String> fileNames,
+    String dotBracket) {}
