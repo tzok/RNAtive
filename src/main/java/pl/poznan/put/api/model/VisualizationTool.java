@@ -4,5 +4,5 @@ public enum VisualizationTool {
   RNAPUZZLER,
   VARNA,
   PSEUDOVIEWER,
-  RCHIE;
+  RCHIE
 }

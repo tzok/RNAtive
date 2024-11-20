@@ -32,7 +32,8 @@ import pl.poznan.put.structure.AnalyzedBasePair;
 import pl.poznan.put.structure.DotBracketSymbol;
 import pl.poznan.put.structure.ImmutableAnalyzedBasePair;
 import pl.poznan.put.structure.ImmutableBasePair;
-import pl.poznan.put.structure.formats.*;
+import pl.poznan.put.structure.formats.DefaultDotBracketFromPdb;
+import pl.poznan.put.structure.formats.ImmutableDefaultDotBracketFromPdb;
 import pl.poznan.put.utility.TabularExporter;
 
 public class App {

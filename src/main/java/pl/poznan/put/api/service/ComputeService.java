@@ -3,7 +3,6 @@ package pl.poznan.put.api.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.*;
-import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.bag.HashBag;
@@ -31,7 +30,8 @@ import pl.poznan.put.notation.LeontisWesthof;
 import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
 import pl.poznan.put.pdb.analysis.PdbParser;
 import pl.poznan.put.structure.AnalyzedBasePair;
-import pl.poznan.put.structure.formats.*;
+import pl.poznan.put.structure.formats.BpSeq;
+import pl.poznan.put.structure.formats.ImmutableDefaultDotBracketFromPdb;
 import pl.poznan.put.utility.svg.Format;
 import pl.poznan.put.utility.svg.SVGHelper;
 
@@ -45,30 +45,6 @@ public class ComputeService {
   private final DrawerVarnaTz drawerVarnaTz;
   private final VisualizationService visualizationService;
   private final ConversionClient conversionClient;
-
-  private List<AnalyzedBasePair> conflictingBasePairs(
-      Set<AnalyzedBasePair> candidates,
-      LeontisWesthof leontisWesthof,
-      HashBag<AnalyzedBasePair> allInteractions) {
-    MultiValuedMap<PdbNamedResidueIdentifier, AnalyzedBasePair> map =
-        new ArrayListValuedHashMap<>();
-
-    candidates.stream()
-        .filter(candidate -> candidate.leontisWesthof() == leontisWesthof)
-        .forEach(
-            candidate -> {
-              pl.poznan.put.structure.BasePair basePair = candidate.basePair();
-              map.put(basePair.left(), candidate);
-              map.put(basePair.right(), candidate);
-            });
-
-    return map.keySet().stream()
-        .filter(key -> map.get(key).size() > 1)
-        .flatMap(key -> map.get(key).stream())
-        .distinct()
-        .sorted(Comparator.comparingInt(allInteractions::getCount))
-        .collect(Collectors.toList());
-  }
 
   public ComputeService(
       TaskRepository taskRepository,
@@ -89,11 +65,11 @@ public class ComputeService {
 
   public ComputeResponse submitComputation(ComputeRequest request) throws Exception {
     logger.info("Submitting new computation task with {} files", request.files().size());
-    Task task = new Task();
+    var task = new Task();
     task.setRequest(objectMapper.writeValueAsString(request));
     task.setStatus(TaskStatus.PENDING); // Explicitly set initial status
     task = taskRepository.save(task);
-    String taskId = task.getId();
+    var taskId = task.getId();
 
     // Schedule async processing without waiting
     processTaskAsync(taskId);
@@ -104,15 +80,14 @@ public class ComputeService {
   @Async
   public void processTaskAsync(String taskId) {
     logger.info("Starting async processing of task {}", taskId);
-    Task task =
-        taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
+    var task = taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
     try {
       task.setStatus(TaskStatus.PROCESSING);
       task = taskRepository.save(task);
 
-      ComputeRequest request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
+      var request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
 
-      List<AnalyzedModel> analyzedModels = parseAndAnalyzeFiles(request);
+      var analyzedModels = parseAndAnalyzeFiles(request);
       if (analyzedModels.stream().anyMatch(Objects::isNull)) {
         task.setStatus(TaskStatus.FAILED);
         task.setMessage("Failed to parse one or more models");
@@ -120,31 +95,25 @@ public class ComputeService {
         return;
       }
 
-      AnalyzedModel firstModel = analyzedModels.get(0);
-      String sequence = extractSequence(firstModel);
-
-      List<AnalyzedBasePair> referenceStructure =
+      var firstModel = analyzedModels.get(0);
+      var sequence = extractSequence(firstModel);
+      var referenceStructure =
           ReferenceStructureUtil.readReferenceStructure(request.dotBracket(), sequence, firstModel);
-
-      HashBag<AnalyzedBasePair> allInteractions = collectAllInteractions(analyzedModels);
-
-      int threshold = calculateThreshold(request);
-
-      Set<AnalyzedBasePair> correctConsideredInteractions =
-          computeCorrectInteractions(request, analyzedModels, referenceStructure, allInteractions, threshold);
-
+      var allInteractions = collectAllInteractions(analyzedModels);
+      var threshold = calculateThreshold(request);
+      var correctConsideredInteractions =
+          computeCorrectInteractions(
+              request, analyzedModels, referenceStructure, allInteractions, threshold);
       resolveConflicts(request, correctConsideredInteractions, allInteractions);
-
-      List<RankedModel> rankedModels = generateRankedModels(request, analyzedModels, correctConsideredInteractions);
-
-      TaskResult taskResult = new TaskResult(rankedModels, referenceStructure);
-
-      String resultJson = objectMapper.writeValueAsString(taskResult);
+      var rankedModels =
+          generateRankedModels(request, analyzedModels, correctConsideredInteractions);
+      var taskResult = new TaskResult(rankedModels, referenceStructure);
+      var resultJson = objectMapper.writeValueAsString(taskResult);
       task.setResult(resultJson);
 
-      String dotBracket = generateDotBracket(request, firstModel, correctConsideredInteractions);
-
-      String svg = generateVisualization(request, firstModel, correctConsideredInteractions, dotBracket);
+      var dotBracket = generateDotBracket(request, firstModel, correctConsideredInteractions);
+      var svg =
+          generateVisualization(request, firstModel, correctConsideredInteractions, dotBracket);
       task.setSvg(svg);
 
       task.setStatus(TaskStatus.COMPLETED);
@@ -160,7 +129,7 @@ public class ComputeService {
     return request.files().parallelStream()
         .map(
             file -> {
-              String jsonResult = analysisClient.analyze(file.content(), request.analyzer());
+              var jsonResult = analysisClient.analyze(file.content(), request.analyzer());
               try {
                 var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
                 var structure3D = new PdbParser(false).parse(file.content()).get(0);
@@ -197,25 +166,23 @@ public class ComputeService {
       List<AnalyzedBasePair> referenceStructure,
       HashBag<AnalyzedBasePair> allInteractions,
       int threshold) {
-    HashBag<AnalyzedBasePair> canonicalBasePairs =
+    var canonicalBasePairs =
         analyzedModels.stream()
             .map(AnalyzedModel::canonicalBasePairs)
             .flatMap(Collection::stream)
             .collect(Collectors.toCollection(HashBag::new));
-    HashBag<AnalyzedBasePair> nonCanonicalBasePairs =
+    var nonCanonicalBasePairs =
         analyzedModels.stream()
             .map(AnalyzedModel::nonCanonicalBasePairs)
             .flatMap(Collection::stream)
             .collect(Collectors.toCollection(HashBag::new));
-    HashBag<AnalyzedBasePair> stackings =
+    var stackings =
         analyzedModels.stream()
             .map(AnalyzedModel::stackings)
             .flatMap(Collection::stream)
             .collect(Collectors.toCollection(HashBag::new));
-    HashBag<AnalyzedBasePair> allInteractionsCollected =
-        allInteractions;
 
-    Set<AnalyzedBasePair> correctCanonicalBasePairs =
+    var correctCanonicalBasePairs =
         canonicalBasePairs.stream()
             .filter(
                 classifiedBasePair ->
@@ -223,7 +190,7 @@ public class ComputeService {
                         || canonicalBasePairs.getCount(classifiedBasePair) >= threshold)
             .collect(Collectors.toSet());
 
-    Set<AnalyzedBasePair> correctNonCanonicalBasePairs =
+    var correctNonCanonicalBasePairs =
         nonCanonicalBasePairs.stream()
             .filter(
                 classifiedBasePair ->
@@ -231,7 +198,7 @@ public class ComputeService {
                         || nonCanonicalBasePairs.getCount(classifiedBasePair) >= threshold)
             .collect(Collectors.toSet());
 
-    Set<AnalyzedBasePair> correctStackings =
+    var correctStackings =
         stackings.stream()
             .filter(
                 classifiedBasePair ->
@@ -239,12 +206,12 @@ public class ComputeService {
                         || stackings.getCount(classifiedBasePair) >= threshold)
             .collect(Collectors.toSet());
 
-    Set<AnalyzedBasePair> correctAllInteractions =
-        allInteractionsCollected.stream()
+    var correctAllInteractions =
+        allInteractions.stream()
             .filter(
                 classifiedBasePair ->
                     referenceStructure.contains(classifiedBasePair)
-                        || allInteractionsCollected.getCount(classifiedBasePair) >= threshold)
+                        || allInteractions.getCount(classifiedBasePair) >= threshold)
             .collect(Collectors.toSet());
 
     return switch (request.consensusMode()) {
@@ -260,18 +227,41 @@ public class ComputeService {
       Set<AnalyzedBasePair> correctConsideredInteractions,
       HashBag<AnalyzedBasePair> allInteractions) {
     if (request.consensusMode() != ConsensusMode.STACKING) {
-      for (LeontisWesthof leontisWesthof : LeontisWesthof.values()) {
-        List<AnalyzedBasePair> conflicting =
+      for (var leontisWesthof : LeontisWesthof.values()) {
+        var conflicting =
             conflictingBasePairs(correctConsideredInteractions, leontisWesthof, allInteractions);
 
         while (!conflicting.isEmpty()) {
           correctConsideredInteractions.remove(conflicting.get(0));
           conflicting =
-              conflictingBasePairs(
-                  correctConsideredInteractions, leontisWesthof, allInteractions);
+              conflictingBasePairs(correctConsideredInteractions, leontisWesthof, allInteractions);
         }
       }
     }
+  }
+
+  private List<AnalyzedBasePair> conflictingBasePairs(
+      Set<AnalyzedBasePair> candidates,
+      LeontisWesthof leontisWesthof,
+      HashBag<AnalyzedBasePair> allInteractions) {
+    MultiValuedMap<PdbNamedResidueIdentifier, AnalyzedBasePair> map =
+        new ArrayListValuedHashMap<>();
+
+    candidates.stream()
+        .filter(candidate -> candidate.leontisWesthof() == leontisWesthof)
+        .forEach(
+            candidate -> {
+              var basePair = candidate.basePair();
+              map.put(basePair.left(), candidate);
+              map.put(basePair.right(), candidate);
+            });
+
+    return map.keySet().stream()
+        .filter(key -> map.get(key).size() > 1)
+        .flatMap(key -> map.get(key).stream())
+        .distinct()
+        .sorted(Comparator.comparingInt(allInteractions::getCount))
+        .collect(Collectors.toList());
   }
 
   private List<RankedModel> generateRankedModels(
@@ -282,16 +272,16 @@ public class ComputeService {
         analyzedModels.stream()
             .map(
                 model -> {
-                  Set<AnalyzedBasePair> modelInteractions =
+                  var modelInteractions =
                       model.streamBasePairs(request.consensusMode()).collect(Collectors.toSet());
-                  double inf =
+                  var inf =
                       InteractionNetworkFidelity.calculate(
                           correctConsideredInteractions, modelInteractions);
                   return new RankedModel(model, inf);
                 })
             .collect(Collectors.toList());
 
-    List<Double> infs =
+    var infs =
         rankedModels.stream()
             .map(RankedModel::getInteractionNetworkFidelity)
             .sorted(Comparator.reverseOrder())
@@ -305,7 +295,9 @@ public class ComputeService {
   }
 
   private String generateDotBracket(
-      ComputeRequest request, AnalyzedModel firstModel, Set<AnalyzedBasePair> correctConsideredInteractions)
+      ComputeRequest request,
+      AnalyzedModel firstModel,
+      Set<AnalyzedBasePair> correctConsideredInteractions)
       throws Exception {
     var residues = firstModel.residueIdentifiers();
     var canonicalPairs =
@@ -337,7 +329,7 @@ public class ComputeService {
       } else {
         var visualizationInput =
             visualizationService.prepareVisualizationInput(firstModel, dotBracket);
-        String visualizationJson = objectMapper.writeValueAsString(visualizationInput);
+        var visualizationJson = objectMapper.writeValueAsString(visualizationInput);
         svg = visualizationClient.visualize(visualizationJson, request.visualizationTool());
       }
       return svg;
@@ -348,15 +340,13 @@ public class ComputeService {
   }
 
   public TaskStatusResponse getTaskStatus(String taskId) {
-    Task task =
-        taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
+    var task = taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
     return new TaskStatusResponse(
         task.getId(), task.getStatus(), task.getCreatedAt(), task.getMessage());
   }
 
   public String getTaskSvg(String taskId) {
-    Task task =
-        taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
+    var task = taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
 
     if (task.getStatus() != TaskStatus.COMPLETED) {
       throw new IllegalStateException("Task is not completed yet");
@@ -370,21 +360,20 @@ public class ComputeService {
   }
 
   public TablesResponse getTables(String taskId) throws Exception {
-    Task task =
-        taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
+    var task = taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
 
     if (task.getStatus() != TaskStatus.COMPLETED) {
       throw new IllegalStateException("Task is not completed yet");
     }
 
-    String resultJson = task.getResult();
-    TaskResult taskResult = objectMapper.readValue(resultJson, TaskResult.class);
-    List<RankedModel> results = taskResult.rankedModels();
+    var resultJson = task.getResult();
+    var taskResult = objectMapper.readValue(resultJson, TaskResult.class);
+    var results = taskResult.rankedModels();
     if (results == null || results.isEmpty()) {
       throw new IllegalStateException("No results available");
     }
 
-    int totalModelCount = results.size();
+    var totalModelCount = results.size();
     var allInteractions =
         results.stream()
             .map(RankedModel::getBasePairsAndStackings)
@@ -411,76 +400,27 @@ public class ComputeService {
             .collect(Collectors.toList());
 
     // Convert CSV data to structured tables
-    TableData rankingTable = generateRankingTable(results);
-    TableData canonicalTable =
+    var rankingTable = generateRankingTable(results);
+    var canonicalTable =
         generatePairsTable(
             allCanonicalPairs, allInteractions, totalModelCount, taskResult.referenceStructure());
-    TableData nonCanonicalTable =
+    var nonCanonicalTable =
         generatePairsTable(
             allNonCanonicalPairs,
             allInteractions,
             totalModelCount,
             taskResult.referenceStructure());
-    TableData stackingsTable =
-        generateStackingsTable(allStackings, allInteractions, totalModelCount);
+    var stackingsTable = generateStackingsTable(allStackings, allInteractions, totalModelCount);
 
-    List<String> fileNames =
-        results.stream().map(RankedModel::getName).collect(Collectors.toList());
+    var fileNames = results.stream().map(RankedModel::getName).collect(Collectors.toList());
 
     return new TablesResponse(
         rankingTable, canonicalTable, nonCanonicalTable, stackingsTable, fileNames);
   }
 
-  public ModelTablesResponse getModelTables(String taskId, String filename) throws Exception {
-    Task task =
-        taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
-
-    if (task.getStatus() != TaskStatus.COMPLETED) {
-      throw new IllegalStateException("Task is not completed yet");
-    }
-
-    String resultJson = task.getResult();
-    TaskResult taskResult = objectMapper.readValue(resultJson, TaskResult.class);
-    List<RankedModel> results = taskResult.rankedModels();
-    if (results == null || results.isEmpty()) {
-      throw new IllegalStateException("No results available");
-    }
-
-    // Find the model with matching filename
-    RankedModel targetModel =
-        results.stream()
-            .filter(model -> model.getName().equals(filename))
-            .findFirst()
-            .orElseThrow(() -> new IllegalArgumentException("Model not found: " + filename));
-
-    int totalModelCount = results.size();
-    var allInteractions =
-        results.stream()
-            .map(RankedModel::getBasePairsAndStackings)
-            .flatMap(List::stream)
-            .collect(Collectors.toCollection(HashBag::new));
-
-    TableData canonicalTable =
-        generatePairsTable(
-            targetModel.getCanonicalBasePairs(),
-            allInteractions,
-            totalModelCount,
-            taskResult.referenceStructure());
-    TableData nonCanonicalTable =
-        generatePairsTable(
-            targetModel.getNonCanonicalBasePairs(),
-            allInteractions,
-            totalModelCount,
-            taskResult.referenceStructure());
-    TableData stackingsTable =
-        generateStackingsTable(targetModel.getStackings(), allInteractions, totalModelCount);
-
-    return new ModelTablesResponse(canonicalTable, nonCanonicalTable, stackingsTable);
-  }
-
   private TableData generateRankingTable(List<RankedModel> models) {
-    List<String> headers = List.of("Rank", "File name", "INF");
-    List<List<Object>> rows =
+    var headers = List.of("Rank", "File name", "INF");
+    var rows =
         models.stream()
             .map(
                 model ->
@@ -495,12 +435,12 @@ public class ComputeService {
       HashBag<AnalyzedBasePair> allInteractions,
       int totalModelCount,
       List<AnalyzedBasePair> referenceStructure) {
-    List<String> headers = List.of("Nt1", "Nt2", "Leontis-Westhof", "Confidence", "Is reference?");
-    List<List<Object>> rows =
+    var headers = List.of("Nt1", "Nt2", "Leontis-Westhof", "Confidence", "Is reference?");
+    var rows =
         pairs.stream()
             .map(
                 pair -> {
-                  double confidence = allInteractions.getCount(pair) / (double) totalModelCount;
+                  var confidence = allInteractions.getCount(pair) / (double) totalModelCount;
                   return List.<Object>of(
                       pair.basePair().left().toString(),
                       pair.basePair().right().toString(),
@@ -516,12 +456,12 @@ public class ComputeService {
       List<? extends AnalyzedBasePair> stackings,
       HashBag<AnalyzedBasePair> allInteractions,
       int totalModelCount) {
-    List<String> headers = List.of("Nt1", "Nt2", "Confidence");
-    List<List<Object>> rows =
+    var headers = List.of("Nt1", "Nt2", "Confidence");
+    var rows =
         stackings.stream()
             .map(
                 stacking -> {
-                  double confidence = allInteractions.getCount(stacking) / (double) totalModelCount;
+                  var confidence = allInteractions.getCount(stacking) / (double) totalModelCount;
                   return List.<Object>of(
                       stacking.basePair().left().toString(),
                       stacking.basePair().right().toString(),
@@ -529,5 +469,51 @@ public class ComputeService {
                 })
             .collect(Collectors.toList());
     return new TableData(headers, rows);
+  }
+
+  public ModelTablesResponse getModelTables(String taskId, String filename) throws Exception {
+    var task = taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
+
+    if (task.getStatus() != TaskStatus.COMPLETED) {
+      throw new IllegalStateException("Task is not completed yet");
+    }
+
+    var resultJson = task.getResult();
+    var taskResult = objectMapper.readValue(resultJson, TaskResult.class);
+    var results = taskResult.rankedModels();
+    if (results == null || results.isEmpty()) {
+      throw new IllegalStateException("No results available");
+    }
+
+    // Find the model with matching filename
+    var targetModel =
+        results.stream()
+            .filter(model -> model.getName().equals(filename))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("Model not found: " + filename));
+
+    var totalModelCount = results.size();
+    var allInteractions =
+        results.stream()
+            .map(RankedModel::getBasePairsAndStackings)
+            .flatMap(List::stream)
+            .collect(Collectors.toCollection(HashBag::new));
+
+    var canonicalTable =
+        generatePairsTable(
+            targetModel.getCanonicalBasePairs(),
+            allInteractions,
+            totalModelCount,
+            taskResult.referenceStructure());
+    var nonCanonicalTable =
+        generatePairsTable(
+            targetModel.getNonCanonicalBasePairs(),
+            allInteractions,
+            totalModelCount,
+            taskResult.referenceStructure());
+    var stackingsTable =
+        generateStackingsTable(targetModel.getStackings(), allInteractions, totalModelCount);
+
+    return new ModelTablesResponse(canonicalTable, nonCanonicalTable, stackingsTable);
   }
 }
