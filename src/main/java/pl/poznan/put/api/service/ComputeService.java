@@ -166,60 +166,43 @@ public class ComputeService {
       List<AnalyzedBasePair> referenceStructure,
       HashBag<AnalyzedBasePair> allInteractions,
       int threshold) {
+    HashBag<AnalyzedBasePair> relevantBasePairs;
+
     switch (consensusMode) {
       case CANONICAL:
-        var canonicalBasePairs =
+        relevantBasePairs =
             analyzedModels.stream()
                 .map(AnalyzedModel::canonicalBasePairs)
                 .flatMap(Collection::stream)
                 .collect(Collectors.toCollection(HashBag::new));
-
-        return canonicalBasePairs.stream()
-            .filter(
-                classifiedBasePair ->
-                    referenceStructure.contains(classifiedBasePair)
-                        || canonicalBasePairs.getCount(classifiedBasePair) >= threshold)
-            .collect(Collectors.toSet());
-
+        break;
       case NON_CANONICAL:
-        var nonCanonicalBasePairs =
+        relevantBasePairs =
             analyzedModels.stream()
                 .map(AnalyzedModel::nonCanonicalBasePairs)
                 .flatMap(Collection::stream)
                 .collect(Collectors.toCollection(HashBag::new));
-
-        return nonCanonicalBasePairs.stream()
-            .filter(
-                classifiedBasePair ->
-                    referenceStructure.contains(classifiedBasePair)
-                        || nonCanonicalBasePairs.getCount(classifiedBasePair) >= threshold)
-            .collect(Collectors.toSet());
-
+        break;
       case STACKING:
-        var stackings =
+        relevantBasePairs =
             analyzedModels.stream()
                 .map(AnalyzedModel::stackings)
                 .flatMap(Collection::stream)
                 .collect(Collectors.toCollection(HashBag::new));
-
-        return stackings.stream()
-            .filter(
-                classifiedBasePair ->
-                    referenceStructure.contains(classifiedBasePair)
-                        || stackings.getCount(classifiedBasePair) >= threshold)
-            .collect(Collectors.toSet());
-
+        break;
       case ALL:
-        return allInteractions.stream()
-            .filter(
-                classifiedBasePair ->
-                    referenceStructure.contains(classifiedBasePair)
-                        || allInteractions.getCount(classifiedBasePair) >= threshold)
-            .collect(Collectors.toSet());
-
+        relevantBasePairs = allInteractions;
+        break;
       default:
         throw new IllegalArgumentException("Unsupported ConsensusMode: " + consensusMode);
     }
+
+    return relevantBasePairs.stream()
+        .filter(
+            classifiedBasePair ->
+                referenceStructure.contains(classifiedBasePair)
+                    || relevantBasePairs.getCount(classifiedBasePair) >= threshold)
+        .collect(Collectors.toSet());
   }
 
   private void resolveConflicts(
