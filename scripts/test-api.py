@@ -117,6 +117,9 @@ def get_results(task_id: str) -> None:
             )
         )
 
+        # Print the dotBracket of the model
+        print(f"\nDotBracket: {model_results['dotBracket']}")
+
     # Get and save SVG visualization
     response = requests.get(f"{API_BASE}/{task_id}/svg")
     response.raise_for_status()
