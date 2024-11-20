@@ -4,8 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import org.apache.commons.collections4.bag.HashBag;
+import java.util.stream.Collectors;
 import org.apache.commons.collections4.MultiValuedMap;
+import org.apache.commons.collections4.bag.HashBag;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.apache.commons.math3.util.FastMath;
 import org.slf4j.Logger;
@@ -18,9 +19,7 @@ import pl.poznan.put.ConsensusMode;
 import pl.poznan.put.InteractionNetworkFidelity;
 import pl.poznan.put.RankedModel;
 import pl.poznan.put.api.dto.*;
-import pl.poznan.put.api.exception.ResourceNotFoundException;
 import pl.poznan.put.api.exception.TaskNotFoundException;
-import pl.poznan.put.api.model.Task;
 import pl.poznan.put.api.model.TaskStatus;
 import pl.poznan.put.api.model.VisualizationTool;
 import pl.poznan.put.api.repository.TaskRepository;
@@ -38,283 +37,269 @@ import pl.poznan.put.utility.svg.SVGHelper;
 
 @Service
 public class TaskProcessorService {
-    private static final Logger logger = LoggerFactory.getLogger(TaskProcessorService.class);
-    private final TaskRepository taskRepository;
-    private final ObjectMapper objectMapper;
-    private final AnalysisClient analysisClient;
-    private final VisualizationClient visualizationClient;
-    private final DrawerVarnaTz drawerVarnaTz;
-    private final VisualizationService visualizationService;
-    private final ConversionClient conversionClient;
+  private static final Logger logger = LoggerFactory.getLogger(TaskProcessorService.class);
+  private final TaskRepository taskRepository;
+  private final ObjectMapper objectMapper;
+  private final AnalysisClient analysisClient;
+  private final VisualizationClient visualizationClient;
+  private final DrawerVarnaTz drawerVarnaTz;
+  private final VisualizationService visualizationService;
+  private final ConversionClient conversionClient;
 
-    @Autowired
-    public TaskProcessorService(
-            TaskRepository taskRepository,
-            ObjectMapper objectMapper,
-            AnalysisClient analysisClient,
-            VisualizationClient visualizationClient,
-            VisualizationService visualizationService,
-            ConversionClient conversionClient,
-            DrawerVarnaTz drawerVarnaTz) {
-        this.taskRepository = taskRepository;
-        this.objectMapper = objectMapper;
-        this.analysisClient = analysisClient;
-        this.visualizationClient = visualizationClient;
-        this.visualizationService = visualizationService;
-        this.conversionClient = conversionClient;
-        this.drawerVarnaTz = drawerVarnaTz;
-    }
+  @Autowired
+  public TaskProcessorService(
+      TaskRepository taskRepository,
+      ObjectMapper objectMapper,
+      AnalysisClient analysisClient,
+      VisualizationClient visualizationClient,
+      VisualizationService visualizationService,
+      ConversionClient conversionClient,
+      DrawerVarnaTz drawerVarnaTz) {
+    this.taskRepository = taskRepository;
+    this.objectMapper = objectMapper;
+    this.analysisClient = analysisClient;
+    this.visualizationClient = visualizationClient;
+    this.visualizationService = visualizationService;
+    this.conversionClient = conversionClient;
+    this.drawerVarnaTz = drawerVarnaTz;
+  }
 
-    @Async("taskExecutor")
-    public CompletableFuture<Void> processTaskAsync(String taskId) {
-        logger.info("Starting async processing of task {}", taskId);
-        try {
-            var task =
-                    taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
-            task.setStatus(TaskStatus.PROCESSING);
-            taskRepository.save(task);
+  @Async("taskExecutor")
+  public CompletableFuture<Void> processTaskAsync(String taskId) {
+    logger.info("Starting async processing of task {}", taskId);
+    try {
+      var task =
+          taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
+      task.setStatus(TaskStatus.PROCESSING);
+      taskRepository.save(task);
 
-            var request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
+      var request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
 
-            var analyzedModels = parseAndAnalyzeFiles(request);
-            if (analyzedModels.stream().anyMatch(Objects::isNull)) {
-                task.setStatus(TaskStatus.FAILED);
-                task.setMessage("Failed to parse one or more models");
-                taskRepository.save(task);
-                return CompletableFuture.completedFuture(null);
-            }
-
-            var firstModel = analyzedModels.get(0);
-            var sequence = extractSequence(firstModel);
-            var referenceStructure =
-                    ReferenceStructureUtil.readReferenceStructure(request.dotBracket(), sequence, firstModel);
-            var allInteractions = collectAllInteractions(analyzedModels);
-            var threshold = calculateThreshold(request);
-            var correctConsideredInteractions =
-                    computeCorrectInteractions(
-                            request.consensusMode(),
-                            analyzedModels,
-                            referenceStructure,
-                            allInteractions,
-                            threshold);
-            var rankedModels =
-                    generateRankedModels(request, analyzedModels, correctConsideredInteractions);
-            var taskResult = new TaskResult(rankedModels, referenceStructure);
-            var resultJson = objectMapper.writeValueAsString(taskResult);
-            task.setResult(resultJson);
-
-            var dotBracket =
-                    generateDotBracket(
-                            firstModel,
-                            computeCorrectInteractions(
-                                    ConsensusMode.CANONICAL,
-                                    analyzedModels,
-                                    referenceStructure,
-                                    allInteractions,
-                                    threshold));
-            var svg =
-                    generateVisualization(request, firstModel, correctConsideredInteractions, dotBracket);
-            task.setSvg(svg);
-
-            task.setStatus(TaskStatus.COMPLETED);
-            taskRepository.save(task);
-        } catch (Exception e) {
-            logger.error("Task {} failed with error", taskId, e);
-            var taskOptional = taskRepository.findById(taskId);
-            if (taskOptional.isPresent()) {
-                var task = taskOptional.get();
-                task.setStatus(TaskStatus.FAILED);
-                task.setMessage("Error processing task: " + e.getMessage());
-                taskRepository.save(task);
-            }
-        }
+      var analyzedModels = parseAndAnalyzeFiles(request);
+      if (analyzedModels.stream().anyMatch(Objects::isNull)) {
+        task.setStatus(TaskStatus.FAILED);
+        task.setMessage("Failed to parse one or more models");
+        taskRepository.save(task);
         return CompletableFuture.completedFuture(null);
+      }
+
+      var firstModel = analyzedModels.get(0);
+      var sequence = extractSequence(firstModel);
+      var referenceStructure =
+          ReferenceStructureUtil.readReferenceStructure(request.dotBracket(), sequence, firstModel);
+      var allInteractions = collectAllInteractions(analyzedModels);
+      var threshold = calculateThreshold(request);
+      var correctConsideredInteractions =
+          computeCorrectInteractions(
+              request.consensusMode(),
+              analyzedModels,
+              referenceStructure,
+              allInteractions,
+              threshold);
+      var rankedModels =
+          generateRankedModels(request, analyzedModels, correctConsideredInteractions);
+      var taskResult = new TaskResult(rankedModels, referenceStructure);
+      var resultJson = objectMapper.writeValueAsString(taskResult);
+      task.setResult(resultJson);
+
+      var dotBracket =
+          generateDotBracket(
+              firstModel,
+              computeCorrectInteractions(
+                  ConsensusMode.CANONICAL,
+                  analyzedModels,
+                  referenceStructure,
+                  allInteractions,
+                  threshold));
+      var svg =
+          generateVisualization(request, firstModel, correctConsideredInteractions, dotBracket);
+      task.setSvg(svg);
+
+      task.setStatus(TaskStatus.COMPLETED);
+      taskRepository.save(task);
+    } catch (Exception e) {
+      logger.error("Task {} failed with error", taskId, e);
+      var taskOptional = taskRepository.findById(taskId);
+      if (taskOptional.isPresent()) {
+        var task = taskOptional.get();
+        task.setStatus(TaskStatus.FAILED);
+        task.setMessage("Error processing task: " + e.getMessage());
+        taskRepository.save(task);
+      }
     }
+    return CompletableFuture.completedFuture(null);
+  }
 
-    private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request) {
-        return request.files().parallelStream()
-                .map(
-                        file -> {
-                            var jsonResult = analysisClient.analyze(file.content(), request.analyzer());
-                            try {
-                                var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
-                                var structure3D = new PdbParser(false).parse(file.content()).get(0);
-                                return new AnalyzedModel(file.name(), structure3D, structure2D);
-                            } catch (JsonProcessingException e) {
-                                logger.error("Failed to parse analysis result for file: {}", file.name(), e);
-                                return null;
-                            }
-                        })
-                .collect(Collectors.toList());
-    }
+  private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request) {
+    return request.files().parallelStream()
+        .map(
+            file -> {
+              var jsonResult = analysisClient.analyze(file.content(), request.analyzer());
+              try {
+                var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
+                var structure3D = new PdbParser(false).parse(file.content()).get(0);
+                return new AnalyzedModel(file.name(), structure3D, structure2D);
+              } catch (JsonProcessingException e) {
+                logger.error("Failed to parse analysis result for file: {}", file.name(), e);
+                return null;
+              }
+            })
+        .collect(Collectors.toList());
+  }
 
-    private String extractSequence(AnalyzedModel firstModel) {
-        return firstModel.residueIdentifiers().stream()
-                .map(PdbNamedResidueIdentifier::oneLetterName)
-                .map(String::valueOf)
-                .collect(Collectors.joining());
-    }
+  private String extractSequence(AnalyzedModel firstModel) {
+    return firstModel.residueIdentifiers().stream()
+        .map(PdbNamedResidueIdentifier::oneLetterName)
+        .map(String::valueOf)
+        .collect(Collectors.joining());
+  }
 
-    private HashBag<AnalyzedBasePair> collectAllInteractions(List<AnalyzedModel> analyzedModels) {
-        return analyzedModels.stream()
-                .map(AnalyzedModel::basePairsAndStackings)
-                .flatMap(Collection::stream)
-                .collect(Collectors.toCollection(HashBag::new));
-    }
+  private HashBag<AnalyzedBasePair> collectAllInteractions(List<AnalyzedModel> analyzedModels) {
+    return analyzedModels.stream()
+        .map(AnalyzedModel::basePairsAndStackings)
+        .flatMap(Collection::stream)
+        .collect(Collectors.toCollection(HashBag::new));
+  }
 
-    private int calculateThreshold(ComputeRequest request) {
-        return (int) FastMath.ceil(request.confidenceLevel() * request.files().size());
-    }
+  private int calculateThreshold(ComputeRequest request) {
+    return (int) FastMath.ceil(request.confidenceLevel() * request.files().size());
+  }
 
-    private Set<AnalyzedBasePair> computeCorrectInteractions(
-            ConsensusMode consensusMode,
-            List<AnalyzedModel> analyzedModels,
-            List<AnalyzedBasePair> referenceStructure,
-            HashBag<AnalyzedBasePair> allInteractions,
-            int threshold) {
-        HashBag<AnalyzedBasePair> relevantBasePairs;
-
+  private Set<AnalyzedBasePair> computeCorrectInteractions(
+      ConsensusMode consensusMode,
+      List<AnalyzedModel> analyzedModels,
+      List<AnalyzedBasePair> referenceStructure,
+      HashBag<AnalyzedBasePair> allInteractions,
+      int threshold) {
+    HashBag<AnalyzedBasePair> relevantBasePairs =
         switch (consensusMode) {
-            case CANONICAL:
-                relevantBasePairs =
-                        analyzedModels.stream()
-                                .map(AnalyzedModel::canonicalBasePairs)
-                                .flatMap(Collection::stream)
-                                .collect(Collectors.toCollection(HashBag::new));
-                break;
-            case NON_CANONICAL:
-                relevantBasePairs =
-                        analyzedModels.stream()
-                                .map(AnalyzedModel::nonCanonicalBasePairs)
-                                .flatMap(Collection::stream)
-                                .collect(Collectors.toCollection(HashBag::new));
-                break;
-            case STACKING:
-                relevantBasePairs =
-                        analyzedModels.stream()
-                                .map(AnalyzedModel::stackings)
-                                .flatMap(Collection::stream)
-                                .collect(Collectors.toCollection(HashBag::new));
-                break;
-            case ALL:
-                relevantBasePairs = allInteractions;
-                break;
-            default:
-                throw new IllegalArgumentException("Unsupported ConsensusMode: " + consensusMode);
+          case CANONICAL -> analyzedModels.stream()
+              .map(AnalyzedModel::canonicalBasePairs)
+              .flatMap(Collection::stream)
+              .collect(Collectors.toCollection(HashBag::new));
+          case NON_CANONICAL -> analyzedModels.stream()
+              .map(AnalyzedModel::nonCanonicalBasePairs)
+              .flatMap(Collection::stream)
+              .collect(Collectors.toCollection(HashBag::new));
+          case STACKING -> analyzedModels.stream()
+              .map(AnalyzedModel::stackings)
+              .flatMap(Collection::stream)
+              .collect(Collectors.toCollection(HashBag::new));
+          case ALL -> allInteractions;
+        };
+
+    Set<AnalyzedBasePair> correctConsideredInteractions =
+        relevantBasePairs.stream()
+            .filter(
+                classifiedBasePair ->
+                    referenceStructure.contains(classifiedBasePair)
+                        || relevantBasePairs.getCount(classifiedBasePair) >= threshold)
+            .collect(Collectors.toSet());
+
+    if (consensusMode != ConsensusMode.STACKING) {
+      for (LeontisWesthof leontisWesthof : LeontisWesthof.values()) {
+        MultiValuedMap<PdbNamedResidueIdentifier, AnalyzedBasePair> map =
+            new ArrayListValuedHashMap<>();
+
+        correctConsideredInteractions.stream()
+            .filter(candidate -> candidate.leontisWesthof() == leontisWesthof)
+            .forEach(
+                candidate -> {
+                  var basePair = candidate.basePair();
+                  map.put(basePair.left(), candidate);
+                  map.put(basePair.right(), candidate);
+                });
+
+        List<AnalyzedBasePair> conflicting =
+            map.keySet().stream()
+                .filter(key -> map.get(key).size() > 1)
+                .flatMap(key -> map.get(key).stream())
+                .distinct()
+                .sorted(Comparator.comparingInt(allInteractions::getCount))
+                .collect(Collectors.toList());
+
+        while (!conflicting.isEmpty()) {
+          correctConsideredInteractions.remove(conflicting.get(0));
+          conflicting =
+              map.keySet().stream()
+                  .filter(key -> map.get(key).size() > 1)
+                  .flatMap(key -> map.get(key).stream())
+                  .distinct()
+                  .sorted(Comparator.comparingInt(allInteractions::getCount))
+                  .toList();
         }
-
-        Set<AnalyzedBasePair> correctConsideredInteractions =
-                relevantBasePairs.stream()
-                        .filter(
-                                classifiedBasePair ->
-                                        referenceStructure.contains(classifiedBasePair)
-                                                || relevantBasePairs.getCount(classifiedBasePair) >= threshold)
-                        .collect(Collectors.toSet());
-
-        if (consensusMode != ConsensusMode.STACKING) {
-            for (LeontisWesthof leontisWesthof : LeontisWesthof.values()) {
-                MultiValuedMap<PdbNamedResidueIdentifier, AnalyzedBasePair> map =
-                        new ArrayListValuedHashMap<>();
-
-                correctConsideredInteractions.stream()
-                        .filter(candidate -> candidate.leontisWesthof() == leontisWesthof)
-                        .forEach(
-                                candidate -> {
-                                    var basePair = candidate.basePair();
-                                    map.put(basePair.left(), candidate);
-                                    map.put(basePair.right(), candidate);
-                                });
-
-                List<AnalyzedBasePair> conflicting =
-                        map.keySet().stream()
-                                .filter(key -> map.get(key).size() > 1)
-                                .flatMap(key -> map.get(key).stream())
-                                .distinct()
-                                .sorted(Comparator.comparingInt(allInteractions::getCount))
-                                .collect(Collectors.toList());
-
-                while (!conflicting.isEmpty()) {
-                    correctConsideredInteractions.remove(conflicting.get(0));
-                    conflicting =
-                            map.keySet().stream()
-                                    .filter(key -> map.get(key).size() > 1)
-                                    .flatMap(key -> map.get(key).stream())
-                                    .distinct()
-                                    .sorted(Comparator.comparingInt(allInteractions::getCount))
-                                    .toList();
-                }
-            }
-        }
-
-        return correctConsideredInteractions;
+      }
     }
 
-    private List<RankedModel> generateRankedModels(
-            ComputeRequest request,
-            List<AnalyzedModel> analyzedModels,
-            Set<AnalyzedBasePair> correctConsideredInteractions) {
-        var rankedModels =
-                analyzedModels.stream()
-                        .map(
-                                model -> {
-                                    var modelInteractions =
-                                            model.streamBasePairs(request.consensusMode()).collect(Collectors.toSet());
-                                    var inf =
-                                            InteractionNetworkFidelity.calculate(
-                                                    correctConsideredInteractions, modelInteractions);
-                                    return new RankedModel(model, inf);
-                                })
-                        .collect(Collectors.toList());
+    return correctConsideredInteractions;
+  }
 
-        var infs =
-                rankedModels.stream()
-                        .map(RankedModel::getInteractionNetworkFidelity)
-                        .sorted(Comparator.reverseOrder())
-                        .toList();
-        rankedModels.forEach(
-                rankedModel ->
-                        rankedModel.setRank(infs.indexOf(rankedModel.getInteractionNetworkFidelity()) + 1));
-        rankedModels.sort(Comparator.reverseOrder());
+  private List<RankedModel> generateRankedModels(
+      ComputeRequest request,
+      List<AnalyzedModel> analyzedModels,
+      Set<AnalyzedBasePair> correctConsideredInteractions) {
+    var rankedModels =
+        analyzedModels.stream()
+            .map(
+                model -> {
+                  var modelInteractions =
+                      model.streamBasePairs(request.consensusMode()).collect(Collectors.toSet());
+                  var inf =
+                      InteractionNetworkFidelity.calculate(
+                          correctConsideredInteractions, modelInteractions);
+                  return new RankedModel(model, inf);
+                })
+            .collect(Collectors.toList());
 
-        return rankedModels;
+    var infs =
+        rankedModels.stream()
+            .map(RankedModel::getInteractionNetworkFidelity)
+            .sorted(Comparator.reverseOrder())
+            .toList();
+    rankedModels.forEach(
+        rankedModel ->
+            rankedModel.setRank(infs.indexOf(rankedModel.getInteractionNetworkFidelity()) + 1));
+    rankedModels.sort(Comparator.reverseOrder());
+
+    return rankedModels;
+  }
+
+  private String generateDotBracket(
+      AnalyzedModel firstModel, Set<AnalyzedBasePair> correctCanonicalBasePairs) {
+    var residues = firstModel.residueIdentifiers();
+    var canonicalPairs = new HashSet<>(correctCanonicalBasePairs);
+    var bpseq = BpSeq.fromBasePairs(residues, canonicalPairs);
+    return conversionClient.convertBpseqToDotBracket(bpseq.toString());
+  }
+
+  private String generateVisualization(
+      ComputeRequest request,
+      AnalyzedModel firstModel,
+      Set<AnalyzedBasePair> correctConsideredInteractions,
+      String dotBracket) {
+    try {
+      String svg;
+      if (request.visualizationTool() == VisualizationTool.VARNA) {
+        var dotBracketObj =
+            ImmutableDefaultDotBracketFromPdb.of(
+                extractSequence(firstModel), dotBracket.split("\n")[1], firstModel.structure3D());
+        var svgDoc =
+            drawerVarnaTz.drawSecondaryStructure(
+                dotBracketObj,
+                firstModel.structure3D(),
+                new ArrayList<>(correctConsideredInteractions));
+        var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
+        svg = new String(svgBytes);
+      } else {
+        var visualizationInput =
+            visualizationService.prepareVisualizationInput(firstModel, dotBracket);
+        var visualizationJson = objectMapper.writeValueAsString(visualizationInput);
+        svg = visualizationClient.visualize(visualizationJson, request.visualizationTool());
+      }
+      return svg;
+    } catch (Exception e) {
+      logger.warn("Visualization generation failed", e);
+      throw new RuntimeException("Visualization generation failed: " + e.getMessage(), e);
     }
-
-    private String generateDotBracket(
-            AnalyzedModel firstModel, Set<AnalyzedBasePair> correctCanonicalBasePairs) {
-        var residues = firstModel.residueIdentifiers();
-        var canonicalPairs = new HashSet<>(correctCanonicalBasePairs);
-        var bpseq = BpSeq.fromBasePairs(residues, canonicalPairs);
-        return conversionClient.convertBpseqToDotBracket(bpseq.toString());
-    }
-
-    private String generateVisualization(
-            ComputeRequest request,
-            AnalyzedModel firstModel,
-            Set<AnalyzedBasePair> correctConsideredInteractions,
-            String dotBracket) {
-        try {
-            String svg;
-            if (request.visualizationTool() == VisualizationTool.VARNA) {
-                var dotBracketObj =
-                        ImmutableDefaultDotBracketFromPdb.of(
-                                extractSequence(firstModel), dotBracket.split("\n")[1], firstModel.structure3D());
-                var svgDoc =
-                        drawerVarnaTz.drawSecondaryStructure(
-                                dotBracketObj,
-                                firstModel.structure3D(),
-                                new ArrayList<>(correctConsideredInteractions));
-                var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
-                svg = new String(svgBytes);
-            } else {
-                var visualizationInput =
-                        visualizationService.prepareVisualizationInput(firstModel, dotBracket);
-                var visualizationJson = objectMapper.writeValueAsString(visualizationInput);
-                svg = visualizationClient.visualize(visualizationJson, request.visualizationTool());
-            }
-            return svg;
-        } catch (Exception e) {
-            logger.warn("Visualization generation failed", e);
-            throw new RuntimeException("Visualization generation failed: " + e.getMessage(), e);
-        }
-    }
+  }
 }
