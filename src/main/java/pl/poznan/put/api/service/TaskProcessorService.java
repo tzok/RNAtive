@@ -98,7 +98,7 @@ public class TaskProcessorService {
               threshold);
       var rankedModels =
           generateRankedModels(request, analyzedModels, correctConsideredInteractions);
-      
+
       var dotBracket =
           generateDotBracket(
               firstModel,
@@ -108,7 +108,7 @@ public class TaskProcessorService {
                   referenceStructure,
                   allInteractions,
                   threshold));
-      
+
       var taskResult = new TaskResult(rankedModels, referenceStructure, dotBracket);
       var resultJson = objectMapper.writeValueAsString(taskResult);
       task.setResult(resultJson);
@@ -249,7 +249,11 @@ public class TaskProcessorService {
                   var inf =
                       InteractionNetworkFidelity.calculate(
                           correctConsideredInteractions, modelInteractions);
-                  return new RankedModel(model, inf);
+                  var canonicalBasePairs =
+                      computeCorrectInteractions(
+                          ConsensusMode.CANONICAL, List.of(model), List.of(), new HashBag<>(), 0);
+                  var dotBracket = generateDotBracket(model, canonicalBasePairs);
+                  return new RankedModel(model, inf, dotBracket);
                 })
             .collect(Collectors.toList());
 
@@ -267,7 +271,7 @@ public class TaskProcessorService {
   }
 
   private String generateDotBracket(
-      AnalyzedModel firstModel, Set<AnalyzedBasePair> correctCanonicalBasePairs) {
+      AnalyzedModel firstModel, Collection<AnalyzedBasePair> correctCanonicalBasePairs) {
     var residues = firstModel.residueIdentifiers();
     var canonicalPairs = new HashSet<>(correctCanonicalBasePairs);
     var bpseq = BpSeq.fromBasePairs(residues, canonicalPairs);

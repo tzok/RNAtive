@@ -23,7 +23,8 @@ public class RankedModel implements Comparable<RankedModel> {
   // Default constructor for Jackson
   public RankedModel() {}
 
-  public RankedModel(AnalyzedModel analyzedModel, double interactionNetworkFidelity, String dotBracket) {
+  public RankedModel(
+      AnalyzedModel analyzedModel, double interactionNetworkFidelity, String dotBracket) {
     this.name = analyzedModel.name();
     this.basePairsAndStackings = analyzedModel.basePairsAndStackings();
     this.canonicalBasePairs = analyzedModel.canonicalBasePairs();
