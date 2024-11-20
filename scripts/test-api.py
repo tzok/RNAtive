@@ -68,7 +68,7 @@ def get_results(task_id: str) -> None:
     response.raise_for_status()
     results = response.json()
 
-    # Display ranking table
+    # Display Model Rankings
     print("\nModel Rankings:")
     print(
         tabulate(
@@ -78,8 +78,12 @@ def get_results(task_id: str) -> None:
         )
     )
 
-    # For each model, get and display detailed results
-    for filename in results["fileNames"]:
+    # Display dotBracket
+    print(f"\nDotBracket: {results['dotBracket']}")
+
+    # Display results for the first file only
+    if results["fileNames"]:
+        filename = results["fileNames"][0]
         print(f"\nDetailed results for {filename}:")
 
         response = requests.get(f"{API_BASE}/{task_id}/result/{filename}")
