@@ -103,7 +103,7 @@ public class ComputeService {
       var threshold = calculateThreshold(request);
       var correctConsideredInteractions =
           computeCorrectInteractions(
-              request, analyzedModels, referenceStructure, allInteractions, threshold);
+              request.consensusMode(), analyzedModels, referenceStructure, allInteractions, threshold);
       resolveConflicts(request, correctConsideredInteractions, allInteractions);
       var rankedModels =
           generateRankedModels(request, analyzedModels, correctConsideredInteractions);
@@ -161,65 +161,65 @@ public class ComputeService {
   }
 
   private Set<AnalyzedBasePair> computeCorrectInteractions(
-      ComputeRequest request,
+      ConsensusMode consensusMode,
       List<AnalyzedModel> analyzedModels,
       List<AnalyzedBasePair> referenceStructure,
       HashBag<AnalyzedBasePair> allInteractions,
       int threshold) {
-    var canonicalBasePairs =
-        analyzedModels.stream()
-            .map(AnalyzedModel::canonicalBasePairs)
-            .flatMap(Collection::stream)
-            .collect(Collectors.toCollection(HashBag::new));
-    var nonCanonicalBasePairs =
-        analyzedModels.stream()
-            .map(AnalyzedModel::nonCanonicalBasePairs)
-            .flatMap(Collection::stream)
-            .collect(Collectors.toCollection(HashBag::new));
-    var stackings =
-        analyzedModels.stream()
-            .map(AnalyzedModel::stackings)
-            .flatMap(Collection::stream)
-            .collect(Collectors.toCollection(HashBag::new));
+    switch (consensusMode) {
+      case CANONICAL:
+        var canonicalBasePairs =
+            analyzedModels.stream()
+                .map(AnalyzedModel::canonicalBasePairs)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toCollection(HashBag::new));
 
-    var correctCanonicalBasePairs =
-        canonicalBasePairs.stream()
+        return canonicalBasePairs.stream()
             .filter(
                 classifiedBasePair ->
                     referenceStructure.contains(classifiedBasePair)
                         || canonicalBasePairs.getCount(classifiedBasePair) >= threshold)
             .collect(Collectors.toSet());
 
-    var correctNonCanonicalBasePairs =
-        nonCanonicalBasePairs.stream()
+      case NON_CANONICAL:
+        var nonCanonicalBasePairs =
+            analyzedModels.stream()
+                .map(AnalyzedModel::nonCanonicalBasePairs)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toCollection(HashBag::new));
+
+        return nonCanonicalBasePairs.stream()
             .filter(
                 classifiedBasePair ->
                     referenceStructure.contains(classifiedBasePair)
                         || nonCanonicalBasePairs.getCount(classifiedBasePair) >= threshold)
             .collect(Collectors.toSet());
 
-    var correctStackings =
-        stackings.stream()
+      case STACKING:
+        var stackings =
+            analyzedModels.stream()
+                .map(AnalyzedModel::stackings)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toCollection(HashBag::new));
+
+        return stackings.stream()
             .filter(
                 classifiedBasePair ->
                     referenceStructure.contains(classifiedBasePair)
                         || stackings.getCount(classifiedBasePair) >= threshold)
             .collect(Collectors.toSet());
 
-    var correctAllInteractions =
-        allInteractions.stream()
+      case ALL:
+        return allInteractions.stream()
             .filter(
                 classifiedBasePair ->
                     referenceStructure.contains(classifiedBasePair)
                         || allInteractions.getCount(classifiedBasePair) >= threshold)
             .collect(Collectors.toSet());
 
-    return switch (request.consensusMode()) {
-      case CANONICAL -> correctCanonicalBasePairs;
-      case NON_CANONICAL -> correctNonCanonicalBasePairs;
-      case STACKING -> correctStackings;
-      case ALL -> correctAllInteractions;
-    };
+      default:
+        throw new IllegalArgumentException("Unsupported ConsensusMode: " + consensusMode);
+    }
   }
 
   private void resolveConflicts(
