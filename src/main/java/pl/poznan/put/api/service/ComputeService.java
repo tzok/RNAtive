@@ -124,7 +124,12 @@ public class ComputeService {
     var fileNames = results.stream().map(RankedModel::getName).collect(Collectors.toList());
 
     return new TablesResponse(
-        rankingTable, canonicalTable, nonCanonicalTable, stackingsTable, fileNames);
+        rankingTable,
+        canonicalTable,
+        nonCanonicalTable,
+        stackingsTable,
+        fileNames,
+        taskResult.dotBracket());
   }
 
   private TableData generateRankingTable(List<RankedModel> models) {
@@ -223,6 +228,7 @@ public class ComputeService {
     var stackingsTable =
         generateStackingsTable(targetModel.getStackings(), allInteractions, totalModelCount);
 
-    return new ModelTablesResponse(canonicalTable, nonCanonicalTable, stackingsTable);
+    return new ModelTablesResponse(
+        canonicalTable, nonCanonicalTable, stackingsTable, targetModel.getDotBracket());
   }
 }
