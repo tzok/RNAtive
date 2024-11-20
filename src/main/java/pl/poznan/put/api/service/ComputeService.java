@@ -104,14 +104,13 @@ public class ComputeService {
       var correctConsideredInteractions =
           computeCorrectInteractions(
               request.consensusMode(), analyzedModels, referenceStructure, allInteractions, threshold);
-      resolveConflicts(request, correctConsideredInteractions, allInteractions);
       var rankedModels =
           generateRankedModels(request, analyzedModels, correctConsideredInteractions);
       var taskResult = new TaskResult(rankedModels, referenceStructure);
       var resultJson = objectMapper.writeValueAsString(taskResult);
       task.setResult(resultJson);
 
-      var dotBracket = generateDotBracket(request, firstModel, correctConsideredInteractions);
+      var dotBracket = generateDotBracket(request, firstModel, computeCorrectInteractions(ConsensusMode.CANONICAL, analyzedModels, referenceStructure, allInteractions, threshold));
       var svg =
           generateVisualization(request, firstModel, correctConsideredInteractions, dotBracket);
       task.setSvg(svg);
@@ -197,54 +196,50 @@ public class ComputeService {
         throw new IllegalArgumentException("Unsupported ConsensusMode: " + consensusMode);
     }
 
-    return relevantBasePairs.stream()
-        .filter(
-            classifiedBasePair ->
-                referenceStructure.contains(classifiedBasePair)
-                    || relevantBasePairs.getCount(classifiedBasePair) >= threshold)
-        .collect(Collectors.toSet());
-  }
+    Set<AnalyzedBasePair> correctConsideredInteractions =
+        relevantBasePairs.stream()
+            .filter(
+                classifiedBasePair ->
+                    referenceStructure.contains(classifiedBasePair)
+                        || relevantBasePairs.getCount(classifiedBasePair) >= threshold)
+            .collect(Collectors.toSet());
 
-  private void resolveConflicts(
-      ComputeRequest request,
-      Set<AnalyzedBasePair> correctConsideredInteractions,
-      HashBag<AnalyzedBasePair> allInteractions) {
-    if (request.consensusMode() != ConsensusMode.STACKING) {
-      for (var leontisWesthof : LeontisWesthof.values()) {
-        var conflicting =
-            conflictingBasePairs(correctConsideredInteractions, leontisWesthof, allInteractions);
+    if (consensusMode != ConsensusMode.STACKING) {
+      for (LeontisWesthof leontisWesthof : LeontisWesthof.values()) {
+        MultiValuedMap<PdbNamedResidueIdentifier, AnalyzedBasePair> map =
+            new ArrayListValuedHashMap<>();
+
+        correctConsideredInteractions.stream()
+            .filter(candidate -> candidate.leontisWesthof() == leontisWesthof)
+            .forEach(
+                candidate -> {
+                  var basePair = candidate.basePair();
+                  map.put(basePair.left(), candidate);
+                  map.put(basePair.right(), candidate);
+                });
+
+        List<AnalyzedBasePair> conflicting =
+            map.keySet().stream()
+                .filter(key -> map.get(key).size() > 1)
+                .flatMap(key -> map.get(key).stream())
+                .distinct()
+                .sorted(Comparator.comparingInt(allInteractions::getCount))
+                .collect(Collectors.toList());
 
         while (!conflicting.isEmpty()) {
           correctConsideredInteractions.remove(conflicting.get(0));
           conflicting =
-              conflictingBasePairs(correctConsideredInteractions, leontisWesthof, allInteractions);
+              map.keySet().stream()
+                  .filter(key -> map.get(key).size() > 1)
+                  .flatMap(key -> map.get(key).stream())
+                  .distinct()
+                  .sorted(Comparator.comparingInt(allInteractions::getCount))
+                  .collect(Collectors.toList());
         }
       }
     }
-  }
 
-  private List<AnalyzedBasePair> conflictingBasePairs(
-      Set<AnalyzedBasePair> candidates,
-      LeontisWesthof leontisWesthof,
-      HashBag<AnalyzedBasePair> allInteractions) {
-    MultiValuedMap<PdbNamedResidueIdentifier, AnalyzedBasePair> map =
-        new ArrayListValuedHashMap<>();
-
-    candidates.stream()
-        .filter(candidate -> candidate.leontisWesthof() == leontisWesthof)
-        .forEach(
-            candidate -> {
-              var basePair = candidate.basePair();
-              map.put(basePair.left(), candidate);
-              map.put(basePair.right(), candidate);
-            });
-
-    return map.keySet().stream()
-        .filter(key -> map.get(key).size() > 1)
-        .flatMap(key -> map.get(key).stream())
-        .distinct()
-        .sorted(Comparator.comparingInt(allInteractions::getCount))
-        .collect(Collectors.toList());
+    return correctConsideredInteractions;
   }
 
   private List<RankedModel> generateRankedModels(
