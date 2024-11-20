@@ -112,24 +112,7 @@ public class ComputeService {
 
       ComputeRequest request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
 
-      // Process each file through the analysis service and build models
-      var analyzedModels =
-          request.files().parallelStream()
-              .map(
-                  file -> {
-                    String jsonResult = analysisClient.analyze(file.content(), request.analyzer());
-                    try {
-                      var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
-                      var structure3D = new PdbParser(false).parse(file.content()).get(0);
-                      return new AnalyzedModel(file.name(), structure3D, structure2D);
-                    } catch (JsonProcessingException e) {
-                      logger.error("Failed to parse analysis result for file: {}", file.name(), e);
-                      return null;
-                    }
-                  })
-              .toList();
-
-      // Check if any model failed to parse
+      List<AnalyzedModel> analyzedModels = parseAndAnalyzeFiles(request);
       if (analyzedModels.stream().anyMatch(Objects::isNull)) {
         task.setStatus(TaskStatus.FAILED);
         task.setMessage("Failed to parse one or more models");
@@ -137,165 +120,32 @@ public class ComputeService {
         return;
       }
 
-      // Get sequence from first model for reference structure
-      var firstModel = analyzedModels.get(0);
-      String sequence =
-          firstModel.residueIdentifiers().stream()
-              .map(PdbNamedResidueIdentifier::oneLetterName)
-              .map(String::valueOf)
-              .collect(Collectors.joining());
+      AnalyzedModel firstModel = analyzedModels.get(0);
+      String sequence = extractSequence(firstModel);
 
-      // Read reference structure if dot-bracket is provided
       List<AnalyzedBasePair> referenceStructure =
           ReferenceStructureUtil.readReferenceStructure(request.dotBracket(), sequence, firstModel);
 
-      // Collect all interactions
-      // Collect all interactions
-      var canonicalBasePairs =
-          analyzedModels.stream()
-              .map(AnalyzedModel::canonicalBasePairs)
-              .flatMap(Collection::stream)
-              .collect(Collectors.toCollection(HashBag::new));
-      var nonCanonicalBasePairs =
-          analyzedModels.stream()
-              .map(AnalyzedModel::nonCanonicalBasePairs)
-              .flatMap(Collection::stream)
-              .collect(Collectors.toCollection(HashBag::new));
-      var stackings =
-          analyzedModels.stream()
-              .map(AnalyzedModel::stackings)
-              .flatMap(Collection::stream)
-              .collect(Collectors.toCollection(HashBag::new));
-      var allInteractions =
-          analyzedModels.stream()
-              .map(AnalyzedModel::basePairsAndStackings)
-              .flatMap(Collection::stream)
-              .collect(Collectors.toCollection(HashBag::new));
+      HashBag<AnalyzedBasePair> allInteractions = collectAllInteractions(analyzedModels);
 
-      // Calculate threshold for confidence filtering
-      int threshold = (int) FastMath.ceil(request.confidenceLevel() * request.files().size());
+      int threshold = calculateThreshold(request);
 
-      // Compute correct interactions for each type
-      Set<AnalyzedBasePair> correctCanonicalBasePairs =
-          canonicalBasePairs.stream()
-              .filter(
-                  classifiedBasePair ->
-                      referenceStructure.contains(classifiedBasePair)
-                          || canonicalBasePairs.getCount(classifiedBasePair) >= threshold)
-              .collect(Collectors.toSet());
-
-      Set<AnalyzedBasePair> correctNonCanonicalBasePairs =
-          nonCanonicalBasePairs.stream()
-              .filter(
-                  classifiedBasePair ->
-                      referenceStructure.contains(classifiedBasePair)
-                          || nonCanonicalBasePairs.getCount(classifiedBasePair) >= threshold)
-              .collect(Collectors.toSet());
-
-      Set<AnalyzedBasePair> correctStackings =
-          stackings.stream()
-              .filter(
-                  classifiedBasePair ->
-                      referenceStructure.contains(classifiedBasePair)
-                          || stackings.getCount(classifiedBasePair) >= threshold)
-              .collect(Collectors.toSet());
-
-      Set<AnalyzedBasePair> correctAllInteractions =
-          allInteractions.stream()
-              .filter(
-                  classifiedBasePair ->
-                      referenceStructure.contains(classifiedBasePair)
-                          || allInteractions.getCount(classifiedBasePair) >= threshold)
-              .collect(Collectors.toSet());
-
-      // Select correct interactions based on consensus mode
       Set<AnalyzedBasePair> correctConsideredInteractions =
-          switch (request.consensusMode()) {
-            case CANONICAL -> correctCanonicalBasePairs;
-            case NON_CANONICAL -> correctNonCanonicalBasePairs;
-            case STACKING -> correctStackings;
-            case ALL -> correctAllInteractions;
-          };
+          computeCorrectInteractions(request, analyzedModels, referenceStructure, allInteractions, threshold);
 
-      // Filter out invalid combinations of Leontis-Westhof classifications
-      if (request.consensusMode() != ConsensusMode.STACKING) {
-        for (LeontisWesthof leontisWesthof : LeontisWesthof.values()) {
-          List<AnalyzedBasePair> conflicting =
-              conflictingBasePairs(correctConsideredInteractions, leontisWesthof, allInteractions);
+      resolveConflicts(request, correctConsideredInteractions, allInteractions);
 
-          while (!conflicting.isEmpty()) {
-            correctConsideredInteractions.remove(conflicting.get(0));
-            conflicting =
-                conflictingBasePairs(
-                    correctConsideredInteractions, leontisWesthof, allInteractions);
-          }
-        }
-      }
+      List<RankedModel> rankedModels = generateRankedModels(request, analyzedModels, correctConsideredInteractions);
 
-      // Convert to ranked models and store result
-      var rankedModels =
-          analyzedModels.stream()
-              .map(
-                  model -> {
-                    Set<AnalyzedBasePair> modelInteractions =
-                        model.streamBasePairs(request.consensusMode()).collect(Collectors.toSet());
-                    double inf =
-                        InteractionNetworkFidelity.calculate(
-                            correctConsideredInteractions, modelInteractions);
-                    return new RankedModel(model, inf);
-                  })
-              .collect(Collectors.toList());
+      TaskResult taskResult = new TaskResult(rankedModels, referenceStructure);
 
-      List<Double> infs =
-          rankedModels.stream()
-              .map(RankedModel::getInteractionNetworkFidelity)
-              .sorted(Comparator.reverseOrder())
-              .toList();
-      rankedModels.forEach(
-          rankedModel ->
-              rankedModel.setRank(infs.indexOf(rankedModel.getInteractionNetworkFidelity()) + 1));
-      rankedModels.sort(Comparator.reverseOrder());
-
-      var taskResult = new TaskResult(rankedModels, referenceStructure);
-
-      // Store the computation result
       String resultJson = objectMapper.writeValueAsString(taskResult);
       task.setResult(resultJson);
 
-      // Generate dot-bracket from canonical interactions
-      var residues = analyzedModels.get(0).residueIdentifiers();
-      var canonicalPairs =
-          correctCanonicalBasePairs.stream()
-              .filter(canonicalBasePairs::contains)
-              .collect(Collectors.toSet());
-      var bpseq = BpSeq.fromBasePairs(residues, canonicalPairs);
-      String dotBracket = conversionClient.convertBpseqToDotBracket(bpseq.toString());
+      String dotBracket = generateDotBracket(request, firstModel, correctConsideredInteractions);
 
-      // Generate visualization input and SVG
-      try {
-        String svg;
-        if (request.visualizationTool() == VisualizationTool.VARNA) {
-          var dotBracketObj =
-              ImmutableDefaultDotBracketFromPdb.of(
-                  sequence, dotBracket.split("\n")[1], firstModel.structure3D());
-          var svgDoc =
-              drawerVarnaTz.drawSecondaryStructure(
-                  dotBracketObj,
-                  firstModel.structure3D(),
-                  new ArrayList<>(correctNonCanonicalBasePairs));
-          var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
-          svg = new String(svgBytes);
-        } else {
-          var visualizationInput =
-              visualizationService.prepareVisualizationInput(firstModel, dotBracket);
-          String visualizationJson = objectMapper.writeValueAsString(visualizationInput);
-          svg = visualizationClient.visualize(visualizationJson, request.visualizationTool());
-        }
-        task.setSvg(svg);
-      } catch (Exception e) {
-        logger.warn("Visualization generation failed", e);
-        task.setMessage("Warning: Visualization generation failed: " + e.getMessage());
-      }
+      String svg = generateVisualization(request, firstModel, correctConsideredInteractions, dotBracket);
+      task.setSvg(svg);
 
       task.setStatus(TaskStatus.COMPLETED);
     } catch (Exception e) {
@@ -304,6 +154,197 @@ public class ComputeService {
       task.setMessage("Error processing task: " + e.getMessage());
     }
     taskRepository.save(task);
+  }
+
+  private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request) {
+    return request.files().parallelStream()
+        .map(
+            file -> {
+              String jsonResult = analysisClient.analyze(file.content(), request.analyzer());
+              try {
+                var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
+                var structure3D = new PdbParser(false).parse(file.content()).get(0);
+                return new AnalyzedModel(file.name(), structure3D, structure2D);
+              } catch (JsonProcessingException e) {
+                logger.error("Failed to parse analysis result for file: {}", file.name(), e);
+                return null;
+              }
+            })
+        .toList();
+  }
+
+  private String extractSequence(AnalyzedModel firstModel) {
+    return firstModel.residueIdentifiers().stream()
+        .map(PdbNamedResidueIdentifier::oneLetterName)
+        .map(String::valueOf)
+        .collect(Collectors.joining());
+  }
+
+  private HashBag<AnalyzedBasePair> collectAllInteractions(List<AnalyzedModel> analyzedModels) {
+    return analyzedModels.stream()
+        .map(AnalyzedModel::basePairsAndStackings)
+        .flatMap(Collection::stream)
+        .collect(Collectors.toCollection(HashBag::new));
+  }
+
+  private int calculateThreshold(ComputeRequest request) {
+    return (int) FastMath.ceil(request.confidenceLevel() * request.files().size());
+  }
+
+  private Set<AnalyzedBasePair> computeCorrectInteractions(
+      ComputeRequest request,
+      List<AnalyzedModel> analyzedModels,
+      List<AnalyzedBasePair> referenceStructure,
+      HashBag<AnalyzedBasePair> allInteractions,
+      int threshold) {
+    HashBag<AnalyzedBasePair> canonicalBasePairs =
+        analyzedModels.stream()
+            .map(AnalyzedModel::canonicalBasePairs)
+            .flatMap(Collection::stream)
+            .collect(Collectors.toCollection(HashBag::new));
+    HashBag<AnalyzedBasePair> nonCanonicalBasePairs =
+        analyzedModels.stream()
+            .map(AnalyzedModel::nonCanonicalBasePairs)
+            .flatMap(Collection::stream)
+            .collect(Collectors.toCollection(HashBag::new));
+    HashBag<AnalyzedBasePair> stackings =
+        analyzedModels.stream()
+            .map(AnalyzedModel::stackings)
+            .flatMap(Collection::stream)
+            .collect(Collectors.toCollection(HashBag::new));
+    HashBag<AnalyzedBasePair> allInteractionsCollected =
+        allInteractions;
+
+    Set<AnalyzedBasePair> correctCanonicalBasePairs =
+        canonicalBasePairs.stream()
+            .filter(
+                classifiedBasePair ->
+                    referenceStructure.contains(classifiedBasePair)
+                        || canonicalBasePairs.getCount(classifiedBasePair) >= threshold)
+            .collect(Collectors.toSet());
+
+    Set<AnalyzedBasePair> correctNonCanonicalBasePairs =
+        nonCanonicalBasePairs.stream()
+            .filter(
+                classifiedBasePair ->
+                    referenceStructure.contains(classifiedBasePair)
+                        || nonCanonicalBasePairs.getCount(classifiedBasePair) >= threshold)
+            .collect(Collectors.toSet());
+
+    Set<AnalyzedBasePair> correctStackings =
+        stackings.stream()
+            .filter(
+                classifiedBasePair ->
+                    referenceStructure.contains(classifiedBasePair)
+                        || stackings.getCount(classifiedBasePair) >= threshold)
+            .collect(Collectors.toSet());
+
+    Set<AnalyzedBasePair> correctAllInteractions =
+        allInteractionsCollected.stream()
+            .filter(
+                classifiedBasePair ->
+                    referenceStructure.contains(classifiedBasePair)
+                        || allInteractionsCollected.getCount(classifiedBasePair) >= threshold)
+            .collect(Collectors.toSet());
+
+    return switch (request.consensusMode()) {
+      case CANONICAL -> correctCanonicalBasePairs;
+      case NON_CANONICAL -> correctNonCanonicalBasePairs;
+      case STACKING -> correctStackings;
+      case ALL -> correctAllInteractions;
+    };
+  }
+
+  private void resolveConflicts(
+      ComputeRequest request,
+      Set<AnalyzedBasePair> correctConsideredInteractions,
+      HashBag<AnalyzedBasePair> allInteractions) {
+    if (request.consensusMode() != ConsensusMode.STACKING) {
+      for (LeontisWesthof leontisWesthof : LeontisWesthof.values()) {
+        List<AnalyzedBasePair> conflicting =
+            conflictingBasePairs(correctConsideredInteractions, leontisWesthof, allInteractions);
+
+        while (!conflicting.isEmpty()) {
+          correctConsideredInteractions.remove(conflicting.get(0));
+          conflicting =
+              conflictingBasePairs(
+                  correctConsideredInteractions, leontisWesthof, allInteractions);
+        }
+      }
+    }
+  }
+
+  private List<RankedModel> generateRankedModels(
+      ComputeRequest request,
+      List<AnalyzedModel> analyzedModels,
+      Set<AnalyzedBasePair> correctConsideredInteractions) {
+    var rankedModels =
+        analyzedModels.stream()
+            .map(
+                model -> {
+                  Set<AnalyzedBasePair> modelInteractions =
+                      model.streamBasePairs(request.consensusMode()).collect(Collectors.toSet());
+                  double inf =
+                      InteractionNetworkFidelity.calculate(
+                          correctConsideredInteractions, modelInteractions);
+                  return new RankedModel(model, inf);
+                })
+            .collect(Collectors.toList());
+
+    List<Double> infs =
+        rankedModels.stream()
+            .map(RankedModel::getInteractionNetworkFidelity)
+            .sorted(Comparator.reverseOrder())
+            .toList();
+    rankedModels.forEach(
+        rankedModel ->
+            rankedModel.setRank(infs.indexOf(rankedModel.getInteractionNetworkFidelity()) + 1));
+    rankedModels.sort(Comparator.reverseOrder());
+
+    return rankedModels;
+  }
+
+  private String generateDotBracket(
+      ComputeRequest request, AnalyzedModel firstModel, Set<AnalyzedBasePair> correctConsideredInteractions)
+      throws Exception {
+    var residues = firstModel.residueIdentifiers();
+    var canonicalPairs =
+        correctConsideredInteractions.stream()
+            .filter(pair -> pair.leontisWesthof().isCanonical())
+            .collect(Collectors.toSet());
+    var bpseq = BpSeq.fromBasePairs(residues, canonicalPairs.toString());
+    return conversionClient.convertBpseqToDotBracket(bpseq.toString());
+  }
+
+  private String generateVisualization(
+      ComputeRequest request,
+      AnalyzedModel firstModel,
+      Set<AnalyzedBasePair> correctConsideredInteractions,
+      String dotBracket) {
+    try {
+      String svg;
+      if (request.visualizationTool() == VisualizationTool.VARNA) {
+        var dotBracketObj =
+            ImmutableDefaultDotBracketFromPdb.of(
+                extractSequence(firstModel), dotBracket.split("\n")[1], firstModel.structure3D());
+        var svgDoc =
+            drawerVarnaTz.drawSecondaryStructure(
+                dotBracketObj,
+                firstModel.structure3D(),
+                new ArrayList<>(correctConsideredInteractions));
+        var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
+        svg = new String(svgBytes);
+      } else {
+        var visualizationInput =
+            visualizationService.prepareVisualizationInput(firstModel, dotBracket);
+        String visualizationJson = objectMapper.writeValueAsString(visualizationInput);
+        svg = visualizationClient.visualize(visualizationJson, request.visualizationTool());
+      }
+      return svg;
+    } catch (Exception e) {
+      logger.warn("Visualization generation failed", e);
+      throw new RuntimeException("Visualization generation failed: " + e.getMessage(), e);
+    }
   }
 
   public TaskStatusResponse getTaskStatus(String taskId) {
