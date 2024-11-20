@@ -18,16 +18,19 @@ public class RankedModel implements Comparable<RankedModel> {
 
   private int rank = -1;
 
+  private String dotBracket;
+
   // Default constructor for Jackson
   public RankedModel() {}
 
-  public RankedModel(AnalyzedModel analyzedModel, double interactionNetworkFidelity) {
+  public RankedModel(AnalyzedModel analyzedModel, double interactionNetworkFidelity, String dotBracket) {
     this.name = analyzedModel.name();
     this.basePairsAndStackings = analyzedModel.basePairsAndStackings();
     this.canonicalBasePairs = analyzedModel.canonicalBasePairs();
     this.nonCanonicalBasePairs = analyzedModel.nonCanonicalBasePairs();
     this.stackings = analyzedModel.stackings();
     this.interactionNetworkFidelity = interactionNetworkFidelity;
+    this.dotBracket = dotBracket;
   }
 
   public String getName() {
@@ -84,6 +87,14 @@ public class RankedModel implements Comparable<RankedModel> {
 
   public void setRank(int rank) {
     this.rank = rank;
+  }
+
+  public String getDotBracket() {
+    return dotBracket;
+  }
+
+  public void setDotBracket(String dotBracket) {
+    this.dotBracket = dotBracket;
   }
 
   @Override
