@@ -103,14 +103,26 @@ public class ComputeService {
       var threshold = calculateThreshold(request);
       var correctConsideredInteractions =
           computeCorrectInteractions(
-              request.consensusMode(), analyzedModels, referenceStructure, allInteractions, threshold);
+              request.consensusMode(),
+              analyzedModels,
+              referenceStructure,
+              allInteractions,
+              threshold);
       var rankedModels =
           generateRankedModels(request, analyzedModels, correctConsideredInteractions);
       var taskResult = new TaskResult(rankedModels, referenceStructure);
       var resultJson = objectMapper.writeValueAsString(taskResult);
       task.setResult(resultJson);
 
-      var dotBracket = generateDotBracket(request, firstModel, computeCorrectInteractions(ConsensusMode.CANONICAL, analyzedModels, referenceStructure, allInteractions, threshold));
+      var dotBracket =
+          generateDotBracket(
+              firstModel,
+              computeCorrectInteractions(
+                  ConsensusMode.CANONICAL,
+                  analyzedModels,
+                  referenceStructure,
+                  allInteractions,
+                  threshold));
       var svg =
           generateVisualization(request, firstModel, correctConsideredInteractions, dotBracket);
       task.setSvg(svg);
@@ -234,7 +246,7 @@ public class ComputeService {
                   .flatMap(key -> map.get(key).stream())
                   .distinct()
                   .sorted(Comparator.comparingInt(allInteractions::getCount))
-                  .collect(Collectors.toList());
+                  .toList();
         }
       }
     }
@@ -273,16 +285,10 @@ public class ComputeService {
   }
 
   private String generateDotBracket(
-      ComputeRequest request,
-      AnalyzedModel firstModel,
-      Set<AnalyzedBasePair> correctConsideredInteractions)
-      throws Exception {
+      AnalyzedModel firstModel, Set<AnalyzedBasePair> correctCanonicalBasePairs) {
     var residues = firstModel.residueIdentifiers();
-    var canonicalPairs =
-        correctConsideredInteractions.stream()
-            .filter(pair -> pair.leontisWesthof().isCanonical())
-            .collect(Collectors.toSet());
-    var bpseq = BpSeq.fromBasePairs(residues, canonicalPairs.toString());
+    var canonicalPairs = new HashSet<>(correctCanonicalBasePairs);
+    var bpseq = BpSeq.fromBasePairs(residues, canonicalPairs);
     return conversionClient.convertBpseqToDotBracket(bpseq.toString());
   }
 
