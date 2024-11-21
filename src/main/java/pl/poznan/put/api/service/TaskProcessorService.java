@@ -68,13 +68,16 @@ public class TaskProcessorService {
   public CompletableFuture<Void> processTaskAsync(String taskId) {
     logger.info("Starting async processing of task {}", taskId);
     try {
+      logger.info("Fetching task from repository");
       var task =
           taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
       task.setStatus(TaskStatus.PROCESSING);
       taskRepository.save(task);
 
+      logger.info("Parsing task request");
       var request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
 
+      logger.info("Parsing and analyzing files");
       var analyzedModels = parseAndAnalyzeFiles(request);
       if (analyzedModels.stream().anyMatch(Objects::isNull)) {
         task.setStatus(TaskStatus.FAILED);
@@ -83,12 +86,17 @@ public class TaskProcessorService {
         return CompletableFuture.completedFuture(null);
       }
 
+      logger.info("Extracting sequence from the first model");
       var firstModel = analyzedModels.get(0);
       var sequence = extractSequence(firstModel);
+      logger.info("Reading reference structure");
       var referenceStructure =
           ReferenceStructureUtil.readReferenceStructure(request.dotBracket(), sequence, firstModel);
+      logger.info("Collecting all interactions");
       var allInteractions = collectAllInteractions(analyzedModels);
+      logger.info("Calculating threshold");
       var threshold = calculateThreshold(request);
+      logger.info("Computing correct interactions");
       var correctConsideredInteractions =
           computeCorrectInteractions(
               request.consensusMode(),
@@ -96,9 +104,11 @@ public class TaskProcessorService {
               referenceStructure,
               allInteractions,
               threshold);
+      logger.info("Generating ranked models");
       var rankedModels =
           generateRankedModels(request, analyzedModels, correctConsideredInteractions);
 
+      logger.info("Generating dot bracket notation");
       var dotBracket =
           generateDotBracket(
               firstModel,
@@ -109,14 +119,17 @@ public class TaskProcessorService {
                   allInteractions,
                   threshold));
 
+      logger.info("Creating task result");
       var taskResult = new TaskResult(rankedModels, referenceStructure, dotBracket);
       var resultJson = objectMapper.writeValueAsString(taskResult);
       task.setResult(resultJson);
 
+      logger.info("Generating visualization");
       var svg =
           generateVisualization(request, firstModel, correctConsideredInteractions, dotBracket);
       task.setSvg(svg);
 
+      logger.info("Task processing completed successfully");
       task.setStatus(TaskStatus.COMPLETED);
       taskRepository.save(task);
     } catch (Exception e) {
@@ -133,7 +146,7 @@ public class TaskProcessorService {
   }
 
   private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request) {
-    return request.files().parallelStream()
+    return request.files().stream()
         .map(
             file -> {
               var jsonResult = analysisClient.analyze(file.content(), request.analyzer());
