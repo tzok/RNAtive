@@ -243,6 +243,18 @@ public class TaskProcessorService {
         while (!conflicting.isEmpty()) {
           logger.debug("Removing conflicting base pair: {}", conflicting.get(0));
           correctConsideredInteractions.remove(conflicting.get(0));
+
+          // Update the map after removing a conflicting base pair
+          map.clear();
+          correctConsideredInteractions.stream()
+              .filter(candidate -> candidate.leontisWesthof() == leontisWesthof)
+              .forEach(
+                  candidate -> {
+                    var basePair = candidate.basePair();
+                    map.put(basePair.left(), candidate);
+                    map.put(basePair.right(), candidate);
+                  });
+
           conflicting =
               map.keySet().stream()
                   .filter(key -> map.get(key).size() > 1)
