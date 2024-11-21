@@ -146,7 +146,7 @@ public class TaskProcessorService {
   }
 
   private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request) {
-    return request.files().stream()
+    return request.files().parallelStream()
         .map(
             file -> {
               var jsonResult = analysisClient.analyze(file.content(), request.analyzer());
@@ -186,6 +186,7 @@ public class TaskProcessorService {
       List<AnalyzedBasePair> referenceStructure,
       HashBag<AnalyzedBasePair> allInteractions,
       int threshold) {
+    logger.info("Starting computation of correct interactions with consensus mode: {}", consensusMode);
     HashBag<AnalyzedBasePair> relevantBasePairs =
         switch (consensusMode) {
           case CANONICAL -> analyzedModels.stream()
@@ -203,6 +204,7 @@ public class TaskProcessorService {
           case ALL -> allInteractions;
         };
 
+    logger.debug("Filtering relevant base pairs based on reference structure and threshold");
     Set<AnalyzedBasePair> correctConsideredInteractions =
         relevantBasePairs.stream()
             .filter(
@@ -212,6 +214,7 @@ public class TaskProcessorService {
             .collect(Collectors.toSet());
 
     if (consensusMode != ConsensusMode.STACKING) {
+      logger.debug("Resolving conflicts in base pairs");
       for (LeontisWesthof leontisWesthof : LeontisWesthof.values()) {
         MultiValuedMap<PdbNamedResidueIdentifier, AnalyzedBasePair> map =
             new ArrayListValuedHashMap<>();
@@ -246,6 +249,7 @@ public class TaskProcessorService {
       }
     }
 
+    logger.info("Finished computing correct interactions");
     return correctConsideredInteractions;
   }
 
