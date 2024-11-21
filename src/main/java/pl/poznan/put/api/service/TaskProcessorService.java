@@ -186,7 +186,8 @@ public class TaskProcessorService {
       List<AnalyzedBasePair> referenceStructure,
       HashBag<AnalyzedBasePair> allInteractions,
       int threshold) {
-    logger.info("Starting computation of correct interactions with consensus mode: {}", consensusMode);
+    logger.info(
+        "Starting computation of correct interactions with consensus mode: {}", consensusMode);
     HashBag<AnalyzedBasePair> relevantBasePairs =
         switch (consensusMode) {
           case CANONICAL -> analyzedModels.stream()
@@ -214,8 +215,9 @@ public class TaskProcessorService {
             .collect(Collectors.toSet());
 
     if (consensusMode != ConsensusMode.STACKING) {
-      logger.debug("Resolving conflicts in base pairs");
+      logger.debug("Resolving conflicts in base pairs for consensus mode: {}", consensusMode);
       for (LeontisWesthof leontisWesthof : LeontisWesthof.values()) {
+        logger.debug("Processing Leontis-Westhof type: {}", leontisWesthof);
         MultiValuedMap<PdbNamedResidueIdentifier, AnalyzedBasePair> map =
             new ArrayListValuedHashMap<>();
 
@@ -228,6 +230,7 @@ public class TaskProcessorService {
                   map.put(basePair.right(), candidate);
                 });
 
+        logger.debug("Mapping base pairs to residues");
         List<AnalyzedBasePair> conflicting =
             map.keySet().stream()
                 .filter(key -> map.get(key).size() > 1)
@@ -236,7 +239,9 @@ public class TaskProcessorService {
                 .sorted(Comparator.comparingInt(allInteractions::getCount))
                 .collect(Collectors.toList());
 
+        logger.debug("Identified {} conflicting base pairs", conflicting.size());
         while (!conflicting.isEmpty()) {
+          logger.debug("Removing conflicting base pair: {}", conflicting.get(0));
           correctConsideredInteractions.remove(conflicting.get(0));
           conflicting =
               map.keySet().stream()
