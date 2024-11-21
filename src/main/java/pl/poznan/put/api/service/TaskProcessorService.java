@@ -253,23 +253,29 @@ public class TaskProcessorService {
       ComputeRequest request,
       List<AnalyzedModel> analyzedModels,
       Set<AnalyzedBasePair> correctConsideredInteractions) {
+    logger.info("Starting to generate ranked models");
     var rankedModels =
         analyzedModels.stream()
             .map(
                 model -> {
+                  logger.debug("Processing model: {}", model.name());
                   var modelInteractions =
                       model.streamBasePairs(request.consensusMode()).collect(Collectors.toSet());
+                  logger.debug("Calculating interaction network fidelity");
                   var inf =
                       InteractionNetworkFidelity.calculate(
                           correctConsideredInteractions, modelInteractions);
+                  logger.debug("Computing canonical base pairs");
                   var canonicalBasePairs =
                       computeCorrectInteractions(
                           ConsensusMode.CANONICAL, List.of(model), List.of(), new HashBag<>(), 0);
+                  logger.debug("Generating dot bracket for model");
                   var dotBracket = generateDotBracket(model, canonicalBasePairs);
                   return new RankedModel(model, inf, dotBracket);
                 })
             .collect(Collectors.toList());
 
+    logger.info("Ranking models based on interaction network fidelity");
     var infs =
         rankedModels.stream()
             .map(RankedModel::getInteractionNetworkFidelity)
@@ -280,6 +286,7 @@ public class TaskProcessorService {
             rankedModel.setRank(infs.indexOf(rankedModel.getInteractionNetworkFidelity()) + 1));
     rankedModels.sort(Comparator.reverseOrder());
 
+    logger.info("Finished generating ranked models");
     return rankedModels;
   }
 
