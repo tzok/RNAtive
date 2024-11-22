@@ -178,8 +178,8 @@ def main():
     submit_parser.add_argument(
         "--confidence",
         type=float,
-        default=0.9,
-        help="Confidence level threshold (0.0-1.0, default: 0.9)",
+        default=0.5,
+        help="Confidence level threshold (0.0-1.0, default: 0.5)",
     )
     submit_parser.add_argument(
         "--molprobity-filter",
@@ -195,8 +195,8 @@ def main():
     submit_parser.add_argument(
         "--visualization",
         choices=["PSEUDOVIEWER", "VARNA", "RCHIE", "RNAPUZZLER"],
-        default="RNAPUZZLER",
-        help="Visualization tool to use (default: RNAPUZZLER)",
+        default="VARNA",
+        help="Visualization tool to use (default: VARNA)",
     )
 
     # Status command
