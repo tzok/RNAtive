@@ -18,7 +18,7 @@ services:
         condition: service_healthy
 
   db:
-    image: postgres:16-alpine
+    image: postgres:alpine
     ports:
       - "5432:5432"
     environment:
@@ -35,8 +35,23 @@ services:
 
   adapters:
     image: rnapdbee-adapters-image
+    environment:
+      - ADAPTERS_WORKERS=24
+      - ADAPTERS_THREADS=1
+      - ADAPTERS_WORKER_TIMEOUT=1200
+      - ADAPTERS_MAX_REQUESTS=10
+      - ADAPTERS_GUNICORN_LOG_LEVEL=info
+      - ADAPTERS_CACHE_DIR=/var/tmp/adapters_cache
+      - ADAPTERS_CACHE_THRESHOLD=50
+      - ADAPTERS_CACHE_TIMEOUT=3600
+      - ADAPTERS_SUBPROCESS_TIMEOUT=600
+      - ADAPTERS_PSEUDOVIEWER_TIMEOUT=40
+      - ADAPTERS_FLASK_LOG_LEVEL=INFO
+    volumes:
+      - adapters_cache:/var/tmp/adapters_cache
     ports:
       - "8000:80"
 
 volumes:
   postgres_data:
+  adapters_cache:
