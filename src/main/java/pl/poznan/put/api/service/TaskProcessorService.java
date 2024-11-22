@@ -336,6 +336,9 @@ public class TaskProcessorService {
       AnalyzedModel firstModel, Collection<AnalyzedBasePair> correctCanonicalBasePairs) {
     var residues = firstModel.residueIdentifiers();
     var canonicalPairs = new HashSet<>(correctCanonicalBasePairs);
+    logger.trace("Generating dot-bracket notation for {} residues and {} canonical base pairs", 
+        residues.size(), canonicalPairs.size());
+    canonicalPairs.forEach(pair -> logger.trace("Base pair: {}", pair));
     var bpseq = BpSeq.fromBasePairs(residues, canonicalPairs);
     return conversionClient.convertBpseqToDotBracket(bpseq.toString());
   }
