@@ -152,7 +152,7 @@ public class TaskProcessorService {
               var jsonResult = analysisClient.analyze(file.content(), request.analyzer());
               try {
                 var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
-                var structure3D = new PdbParser(false).parse(file.content()).get(0);
+                var structure3D = new PdbParser().parse(file.content()).get(0);
                 return new AnalyzedModel(file.name(), structure3D, structure2D);
               } catch (JsonProcessingException e) {
                 logger.error("Failed to parse analysis result for file: {}", file.name(), e);

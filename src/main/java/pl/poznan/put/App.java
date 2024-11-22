@@ -172,7 +172,7 @@ public class App {
       }
 
       var pdbContent = Files.readString(pdbFile.toPath(), Charset.defaultCharset());
-      var structure3D = new PdbParser(false).parse(pdbContent);
+      var structure3D = new PdbParser().parse(pdbContent);
 
       if (structure3D.isEmpty()) {
         throw new RuntimeException("Failed to parse PDB file: " + pdbFile.getName());

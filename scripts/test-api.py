@@ -78,6 +78,33 @@ def get_results(task_id: str) -> None:
         )
     )
 
+    print("\nCanonical Base Pairs:")
+    print(
+        tabulate(
+            results["canonicalPairs"]["rows"],
+            headers=results["canonicalPairs"]["headers"],
+            tablefmt="grid",
+        )
+    )
+
+    print("\nNon-canonical Base Pairs:")
+    print(
+        tabulate(
+            results["nonCanonicalPairs"]["rows"],
+            headers=results["nonCanonicalPairs"]["headers"],
+            tablefmt="grid",
+        )
+    )
+
+    print("\nStackings:")
+    print(
+        tabulate(
+            results["stackings"]["rows"],
+            headers=results["stackings"]["headers"],
+            tablefmt="grid",
+        )
+    )
+
     # Display dotBracket
     print(f"\nDotBracket:\n{results['dotBracket']}")
 

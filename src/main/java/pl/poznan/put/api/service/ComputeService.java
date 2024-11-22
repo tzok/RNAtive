@@ -152,6 +152,7 @@ public class ComputeService {
     var headers = List.of("Nt1", "Nt2", "Leontis-Westhof", "Confidence", "Is reference?");
     var rows =
         pairs.stream()
+                .distinct()
             .map(
                 pair -> {
                   var confidence = allInteractions.getCount(pair) / (double) totalModelCount;
@@ -173,6 +174,7 @@ public class ComputeService {
     var headers = List.of("Nt1", "Nt2", "Confidence");
     var rows =
         stackings.stream()
+                .distinct()
             .map(
                 stacking -> {
                   var confidence = allInteractions.getCount(stacking) / (double) totalModelCount;
