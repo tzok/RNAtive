@@ -146,35 +146,40 @@ public class TaskProcessorService {
   }
 
   private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request) {
-    var analyzedModels = request.files().parallelStream()
-        .map(
-            file -> {
-              var jsonResult = analysisClient.analyze(file.content(), request.analyzer());
-              try {
-                var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
-                var structure3D = new PdbParser().parse(file.content()).get(0);
-                return new AnalyzedModel(file.name(), structure3D, structure2D);
-              } catch (JsonProcessingException e) {
-                logger.error("Failed to parse analysis result for file: {}", file.name(), e);
-                return null;
-              }
-            })
-        .collect(Collectors.toList());
+    var analyzedModels =
+        request.files().parallelStream()
+            .map(
+                file -> {
+                  var jsonResult = analysisClient.analyze(file.content(), request.analyzer());
+                  try {
+                    var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
+                    var structure3D = new PdbParser().parse(file.content()).get(0);
+                    return new AnalyzedModel(file.name(), structure3D, structure2D);
+                  } catch (JsonProcessingException e) {
+                    logger.error("Failed to parse analysis result for file: {}", file.name(), e);
+                    return null;
+                  }
+                })
+            .collect(Collectors.toList());
 
     // Check if all models have the same sequence
     if (analyzedModels.stream().allMatch(Objects::nonNull)) {
-      var sequences = analyzedModels.stream()
-          .map(model -> model.residueIdentifiers().stream()
-              .map(PdbNamedResidueIdentifier::oneLetterName)
-              .map(String::valueOf)
-              .collect(Collectors.joining()))
-          .distinct()
-          .collect(Collectors.toList());
+      var sequences =
+          analyzedModels.stream()
+              .map(
+                  model ->
+                      model.residueIdentifiers().stream()
+                          .map(PdbNamedResidueIdentifier::oneLetterName)
+                          .map(String::valueOf)
+                          .collect(Collectors.joining()))
+              .distinct()
+              .collect(Collectors.toList());
 
       if (sequences.size() > 1) {
         logger.error("Models have different sequences");
-        var message = "Models have different nucleotide sequences. Found sequences: " + 
-            String.join(", ", sequences);
+        var message =
+            "Models have different nucleotide sequences. Found sequences: "
+                + String.join(", ", sequences);
         throw new RuntimeException(message);
       }
     }
