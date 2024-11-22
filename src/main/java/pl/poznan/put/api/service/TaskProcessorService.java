@@ -165,21 +165,14 @@ public class TaskProcessorService {
     // Check if all models have the same sequence
     if (analyzedModels.stream().allMatch(Objects::nonNull)) {
       var sequences =
-          analyzedModels.stream()
-              .map(
-                  model ->
-                      model.residueIdentifiers().stream()
-                          .map(PdbNamedResidueIdentifier::oneLetterName)
-                          .map(String::valueOf)
-                          .collect(Collectors.joining()))
-              .distinct()
-              .collect(Collectors.toList());
+          analyzedModels.stream().map(AnalyzedModel::residueIdentifiers).distinct().toList();
 
       if (sequences.size() > 1) {
-        logger.error("Models have different sequences");
+        logger.error("Models have different nucleotide composition");
         var message =
-            "Models have different nucleotide sequences. Found sequences: "
-                + String.join(", ", sequences);
+            "Models have different nucleotide composition. Found nucleotides: "
+                + String.join(
+                    ", ", sequences.stream().map(List::toString).collect(Collectors.joining(", ")));
         throw new RuntimeException(message);
       }
     }
@@ -336,8 +329,10 @@ public class TaskProcessorService {
       AnalyzedModel firstModel, Collection<AnalyzedBasePair> correctCanonicalBasePairs) {
     var residues = firstModel.residueIdentifiers();
     var canonicalPairs = new HashSet<>(correctCanonicalBasePairs);
-    logger.trace("Generating dot-bracket notation for {} residues and {} canonical base pairs", 
-        residues.size(), canonicalPairs.size());
+    logger.trace(
+        "Generating dot-bracket notation for {} residues and {} canonical base pairs",
+        residues.size(),
+        canonicalPairs.size());
     canonicalPairs.forEach(pair -> logger.trace("Base pair: {}", pair));
     var bpseq = BpSeq.fromBasePairs(residues, canonicalPairs);
     return conversionClient.convertBpseqToDotBracket(bpseq.toString());
