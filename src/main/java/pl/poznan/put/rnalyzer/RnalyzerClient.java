@@ -51,6 +51,7 @@ public class RnalyzerClient implements AutoCloseable {
       throw new IllegalStateException("Session not initialized. Call initializeSession() first.");
     }
 
+    LOGGER.info("Analyzing PDB content with MolProbity: {}", filename);
     LOGGER.trace("Preparing XML content for PDB analysis");
     Structures structures = new Structures(List.of(new Structure(pdbContent, filename)));
     StringWriter writer = new StringWriter();
@@ -65,7 +66,6 @@ public class RnalyzerClient implements AutoCloseable {
 
     String xmlContent = writer.toString();
     LOGGER.trace("XML content length: {} characters", xmlContent.length());
-    LOGGER.trace("XML content:\n{}", xmlContent);
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_XML);
