@@ -396,7 +396,8 @@ public class TaskProcessorService {
         if (request.molProbityFilter() == MolProbityFilter.GOOD_ONLY) {
           if (!"good".equalsIgnoreCase(structure.rankCategory())) {
             logger.info(
-                "Model {} removed: overall rank category is {} (clashscore: {}, percentile rank: {})",
+                "Model {} removed: overall rank category is {} (clashscore: {}, percentile rank:"
+                    + " {})",
                 model.name(),
                 structure.rankCategory(),
                 structure.clashscore(),
@@ -422,23 +423,20 @@ public class TaskProcessorService {
           if (!"good".equalsIgnoreCase(structure.badBondsCategory())) {
             logger.info(
                 "Model {} removed: bonds category is {} ({}%)",
-                model.name(),
-                structure.badBondsCategory(),
-                structure.pctBadBonds());
+                model.name(), structure.badBondsCategory(), structure.pctBadBonds());
             isValid = false;
           }
           if (!"good".equalsIgnoreCase(structure.badAnglesCategory())) {
             logger.info(
                 "Model {} removed: angles category is {} ({}%)",
-                model.name(),
-                structure.badAnglesCategory(),
-                structure.pctBadAngles());
+                model.name(), structure.badAnglesCategory(), structure.pctBadAngles());
             isValid = false;
           }
         } else if (request.molProbityFilter() == MolProbityFilter.GOOD_AND_CAUTION) {
           if ("bad".equalsIgnoreCase(structure.rankCategory())) {
             logger.info(
-                "Model {} removed: overall rank category is {} (clashscore: {}, percentile rank: {})",
+                "Model {} removed: overall rank category is {} (clashscore: {}, percentile rank:"
+                    + " {})",
                 model.name(),
                 structure.rankCategory(),
                 structure.clashscore(),
@@ -464,17 +462,13 @@ public class TaskProcessorService {
           if ("bad".equalsIgnoreCase(structure.badBondsCategory())) {
             logger.info(
                 "Model {} removed: bonds category is {} ({}%)",
-                model.name(),
-                structure.badBondsCategory(),
-                structure.pctBadBonds());
+                model.name(), structure.badBondsCategory(), structure.pctBadBonds());
             isValid = false;
           }
           if ("bad".equalsIgnoreCase(structure.badAnglesCategory())) {
             logger.info(
                 "Model {} removed: angles category is {} ({}%)",
-                model.name(),
-                structure.badAnglesCategory(),
-                structure.pctBadAngles());
+                model.name(), structure.badAnglesCategory(), structure.pctBadAngles());
             isValid = false;
           }
         }

@@ -9,11 +9,11 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
-import pl.poznan.put.rnalyzer.model.Structure;
-import pl.poznan.put.rnalyzer.model.Structures;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
+import pl.poznan.put.rnalyzer.model.Structure;
+import pl.poznan.put.rnalyzer.model.Structures;
 
 public class RnalyzerClient implements AutoCloseable {
   private static final Logger LOGGER = LoggerFactory.getLogger(RnalyzerClient.class);
@@ -45,24 +45,24 @@ public class RnalyzerClient implements AutoCloseable {
     }
   }
 
-  public MolProbityResponse analyzePdbContent(String pdbContent) {
+  public MolProbityResponse analyzePdbContent(String pdbContent, String filename) {
     if (resourceId == null) {
       LOGGER.error("Attempt to analyze PDB content without initialized session");
       throw new IllegalStateException("Session not initialized. Call initializeSession() first.");
     }
 
     LOGGER.trace("Preparing XML content for PDB analysis");
-    Structures structures = new Structures(List.of(new Structure(pdbContent)));
+    Structures structures = new Structures(List.of(new Structure(pdbContent, filename)));
     StringWriter writer = new StringWriter();
     try {
-        JAXBContext context = JAXBContext.newInstance(Structures.class);
-        Marshaller marshaller = context.createMarshaller();
-        marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
-        marshaller.marshal(structures, writer);
+      JAXBContext context = JAXBContext.newInstance(Structures.class);
+      Marshaller marshaller = context.createMarshaller();
+      marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
+      marshaller.marshal(structures, writer);
     } catch (JAXBException e) {
-        throw new RuntimeException("Failed to generate XML content", e);
+      throw new RuntimeException("Failed to generate XML content", e);
     }
-    
+
     String xmlContent = writer.toString();
     LOGGER.trace("XML content length: {} characters", xmlContent.length());
     LOGGER.trace("XML content:\n{}", xmlContent);

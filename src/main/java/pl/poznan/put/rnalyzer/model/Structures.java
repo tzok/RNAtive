@@ -9,21 +9,20 @@ import java.util.List;
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlRootElement(name = "structures")
 public class Structures {
-    @XmlElement(name = "structure")
-    private List<Structure> structures;
+  @XmlElement(name = "structure")
+  private List<Structure> structures;
 
-    public Structures() {
-    }
+  public Structures() {}
 
-    public Structures(List<Structure> structures) {
-        this.structures = structures;
-    }
+  public Structures(List<Structure> structures) {
+    this.structures = structures;
+  }
 
-    public List<Structure> getStructures() {
-        return structures;
-    }
+  public List<Structure> getStructures() {
+    return structures;
+  }
 
-    public void setStructures(List<Structure> structures) {
-        this.structures = structures;
-    }
+  public void setStructures(List<Structure> structures) {
+    this.structures = structures;
+  }
 }

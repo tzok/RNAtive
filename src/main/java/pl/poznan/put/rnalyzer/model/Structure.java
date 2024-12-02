@@ -18,14 +18,6 @@ public class Structure {
 
   public Structure() {}
 
-  public Structure(List<String> atoms) {
-    this(atoms, null);
-  }
-
-  public Structure(String content) {
-    this(content, null);
-  }
-
   public Structure(List<String> atoms, String filename) {
     this.atoms = atoms;
     this.filename = filename;

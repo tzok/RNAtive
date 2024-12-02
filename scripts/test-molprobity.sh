@@ -101,7 +101,7 @@ for pdb_file in "$@"; do
 		echo "Sending analysis request..."
 	fi
 
-	response=$(curl -s -X PUT \
+	response=$(curl -v -X PUT \
 		-H "Content-Type: application/xml" \
 		-H "Accept: application/json" \
 		-d "$xml_content" \
