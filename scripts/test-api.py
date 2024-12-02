@@ -77,7 +77,7 @@ def get_results(task_id: str) -> None:
             tablefmt="grid",
         )
     )
-    
+
     # Display removal reasons if present
     if "removedModels" in results:
         print("\nRemoved Models:")
