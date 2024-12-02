@@ -558,21 +558,8 @@ public class TaskProcessorService {
     return true;
   }
 
-  private void addRemovalReason(String modelName, List<RankedModel> removedModels, String reason) {
-
+  private void addRemovalReason(String modelName, Task task, String reason) {
     logger.info("Model {} removed: {}", modelName, reason);
-    var removedModel =
-        removedModels.stream()
-            .filter(rm -> rm.getName().equals(modelName))
-            .findFirst()
-            .orElseGet(
-                () -> {
-                  var rm = new RankedModel();
-                  rm.setName(modelName);
-                  rm.setInteractionNetworkFidelity(Double.NaN);
-                  removedModels.add(rm);
-                  return rm;
-                });
-    removedModel.getRemovalReasons().add(reason);
+    task.addRemovalReason(String.format("Model %s: %s", modelName, reason));
   }
 }
