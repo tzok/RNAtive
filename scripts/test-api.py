@@ -226,9 +226,22 @@ def main():
             if status.get("message"):
                 print(f"Message: {status['message']}")
             if status.get("removalReasons"):
-                print("\nRemoval reasons:")
+                print("\nRemoved models:")
+                # Group reasons by model
+                model_reasons = {}
                 for reason in status["removalReasons"]:
-                    print(f"  - {reason}")
+                    if reason.startswith("Model "):
+                        model_name = reason.split(":")[0].replace("Model ", "").strip()
+                        reason_text = reason.split(":", 1)[1].strip()
+                        if model_name not in model_reasons:
+                            model_reasons[model_name] = []
+                        model_reasons[model_name].append(reason_text)
+                
+                # Print grouped reasons
+                for model, reasons in model_reasons.items():
+                    print(f"\n  {model}:")
+                    for reason in reasons:
+                        print(f"    - {reason}")
 
         elif args.command == "results":
             get_results(args.task_id)
