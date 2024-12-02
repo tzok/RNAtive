@@ -14,12 +14,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import pl.poznan.put.AnalyzedModel;
 import pl.poznan.put.ConsensusMode;
 import pl.poznan.put.InteractionNetworkFidelity;
 import pl.poznan.put.RankedModel;
 import pl.poznan.put.api.dto.*;
 import pl.poznan.put.api.exception.TaskNotFoundException;
+import pl.poznan.put.api.model.MolProbityFilter;
+import pl.poznan.put.api.model.Task;
 import pl.poznan.put.api.model.TaskStatus;
 import pl.poznan.put.api.model.VisualizationTool;
 import pl.poznan.put.api.repository.TaskRepository;
@@ -29,6 +32,8 @@ import pl.poznan.put.model.BaseInteractions;
 import pl.poznan.put.notation.LeontisWesthof;
 import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
 import pl.poznan.put.pdb.analysis.PdbParser;
+import pl.poznan.put.rnalyzer.MolProbityResponse;
+import pl.poznan.put.rnalyzer.RnalyzerClient;
 import pl.poznan.put.structure.AnalyzedBasePair;
 import pl.poznan.put.structure.formats.BpSeq;
 import pl.poznan.put.structure.formats.ImmutableDefaultDotBracketFromPdb;
@@ -36,6 +41,7 @@ import pl.poznan.put.utility.svg.Format;
 import pl.poznan.put.utility.svg.SVGHelper;
 
 @Service
+@Transactional
 public class TaskProcessorService {
   private static final Logger logger = LoggerFactory.getLogger(TaskProcessorService.class);
   private final TaskRepository taskRepository;
@@ -78,10 +84,20 @@ public class TaskProcessorService {
       var request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
 
       logger.info("Parsing and analyzing files");
-      var analyzedModels = parseAndAnalyzeFiles(request);
+      var analyzedModels = parseAndAnalyzeFiles(request, task);
       if (analyzedModels.stream().anyMatch(Objects::isNull)) {
         task.setStatus(TaskStatus.FAILED);
         task.setMessage("Failed to parse one or more models");
+        taskRepository.save(task);
+        return CompletableFuture.completedFuture(null);
+      }
+
+      if (analyzedModels.size() < 2) {
+        task.setStatus(TaskStatus.FAILED);
+        task.setMessage(
+            analyzedModels.isEmpty()
+                ? "All models were filtered out by MolProbity criteria"
+                : "Only one model remained after MolProbity filtering");
         taskRepository.save(task);
         return CompletableFuture.completedFuture(null);
       }
@@ -95,7 +111,7 @@ public class TaskProcessorService {
       logger.info("Collecting all interactions");
       var allInteractions = collectAllInteractions(analyzedModels);
       logger.info("Calculating threshold");
-      var threshold = calculateThreshold(request);
+      var threshold = calculateThreshold(request.confidenceLevel(), analyzedModels.size());
       logger.info("Computing correct interactions");
       var correctConsideredInteractions =
           computeCorrectInteractions(
@@ -106,7 +122,8 @@ public class TaskProcessorService {
               threshold);
       logger.info("Generating ranked models");
       var rankedModels =
-          generateRankedModels(request, analyzedModels, correctConsideredInteractions);
+          generateRankedModels(
+              request.consensusMode(), analyzedModels, correctConsideredInteractions);
 
       logger.info("Generating dot bracket notation");
       var dotBracket =
@@ -126,7 +143,8 @@ public class TaskProcessorService {
 
       logger.info("Generating visualization");
       var svg =
-          generateVisualization(request, firstModel, correctConsideredInteractions, dotBracket);
+          generateVisualization(
+              request.visualizationTool(), firstModel, correctConsideredInteractions, dotBracket);
       task.setSvg(svg);
 
       logger.info("Task processing completed successfully");
@@ -145,22 +163,36 @@ public class TaskProcessorService {
     return CompletableFuture.completedFuture(null);
   }
 
-  private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request) {
-    var analyzedModels =
-        request.files().parallelStream()
-            .map(
-                file -> {
-                  var jsonResult = analysisClient.analyze(file.content(), request.analyzer());
-                  try {
-                    var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
-                    var structure3D = new PdbParser().parse(file.content()).get(0);
-                    return new AnalyzedModel(file.name(), structure3D, structure2D);
-                  } catch (JsonProcessingException e) {
-                    logger.error("Failed to parse analysis result for file: {}", file.name(), e);
-                    return null;
-                  }
-                })
-            .collect(Collectors.toList());
+  private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request, Task task) {
+    var analyzedModels = new ArrayList<AnalyzedModel>();
+
+    try (var rnalyzerClient = new RnalyzerClient()) {
+      if (request.molProbityFilter() != MolProbityFilter.ALL) {
+        rnalyzerClient.initializeSession();
+      }
+
+      for (var file : request.files()) {
+        try {
+          var structure3D = new PdbParser().parse(file.content()).get(0);
+
+          // Apply MolProbity filtering early if enabled
+          if (request.molProbityFilter() != MolProbityFilter.ALL) {
+            var response = rnalyzerClient.analyzePdbContent(structure3D.toPdb(), file.name());
+            if (!isModelValid(
+                file.name(), response.structure(), request.molProbityFilter(), task)) {
+              continue; // Skip analysis for filtered models
+            }
+          }
+
+          // Only analyze models that passed MolProbity filtering
+          var jsonResult = analysisClient.analyze(file.name(), file.content(), request.analyzer());
+          var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
+          analyzedModels.add(new AnalyzedModel(file.name(), structure3D, structure2D));
+        } catch (JsonProcessingException e) {
+          logger.error("Failed to parse analysis result for file: {}", file.name(), e);
+        }
+      }
+    }
 
     // Check if all models have the same sequence
     if (analyzedModels.stream().allMatch(Objects::nonNull)) {
@@ -194,8 +226,8 @@ public class TaskProcessorService {
         .collect(Collectors.toCollection(HashBag::new));
   }
 
-  private int calculateThreshold(ComputeRequest request) {
-    return (int) FastMath.ceil(request.confidenceLevel() * request.files().size());
+  private int calculateThreshold(double confidenceLevel, int count) {
+    return (int) FastMath.ceil(confidenceLevel * count);
   }
 
   private Set<AnalyzedBasePair> computeCorrectInteractions(
@@ -285,7 +317,7 @@ public class TaskProcessorService {
   }
 
   private List<RankedModel> generateRankedModels(
-      ComputeRequest request,
+      ConsensusMode consensusMode,
       List<AnalyzedModel> analyzedModels,
       Set<AnalyzedBasePair> correctConsideredInteractions) {
     logger.info("Starting to generate ranked models");
@@ -295,7 +327,7 @@ public class TaskProcessorService {
                 model -> {
                   logger.debug("Processing model: {}", model.name());
                   var modelInteractions =
-                      model.streamBasePairs(request.consensusMode()).collect(Collectors.toSet());
+                      model.streamBasePairs(consensusMode).collect(Collectors.toSet());
                   logger.debug("Calculating interaction network fidelity");
                   var inf =
                       InteractionNetworkFidelity.calculate(
@@ -339,13 +371,13 @@ public class TaskProcessorService {
   }
 
   private String generateVisualization(
-      ComputeRequest request,
+      VisualizationTool visualizationTool,
       AnalyzedModel firstModel,
       Set<AnalyzedBasePair> correctConsideredInteractions,
       String dotBracket) {
     try {
       String svg;
-      if (request.visualizationTool() == VisualizationTool.VARNA) {
+      if (visualizationTool == VisualizationTool.VARNA) {
         var dotBracketObj =
             ImmutableDefaultDotBracketFromPdb.of(
                 extractSequence(firstModel), dotBracket.split("\n")[1], firstModel.structure3D());
@@ -360,12 +392,135 @@ public class TaskProcessorService {
         var visualizationInput =
             visualizationService.prepareVisualizationInput(firstModel, dotBracket);
         var visualizationJson = objectMapper.writeValueAsString(visualizationInput);
-        svg = visualizationClient.visualize(visualizationJson, request.visualizationTool());
+        svg = visualizationClient.visualize(visualizationJson, visualizationTool);
       }
       return svg;
     } catch (Exception e) {
       logger.warn("Visualization generation failed", e);
       throw new RuntimeException("Visualization generation failed: " + e.getMessage(), e);
     }
+  }
+
+  private boolean isModelValid(
+      String modelName,
+      MolProbityResponse.Structure structure,
+      MolProbityFilter filter,
+      Task task) {
+
+    if (filter == MolProbityFilter.GOOD_ONLY) {
+      return validateGoodOnly(modelName, structure, task);
+    } else if (filter == MolProbityFilter.GOOD_AND_CAUTION) {
+      return validateGoodAndCaution(modelName, structure, task);
+    }
+    return true;
+  }
+
+  private boolean validateGoodOnly(
+      String modelName, MolProbityResponse.Structure structure, Task task) {
+    if (!"good".equalsIgnoreCase(structure.rankCategory())) {
+      addRemovalReason(
+          modelName,
+          task,
+          String.format(
+              "Overall rank category is %s (clashscore: %s, percentile rank: %s)",
+              structure.rankCategory(), structure.clashscore(), structure.pctRank()));
+      return false;
+    }
+    if (!"good".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
+      addRemovalReason(
+          modelName,
+          task,
+          String.format(
+              "Sugar pucker category is %s (%s%%)",
+              structure.probablyWrongSugarPuckersCategory(),
+              structure.pctProbablyWrongSugarPuckers()));
+      return false;
+    }
+    if (!"good".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
+      addRemovalReason(
+          modelName,
+          task,
+          String.format(
+              "Backbone conformations category is %s (%s%%)",
+              structure.badBackboneConformationsCategory(),
+              structure.pctBadBackboneConformations()));
+      return false;
+    }
+    if (!"good".equalsIgnoreCase(structure.badBondsCategory())) {
+      addRemovalReason(
+          modelName,
+          task,
+          String.format(
+              "Bonds category is %s (%s%%)",
+              structure.badBondsCategory(), structure.pctBadBonds()));
+      return false;
+    }
+    if (!"good".equalsIgnoreCase(structure.badAnglesCategory())) {
+      addRemovalReason(
+          modelName,
+          task,
+          String.format(
+              "Angles category is %s (%s%%)",
+              structure.badAnglesCategory(), structure.pctBadAngles()));
+      return false;
+    }
+    return true;
+  }
+
+  private boolean validateGoodAndCaution(
+      String modelName, MolProbityResponse.Structure structure, Task task) {
+    if ("warning".equalsIgnoreCase(structure.rankCategory())) {
+      addRemovalReason(
+          modelName,
+          task,
+          String.format(
+              "Overall rank category is %s (clashscore: %s, percentile rank: %s)",
+              structure.rankCategory(), structure.clashscore(), structure.pctRank()));
+      return false;
+    }
+    if ("warning".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
+      addRemovalReason(
+          modelName,
+          task,
+          String.format(
+              "Sugar pucker category is %s (%s%%)",
+              structure.probablyWrongSugarPuckersCategory(),
+              structure.pctProbablyWrongSugarPuckers()));
+      return false;
+    }
+    if ("warning".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
+      addRemovalReason(
+          modelName,
+          task,
+          String.format(
+              "Backbone conformations category is %s (%s%%)",
+              structure.badBackboneConformationsCategory(),
+              structure.pctBadBackboneConformations()));
+      return false;
+    }
+    if ("warning".equalsIgnoreCase(structure.badBondsCategory())) {
+      addRemovalReason(
+          modelName,
+          task,
+          String.format(
+              "Bonds category is %s (%s%%)",
+              structure.badBondsCategory(), structure.pctBadBonds()));
+      return false;
+    }
+    if ("warning".equalsIgnoreCase(structure.badAnglesCategory())) {
+      addRemovalReason(
+          modelName,
+          task,
+          String.format(
+              "Angles category is %s (%s%%)",
+              structure.badAnglesCategory(), structure.pctBadAngles()));
+      return false;
+    }
+    return true;
+  }
+
+  private void addRemovalReason(String modelName, Task task, String reason) {
+    logger.info("Model {} removed: {}", modelName, reason);
+    task.addRemovalReason(modelName, reason);
   }
 }

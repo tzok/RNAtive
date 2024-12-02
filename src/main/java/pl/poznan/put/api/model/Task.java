@@ -2,7 +2,7 @@ package pl.poznan.put.api.model;
 
 import jakarta.persistence.*;
 import java.time.Instant;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 public class Task {
@@ -20,6 +20,12 @@ public class Task {
   @Lob private String svg;
 
   @Lob private String message;
+
+  @ElementCollection(fetch = FetchType.EAGER)
+  @CollectionTable(name = "removal_reasons", joinColumns = @JoinColumn(name = "task_id"))
+  @MapKeyColumn(name = "model_name")
+  @Column(name = "reason", length = 1000)
+  private Map<String, List<String>> removalReasons = new HashMap<>();
 
   public Task() {
     this.id = UUID.randomUUID().toString();
@@ -74,5 +80,13 @@ public class Task {
 
   public void setMessage(String message) {
     this.message = message;
+  }
+
+  public Map<String, List<String>> getRemovalReasons() {
+    return removalReasons;
+  }
+
+  public void addRemovalReason(String modelName, String reason) {
+    removalReasons.computeIfAbsent(modelName, k -> new ArrayList<>()).add(reason);
   }
 }

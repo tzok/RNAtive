@@ -27,7 +27,7 @@ def submit_job(files: List[Path], args, dot_bracket: Optional[str] = None) -> st
         "visualizationTool": args.visualization,
         "consensusMode": args.consensus_mode,
         "confidenceLevel": args.confidence,
-        "molprobityFilter": args.molprobity_filter,
+        "molProbityFilter": args.molprobity_filter,
     }
 
     if dot_bracket:
@@ -68,7 +68,7 @@ def get_results(task_id: str) -> None:
     response.raise_for_status()
     results = response.json()
 
-    # Display Model Rankings
+    # Display Model Rankings and Removal Reasons
     print("\nModel Rankings:")
     print(
         tabulate(
@@ -183,8 +183,9 @@ def main():
     )
     submit_parser.add_argument(
         "--molprobity-filter",
-        action="store_true",
-        help="Enable MolProbity filtering",
+        choices=["GOOD_ONLY", "GOOD_AND_CAUTION", "ALL"],
+        default="GOOD_AND_CAUTION",
+        help="MolProbity filtering level (default: GOOD_AND_CAUTION)",
     )
     submit_parser.add_argument(
         "--analyzer",
@@ -223,6 +224,12 @@ def main():
             print(f"Status: {status['status']}")
             if status.get("message"):
                 print(f"Message: {status['message']}")
+            if status.get("removalReasons"):
+                print("\nRemoved models:")
+                for model, reasons in status["removalReasons"].items():
+                    print(f"\n  {model}:")
+                    for reason in reasons:
+                        print(f"    - {reason}")
 
         elif args.command == "results":
             get_results(args.task_id)

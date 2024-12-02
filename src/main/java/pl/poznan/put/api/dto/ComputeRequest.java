@@ -3,6 +3,7 @@ package pl.poznan.put.api.dto;
 import java.util.List;
 import pl.poznan.put.Analyzer;
 import pl.poznan.put.ConsensusMode;
+import pl.poznan.put.api.model.MolProbityFilter;
 import pl.poznan.put.api.model.VisualizationTool;
 
 public record ComputeRequest(
@@ -11,7 +12,7 @@ public record ComputeRequest(
     Analyzer analyzer,
     ConsensusMode consensusMode,
     String dotBracket,
-    Boolean applyMolProbityFilter,
+    MolProbityFilter molProbityFilter,
     VisualizationTool visualizationTool) {
   public ComputeRequest {
     // Set defaults if null
@@ -21,8 +22,8 @@ public record ComputeRequest(
     if (consensusMode == null) {
       consensusMode = ConsensusMode.CANONICAL;
     }
-    if (applyMolProbityFilter == null) {
-      applyMolProbityFilter = true;
+    if (molProbityFilter == null) {
+      molProbityFilter = MolProbityFilter.GOOD_ONLY;
     }
     if (visualizationTool == null) {
       visualizationTool = VisualizationTool.RNAPUZZLER;

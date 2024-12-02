@@ -51,7 +51,11 @@ public class ComputeService {
   public TaskStatusResponse getTaskStatus(String taskId) {
     var task = taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
     return new TaskStatusResponse(
-        task.getId(), task.getStatus(), task.getCreatedAt(), task.getMessage());
+        task.getId(),
+        task.getStatus(),
+        task.getCreatedAt(),
+        task.getMessage(),
+        task.getRemovalReasons());
   }
 
   public String getTaskSvg(String taskId) {
