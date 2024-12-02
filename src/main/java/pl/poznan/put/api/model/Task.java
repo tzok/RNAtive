@@ -20,6 +20,11 @@ public class Task {
   @Lob private String svg;
 
   @Lob private String message;
+  
+  @ElementCollection
+  @CollectionTable(name = "removal_reasons", joinColumns = @JoinColumn(name = "task_id"))
+  @Column(name = "reason", length = 1000)
+  private List<String> removalReasons = new ArrayList<>();
 
   public Task() {
     this.id = UUID.randomUUID().toString();
@@ -74,5 +79,13 @@ public class Task {
 
   public void setMessage(String message) {
     this.message = message;
+  }
+
+  public List<String> getRemovalReasons() {
+    return removalReasons;
+  }
+
+  public void addRemovalReason(String reason) {
+    this.removalReasons.add(reason);
   }
 }

@@ -78,15 +78,6 @@ def get_results(task_id: str) -> None:
         )
     )
 
-    # Display removal reasons if present
-    if "removedModels" in results:
-        print("\nRemoved Models:")
-        for model in results["removedModels"]:
-            print(f"\nModel: {model['name']}")
-            if "removalReasons" in model and model["removalReasons"]:
-                print("Removal reasons:")
-                for reason in model["removalReasons"]:
-                    print(f"  - {reason}")
 
     print("\nCanonical Base Pairs:")
     print(
@@ -234,6 +225,10 @@ def main():
             print(f"Status: {status['status']}")
             if status.get("message"):
                 print(f"Message: {status['message']}")
+            if status.get("removalReasons"):
+                print("\nRemoval reasons:")
+                for reason in status["removalReasons"]:
+                    print(f"  - {reason}")
 
         elif args.command == "results":
             get_results(args.task_id)

@@ -444,7 +444,7 @@ public class TaskProcessorService {
       String modelName,
       MolProbityResponse.Structure structure,
       MolProbityFilter filter,
-      List<RankedModel> removedModels) {
+      Task task) {
 
     if (filter == MolProbityFilter.GOOD_ONLY) {
       return validateGoodOnly(modelName, structure, removedModels);

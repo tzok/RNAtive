@@ -21,8 +21,6 @@ public class RankedModel implements Comparable<RankedModel> {
 
   private String dotBracket;
 
-  private List<String> removalReasons = new ArrayList<>();
-
   // Default constructor for Jackson
   public RankedModel() {}
 
@@ -101,13 +99,6 @@ public class RankedModel implements Comparable<RankedModel> {
     this.dotBracket = dotBracket;
   }
 
-  public List<String> getRemovalReasons() {
-    return removalReasons;
-  }
-
-  public void setRemovalReasons(List<String> removalReasons) {
-    this.removalReasons = removalReasons;
-  }
 
   @Override
   public int compareTo(final RankedModel t) {
