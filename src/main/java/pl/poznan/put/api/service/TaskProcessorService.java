@@ -519,6 +519,6 @@ public class TaskProcessorService {
 
   private void addRemovalReason(String modelName, Task task, String reason) {
     logger.info("Model {} removed: {}", modelName, reason);
-    task.addRemovalReason(String.format("Model %s: %s", modelName, reason));
+    task.addRemovalReason(modelName, reason);
   }
 }

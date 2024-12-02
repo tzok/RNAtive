@@ -25,8 +25,9 @@ public class Task {
 
   @ElementCollection(fetch = FetchType.EAGER)
   @CollectionTable(name = "removal_reasons", joinColumns = @JoinColumn(name = "task_id"))
+  @MapKeyColumn(name = "model_name")
   @Column(name = "reason", length = 1000)
-  private List<String> removalReasons = new ArrayList<>();
+  private Map<String, List<String>> removalReasons = new HashMap<>();
 
   public Task() {
     this.id = UUID.randomUUID().toString();
@@ -83,11 +84,11 @@ public class Task {
     this.message = message;
   }
 
-  public List<String> getRemovalReasons() {
+  public Map<String, List<String>> getRemovalReasons() {
     return removalReasons;
   }
 
-  public void addRemovalReason(String reason) {
-    this.removalReasons.add(reason);
+  public void addRemovalReason(String modelName, String reason) {
+    removalReasons.computeIfAbsent(modelName, k -> new ArrayList<>()).add(reason);
   }
 }

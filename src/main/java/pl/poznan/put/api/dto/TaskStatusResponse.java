@@ -9,4 +9,4 @@ public record TaskStatusResponse(
     TaskStatus status,
     Instant createdAt,
     String message,
-    List<String> removalReasons) {}
+    Map<String, List<String>> removalReasons) {}
