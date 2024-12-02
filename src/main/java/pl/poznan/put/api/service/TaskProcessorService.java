@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import pl.poznan.put.AnalyzedModel;
 import pl.poznan.put.ConsensusMode;
 import pl.poznan.put.InteractionNetworkFidelity;
@@ -161,7 +162,6 @@ public class TaskProcessorService {
   }
 
   private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request, Task task) {
-    var removedModels = new ArrayList<RankedModel>();
     var analyzedModels = new ArrayList<AnalyzedModel>();
 
     try (var rnalyzerClient = new RnalyzerClient()) {

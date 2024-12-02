@@ -1,7 +1,12 @@
 package pl.poznan.put.api.dto;
 
 import java.time.Instant;
+import java.util.List;
 import pl.poznan.put.api.model.TaskStatus;
 
 public record TaskStatusResponse(
-    String taskId, TaskStatus status, Instant createdAt, String message, List<String> removalReasons) {}
+    String taskId,
+    TaskStatus status,
+    Instant createdAt,
+    String message,
+    List<String> removalReasons) {}
