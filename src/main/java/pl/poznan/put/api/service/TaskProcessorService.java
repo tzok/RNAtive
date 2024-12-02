@@ -21,6 +21,7 @@ import pl.poznan.put.RankedModel;
 import pl.poznan.put.api.dto.*;
 import pl.poznan.put.api.exception.TaskNotFoundException;
 import pl.poznan.put.api.model.MolProbityFilter;
+import pl.poznan.put.api.model.Task;
 import pl.poznan.put.api.model.TaskStatus;
 import pl.poznan.put.api.model.VisualizationTool;
 import pl.poznan.put.api.repository.TaskRepository;
@@ -394,44 +395,74 @@ public class TaskProcessorService {
         boolean isValid = true;
         if (request.molProbityFilter() == MolProbityFilter.GOOD_ONLY) {
           if (!"good".equalsIgnoreCase(structure.rankCategory())) {
-            logger.info("Model {} removed: overall rank category is {}", model.name(), structure.rankCategory());
+            logger.info(
+                "Model {} removed: overall rank category is {}",
+                model.name(),
+                structure.rankCategory());
             isValid = false;
           }
           if (!"good".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
-            logger.info("Model {} removed: sugar pucker category is {}", model.name(), structure.probablyWrongSugarPuckersCategory());
+            logger.info(
+                "Model {} removed: sugar pucker category is {}",
+                model.name(),
+                structure.probablyWrongSugarPuckersCategory());
             isValid = false;
           }
           if (!"good".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
-            logger.info("Model {} removed: backbone conformations category is {}", model.name(), structure.badBackboneConformationsCategory());
+            logger.info(
+                "Model {} removed: backbone conformations category is {}",
+                model.name(),
+                structure.badBackboneConformationsCategory());
             isValid = false;
           }
           if (!"good".equalsIgnoreCase(structure.badBondsCategory())) {
-            logger.info("Model {} removed: bonds category is {}", model.name(), structure.badBondsCategory());
+            logger.info(
+                "Model {} removed: bonds category is {}",
+                model.name(),
+                structure.badBondsCategory());
             isValid = false;
           }
           if (!"good".equalsIgnoreCase(structure.badAnglesCategory())) {
-            logger.info("Model {} removed: angles category is {}", model.name(), structure.badAnglesCategory());
+            logger.info(
+                "Model {} removed: angles category is {}",
+                model.name(),
+                structure.badAnglesCategory());
             isValid = false;
           }
         } else if (request.molProbityFilter() == MolProbityFilter.GOOD_AND_CAUTION) {
           if ("bad".equalsIgnoreCase(structure.rankCategory())) {
-            logger.info("Model {} removed: overall rank category is {}", model.name(), structure.rankCategory());
+            logger.info(
+                "Model {} removed: overall rank category is {}",
+                model.name(),
+                structure.rankCategory());
             isValid = false;
           }
           if ("bad".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
-            logger.info("Model {} removed: sugar pucker category is {}", model.name(), structure.probablyWrongSugarPuckersCategory());
+            logger.info(
+                "Model {} removed: sugar pucker category is {}",
+                model.name(),
+                structure.probablyWrongSugarPuckersCategory());
             isValid = false;
           }
           if ("bad".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
-            logger.info("Model {} removed: backbone conformations category is {}", model.name(), structure.badBackboneConformationsCategory());
+            logger.info(
+                "Model {} removed: backbone conformations category is {}",
+                model.name(),
+                structure.badBackboneConformationsCategory());
             isValid = false;
           }
           if ("bad".equalsIgnoreCase(structure.badBondsCategory())) {
-            logger.info("Model {} removed: bonds category is {}", model.name(), structure.badBondsCategory());
+            logger.info(
+                "Model {} removed: bonds category is {}",
+                model.name(),
+                structure.badBondsCategory());
             isValid = false;
           }
           if ("bad".equalsIgnoreCase(structure.badAnglesCategory())) {
-            logger.info("Model {} removed: angles category is {}", model.name(), structure.badAnglesCategory());
+            logger.info(
+                "Model {} removed: angles category is {}",
+                model.name(),
+                structure.badAnglesCategory());
             isValid = false;
           }
         }
