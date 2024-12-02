@@ -467,7 +467,7 @@ public class TaskProcessorService {
 
   private boolean validateGoodAndCaution(
       String modelName, MolProbityResponse.Structure structure, Task task) {
-    if ("bad".equalsIgnoreCase(structure.rankCategory())) {
+    if ("warning".equalsIgnoreCase(structure.rankCategory())) {
       addRemovalReason(
           modelName,
           task,
@@ -476,7 +476,7 @@ public class TaskProcessorService {
               structure.rankCategory(), structure.clashscore(), structure.pctRank()));
       return false;
     }
-    if ("bad".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
+    if ("warning".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
       addRemovalReason(
           modelName,
           task,
@@ -486,7 +486,7 @@ public class TaskProcessorService {
               structure.pctProbablyWrongSugarPuckers()));
       return false;
     }
-    if ("bad".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
+    if ("warning".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
       addRemovalReason(
           modelName,
           task,
@@ -496,7 +496,7 @@ public class TaskProcessorService {
               structure.pctBadBackboneConformations()));
       return false;
     }
-    if ("bad".equalsIgnoreCase(structure.badBondsCategory())) {
+    if ("warning".equalsIgnoreCase(structure.badBondsCategory())) {
       addRemovalReason(
           modelName,
           task,
@@ -505,7 +505,7 @@ public class TaskProcessorService {
               structure.badBondsCategory(), structure.pctBadBonds()));
       return false;
     }
-    if ("bad".equalsIgnoreCase(structure.badAnglesCategory())) {
+    if ("warning".equalsIgnoreCase(structure.badAnglesCategory())) {
       addRemovalReason(
           modelName,
           task,
