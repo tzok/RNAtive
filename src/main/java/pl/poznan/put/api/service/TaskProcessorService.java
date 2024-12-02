@@ -111,7 +111,7 @@ public class TaskProcessorService {
       logger.info("Collecting all interactions");
       var allInteractions = collectAllInteractions(analyzedModels);
       logger.info("Calculating threshold");
-      var threshold = calculateThreshold(request);
+      var threshold = calculateThreshold(request.confidenceLevel(), analyzedModels.size());
       logger.info("Computing correct interactions");
       var correctConsideredInteractions =
           computeCorrectInteractions(
@@ -122,7 +122,8 @@ public class TaskProcessorService {
               threshold);
       logger.info("Generating ranked models");
       var rankedModels =
-          generateRankedModels(request, analyzedModels, correctConsideredInteractions);
+          generateRankedModels(
+              request.consensusMode(), analyzedModels, correctConsideredInteractions);
 
       logger.info("Generating dot bracket notation");
       var dotBracket =
@@ -142,7 +143,8 @@ public class TaskProcessorService {
 
       logger.info("Generating visualization");
       var svg =
-          generateVisualization(request, firstModel, correctConsideredInteractions, dotBracket);
+          generateVisualization(
+              request.visualizationTool(), firstModel, correctConsideredInteractions, dotBracket);
       task.setSvg(svg);
 
       logger.info("Task processing completed successfully");
@@ -224,8 +226,8 @@ public class TaskProcessorService {
         .collect(Collectors.toCollection(HashBag::new));
   }
 
-  private int calculateThreshold(ComputeRequest request) {
-    return (int) FastMath.ceil(request.confidenceLevel() * request.files().size());
+  private int calculateThreshold(double confidenceLevel, int count) {
+    return (int) FastMath.ceil(confidenceLevel * count);
   }
 
   private Set<AnalyzedBasePair> computeCorrectInteractions(
@@ -315,7 +317,7 @@ public class TaskProcessorService {
   }
 
   private List<RankedModel> generateRankedModels(
-      ComputeRequest request,
+      ConsensusMode consensusMode,
       List<AnalyzedModel> analyzedModels,
       Set<AnalyzedBasePair> correctConsideredInteractions) {
     logger.info("Starting to generate ranked models");
@@ -325,7 +327,7 @@ public class TaskProcessorService {
                 model -> {
                   logger.debug("Processing model: {}", model.name());
                   var modelInteractions =
-                      model.streamBasePairs(request.consensusMode()).collect(Collectors.toSet());
+                      model.streamBasePairs(consensusMode).collect(Collectors.toSet());
                   logger.debug("Calculating interaction network fidelity");
                   var inf =
                       InteractionNetworkFidelity.calculate(
@@ -369,13 +371,13 @@ public class TaskProcessorService {
   }
 
   private String generateVisualization(
-      ComputeRequest request,
+      VisualizationTool visualizationTool,
       AnalyzedModel firstModel,
       Set<AnalyzedBasePair> correctConsideredInteractions,
       String dotBracket) {
     try {
       String svg;
-      if (request.visualizationTool() == VisualizationTool.VARNA) {
+      if (visualizationTool == VisualizationTool.VARNA) {
         var dotBracketObj =
             ImmutableDefaultDotBracketFromPdb.of(
                 extractSequence(firstModel), dotBracket.split("\n")[1], firstModel.structure3D());
@@ -390,7 +392,7 @@ public class TaskProcessorService {
         var visualizationInput =
             visualizationService.prepareVisualizationInput(firstModel, dotBracket);
         var visualizationJson = objectMapper.writeValueAsString(visualizationInput);
-        svg = visualizationClient.visualize(visualizationJson, request.visualizationTool());
+        svg = visualizationClient.visualize(visualizationJson, visualizationTool);
       }
       return svg;
     } catch (Exception e) {
