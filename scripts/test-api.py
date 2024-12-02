@@ -226,18 +226,7 @@ def main():
                 print(f"Message: {status['message']}")
             if status.get("removalReasons"):
                 print("\nRemoved models:")
-                # Group reasons by model
-                model_reasons = {}
-                for reason in status["removalReasons"]:
-                    if reason.startswith("Model "):
-                        model_name = reason.split(":")[0].replace("Model ", "").strip()
-                        reason_text = reason.split(":", 1)[1].strip()
-                        if model_name not in model_reasons:
-                            model_reasons[model_name] = []
-                        model_reasons[model_name].append(reason_text)
-
-                # Print grouped reasons
-                for model, reasons in model_reasons.items():
+                for model, reasons in status["removalReasons"].items():
                     print(f"\n  {model}:")
                     for reason in reasons:
                         print(f"    - {reason}")
