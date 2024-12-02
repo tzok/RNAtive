@@ -2,9 +2,7 @@ package pl.poznan.put.api.model;
 
 import jakarta.persistence.*;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 public class Task {

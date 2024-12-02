@@ -2,6 +2,7 @@ package pl.poznan.put.api.dto;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import pl.poznan.put.api.model.TaskStatus;
 
 public record TaskStatusResponse(
