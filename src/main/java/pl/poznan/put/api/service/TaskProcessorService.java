@@ -86,6 +86,78 @@ public class TaskProcessorService {
         return CompletableFuture.completedFuture(null);
       }
 
+      if (request.molProbityFilter() != MolProbityFilter.ALL) {
+        logger.info("Applying MolProbity filter: {}", request.molProbityFilter());
+        try (var rnalyzerClient = new RnalyzerClient()) {
+          rnalyzerClient.initializeSession();
+          var filteredModels = new ArrayList<AnalyzedModel>();
+          
+          for (var model : analyzedModels) {
+            var response = rnalyzerClient.analyzePdbContent(model.structure3D().toPdb());
+            var structure = response.structure();
+            
+            boolean isValid = true;
+            if (request.molProbityFilter() == MolProbityFilter.GOOD_ONLY) {
+              if (!"good".equalsIgnoreCase(structure.rankCategory())) {
+                logger.info("Model {} removed: overall rank category is {}", model.name(), structure.rankCategory());
+                isValid = false;
+              }
+              if (!"good".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
+                logger.info("Model {} removed: sugar pucker category is {}", model.name(), structure.probablyWrongSugarPuckersCategory());
+                isValid = false;
+              }
+              if (!"good".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
+                logger.info("Model {} removed: backbone conformations category is {}", model.name(), structure.badBackboneConformationsCategory());
+                isValid = false;
+              }
+              if (!"good".equalsIgnoreCase(structure.badBondsCategory())) {
+                logger.info("Model {} removed: bonds category is {}", model.name(), structure.badBondsCategory());
+                isValid = false;
+              }
+              if (!"good".equalsIgnoreCase(structure.badAnglesCategory())) {
+                logger.info("Model {} removed: angles category is {}", model.name(), structure.badAnglesCategory());
+                isValid = false;
+              }
+            } else if (request.molProbityFilter() == MolProbityFilter.GOOD_AND_CAUTION) {
+              if ("bad".equalsIgnoreCase(structure.rankCategory())) {
+                logger.info("Model {} removed: overall rank category is {}", model.name(), structure.rankCategory());
+                isValid = false;
+              }
+              if ("bad".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
+                logger.info("Model {} removed: sugar pucker category is {}", model.name(), structure.probablyWrongSugarPuckersCategory());
+                isValid = false;
+              }
+              if ("bad".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
+                logger.info("Model {} removed: backbone conformations category is {}", model.name(), structure.badBackboneConformationsCategory());
+                isValid = false;
+              }
+              if ("bad".equalsIgnoreCase(structure.badBondsCategory())) {
+                logger.info("Model {} removed: bonds category is {}", model.name(), structure.badBondsCategory());
+                isValid = false;
+              }
+              if ("bad".equalsIgnoreCase(structure.badAnglesCategory())) {
+                logger.info("Model {} removed: angles category is {}", model.name(), structure.badAnglesCategory());
+                isValid = false;
+              }
+            }
+            
+            if (isValid) {
+              filteredModels.add(model);
+            }
+          }
+          
+          if (filteredModels.isEmpty()) {
+            task.setStatus(TaskStatus.FAILED);
+            task.setMessage("All models were filtered out by MolProbity criteria");
+            taskRepository.save(task);
+            return CompletableFuture.completedFuture(null);
+          }
+          
+          analyzedModels = filteredModels;
+          logger.info("After MolProbity filtering: {} models remaining", analyzedModels.size());
+        }
+      }
+
       logger.info("Extracting sequence from the first model");
       var firstModel = analyzedModels.get(0);
       var sequence = extractSequence(firstModel);
