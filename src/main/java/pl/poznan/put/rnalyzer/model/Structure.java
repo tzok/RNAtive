@@ -12,14 +12,28 @@ public class Structure {
   @JsonProperty("atoms")
   private List<String> atoms;
 
+  @XmlElement(name = "filename")
+  @JsonProperty("filename")
+  private String filename;
+
   public Structure() {}
 
   public Structure(List<String> atoms) {
-    this.atoms = atoms;
+    this(atoms, null);
   }
 
   public Structure(String content) {
+    this(content, null);
+  }
+
+  public Structure(List<String> atoms, String filename) {
+    this.atoms = atoms;
+    this.filename = filename;
+  }
+
+  public Structure(String content, String filename) {
     this.atoms = content != null ? List.of(content.split("\n")) : List.of();
+    this.filename = filename;
   }
 
   public List<String> getAtoms() {
@@ -28,5 +42,13 @@ public class Structure {
 
   public void setAtoms(List<String> atoms) {
     this.atoms = atoms;
+  }
+
+  public String getFilename() {
+    return filename;
+  }
+
+  public void setFilename(String filename) {
+    this.filename = filename;
   }
 }
