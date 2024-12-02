@@ -183,8 +183,9 @@ def main():
     )
     submit_parser.add_argument(
         "--molprobity-filter",
-        action="store_true",
-        help="Enable MolProbity filtering",
+        choices=["GOOD_ONLY", "GOOD_AND_CAUTION", "ALL"],
+        default="GOOD_ONLY",
+        help="MolProbity filtering level (default: GOOD_ONLY)",
     )
     submit_parser.add_argument(
         "--analyzer",

@@ -11,7 +11,7 @@ public record ComputeRequest(
     Analyzer analyzer,
     ConsensusMode consensusMode,
     String dotBracket,
-    Boolean applyMolProbityFilter,
+    MolProbityFilter molProbityFilter,
     VisualizationTool visualizationTool) {
   public ComputeRequest {
     // Set defaults if null
@@ -21,8 +21,8 @@ public record ComputeRequest(
     if (consensusMode == null) {
       consensusMode = ConsensusMode.CANONICAL;
     }
-    if (applyMolProbityFilter == null) {
-      applyMolProbityFilter = true;
+    if (molProbityFilter == null) {
+      molProbityFilter = MolProbityFilter.GOOD_ONLY;
     }
     if (visualizationTool == null) {
       visualizationTool = VisualizationTool.RNAPUZZLER;
