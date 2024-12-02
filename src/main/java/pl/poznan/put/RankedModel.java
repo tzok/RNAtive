@@ -1,6 +1,5 @@
 package pl.poznan.put;
 
-import java.util.ArrayList;
 import java.util.List;
 import pl.poznan.put.structure.AnalyzedBasePair;
 
@@ -98,7 +97,6 @@ public class RankedModel implements Comparable<RankedModel> {
   public void setDotBracket(String dotBracket) {
     this.dotBracket = dotBracket;
   }
-
 
   @Override
   public int compareTo(final RankedModel t) {

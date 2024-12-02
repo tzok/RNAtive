@@ -2,6 +2,8 @@ package pl.poznan.put.api.model;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -20,7 +22,7 @@ public class Task {
   @Lob private String svg;
 
   @Lob private String message;
-  
+
   @ElementCollection
   @CollectionTable(name = "removal_reasons", joinColumns = @JoinColumn(name = "task_id"))
   @Column(name = "reason", length = 1000)

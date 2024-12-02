@@ -82,7 +82,7 @@ public class TaskProcessorService {
       var request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
 
       logger.info("Parsing and analyzing files");
-      var analyzedModels = parseAndAnalyzeFiles(request);
+      var analyzedModels = parseAndAnalyzeFiles(request, task);
       if (analyzedModels.stream().anyMatch(Objects::isNull)) {
         task.setStatus(TaskStatus.FAILED);
         task.setMessage("Failed to parse one or more models");
@@ -159,7 +159,7 @@ public class TaskProcessorService {
     return CompletableFuture.completedFuture(null);
   }
 
-  private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request) {
+  private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request, Task task) {
     var removedModels = new ArrayList<RankedModel>();
     var analyzedModels = new ArrayList<AnalyzedModel>();
 
@@ -176,7 +176,7 @@ public class TaskProcessorService {
           if (request.molProbityFilter() != MolProbityFilter.ALL) {
             var response = rnalyzerClient.analyzePdbContent(structure3D.toPdb(), file.name());
             if (!isModelValid(
-                file.name(), response.structure(), request.molProbityFilter(), removedModels)) {
+                file.name(), response.structure(), request.molProbityFilter(), task)) {
               continue; // Skip analysis for filtered models
             }
           }
@@ -398,48 +398,6 @@ public class TaskProcessorService {
     }
   }
 
-  private List<AnalyzedModel> applyMolProbityFilter(
-      List<AnalyzedModel> models, ComputeRequest request, Task task) {
-    if (request.molProbityFilter() == MolProbityFilter.ALL) {
-      return models;
-    }
-
-    logger.info("Applying MolProbity filter: {}", request.molProbityFilter());
-    try (var rnalyzerClient = new RnalyzerClient()) {
-      rnalyzerClient.initializeSession();
-      var filteredModels = new ArrayList<AnalyzedModel>();
-      var removedModels = new ArrayList<RankedModel>();
-
-      for (var model : models) {
-        var response = rnalyzerClient.analyzePdbContent(model.structure3D().toPdb(), model.name());
-        var structure = response.structure();
-
-        if (isModelValid(model.name(), structure, request.molProbityFilter(), removedModels)) {
-          filteredModels.add(model);
-        }
-      }
-
-      if (filteredModels.size() < 2) {
-        task.setStatus(TaskStatus.FAILED);
-        task.setMessage(
-            filteredModels.isEmpty()
-                ? "All models were filtered out by MolProbity criteria"
-                : "Only one model remained after MolProbity filtering");
-
-        // Create a minimal result with just the removed models
-        var taskResult = new TaskResult(removedModels, List.of(), "");
-        task.setResult(objectMapper.writeValueAsString(taskResult));
-        taskRepository.save(task);
-        return null;
-      }
-
-      logger.info("After MolProbity filtering: {} models remaining", filteredModels.size());
-      return filteredModels;
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   private boolean isModelValid(
       String modelName,
       MolProbityResponse.Structure structure,
@@ -447,19 +405,19 @@ public class TaskProcessorService {
       Task task) {
 
     if (filter == MolProbityFilter.GOOD_ONLY) {
-      return validateGoodOnly(modelName, structure, removedModels);
+      return validateGoodOnly(modelName, structure, task);
     } else if (filter == MolProbityFilter.GOOD_AND_CAUTION) {
-      return validateGoodAndCaution(modelName, structure, removedModels);
+      return validateGoodAndCaution(modelName, structure, task);
     }
     return true;
   }
 
   private boolean validateGoodOnly(
-      String modelName, MolProbityResponse.Structure structure, List<RankedModel> removedModels) {
+      String modelName, MolProbityResponse.Structure structure, Task task) {
     if (!"good".equalsIgnoreCase(structure.rankCategory())) {
       addRemovalReason(
           modelName,
-          removedModels,
+          task,
           String.format(
               "Overall rank category is %s (clashscore: %s, percentile rank: %s)",
               structure.rankCategory(), structure.clashscore(), structure.pctRank()));
@@ -468,7 +426,7 @@ public class TaskProcessorService {
     if (!"good".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
       addRemovalReason(
           modelName,
-          removedModels,
+          task,
           String.format(
               "Sugar pucker category is %s (%s%%)",
               structure.probablyWrongSugarPuckersCategory(),
@@ -478,7 +436,7 @@ public class TaskProcessorService {
     if (!"good".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
       addRemovalReason(
           modelName,
-          removedModels,
+          task,
           String.format(
               "Backbone conformations category is %s (%s%%)",
               structure.badBackboneConformationsCategory(),
@@ -488,7 +446,7 @@ public class TaskProcessorService {
     if (!"good".equalsIgnoreCase(structure.badBondsCategory())) {
       addRemovalReason(
           modelName,
-          removedModels,
+          task,
           String.format(
               "Bonds category is %s (%s%%)",
               structure.badBondsCategory(), structure.pctBadBonds()));
@@ -497,7 +455,7 @@ public class TaskProcessorService {
     if (!"good".equalsIgnoreCase(structure.badAnglesCategory())) {
       addRemovalReason(
           modelName,
-          removedModels,
+          task,
           String.format(
               "Angles category is %s (%s%%)",
               structure.badAnglesCategory(), structure.pctBadAngles()));
@@ -507,11 +465,11 @@ public class TaskProcessorService {
   }
 
   private boolean validateGoodAndCaution(
-      String modelName, MolProbityResponse.Structure structure, List<RankedModel> removedModels) {
+      String modelName, MolProbityResponse.Structure structure, Task task) {
     if ("bad".equalsIgnoreCase(structure.rankCategory())) {
       addRemovalReason(
           modelName,
-          removedModels,
+          task,
           String.format(
               "Overall rank category is %s (clashscore: %s, percentile rank: %s)",
               structure.rankCategory(), structure.clashscore(), structure.pctRank()));
@@ -520,7 +478,7 @@ public class TaskProcessorService {
     if ("bad".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
       addRemovalReason(
           modelName,
-          removedModels,
+          task,
           String.format(
               "Sugar pucker category is %s (%s%%)",
               structure.probablyWrongSugarPuckersCategory(),
@@ -530,7 +488,7 @@ public class TaskProcessorService {
     if ("bad".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
       addRemovalReason(
           modelName,
-          removedModels,
+          task,
           String.format(
               "Backbone conformations category is %s (%s%%)",
               structure.badBackboneConformationsCategory(),
@@ -540,7 +498,7 @@ public class TaskProcessorService {
     if ("bad".equalsIgnoreCase(structure.badBondsCategory())) {
       addRemovalReason(
           modelName,
-          removedModels,
+          task,
           String.format(
               "Bonds category is %s (%s%%)",
               structure.badBondsCategory(), structure.pctBadBonds()));
@@ -549,7 +507,7 @@ public class TaskProcessorService {
     if ("bad".equalsIgnoreCase(structure.badAnglesCategory())) {
       addRemovalReason(
           modelName,
-          removedModels,
+          task,
           String.format(
               "Angles category is %s (%s%%)",
               structure.badAnglesCategory(), structure.pctBadAngles()));
