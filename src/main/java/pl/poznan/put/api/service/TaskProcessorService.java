@@ -183,7 +183,7 @@ public class TaskProcessorService {
           }
 
           // Only analyze models that passed MolProbity filtering
-          var jsonResult = analysisClient.analyze(file.content(), request.analyzer());
+          var jsonResult = analysisClient.analyze(file.name(), file.content(), request.analyzer());
           var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
           analyzedModels.add(new AnalyzedModel(file.name(), structure3D, structure2D));
         } catch (JsonProcessingException e) {

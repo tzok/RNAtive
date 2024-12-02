@@ -21,8 +21,8 @@ public class AnalysisClient {
     this.restClient = RestClient.create();
   }
 
-  public String analyze(String pdbContent, Analyzer analyzer) {
-    logger.info("Analyzing structure with {}", analyzer);
+  public String analyze(String filename, String pdbContent, Analyzer analyzer) {
+    logger.info("Analyzing {} structure with {}", filename, analyzer);
     return restClient
         .post()
         .uri(baseUrl + "/" + analyzer.urlPart())
