@@ -4,4 +4,4 @@ import java.time.Instant;
 import pl.poznan.put.api.model.TaskStatus;
 
 public record TaskStatusResponse(
-    String taskId, TaskStatus status, Instant createdAt, String message) {}
+    String taskId, TaskStatus status, Instant createdAt, String message, List<String> removalReasons) {}
