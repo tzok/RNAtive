@@ -1,0 +1,90 @@
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+.rounded-border {
+  border: 1px solid gray; /* 1px wide gray border */
+  border-radius: 15px; /* Adjust the value for more or less rounding */
+  padding: 80px; /* Optional: add padding for spacing inside the div */
+  padding-top: 20px;
+  padding-bottom: 40px;
+  margin-left: 15px; /* Outer padding effect on the left */
+  margin-right: 15px; /* Outer padding effect on the right */
+  margin-top: 15px; /* Outer padding effect on the left */
+  margin-bottom: 15px; /* Outer padding effect on the right */
+}
+.toc {
+  border: 1px solid gray; /* 1px wide gray border */
+  border-radius: 15px; /* Adjust the value for more or less rounding */
+  padding-right: 80px; /* Optional: add padding for spacing inside the div */
+  padding-left: 20px;
+  padding-top: 20px;
+  padding-bottom: 40px;
+  margin-left: 15px; /* Outer padding effect on the left */
+  margin-right: 15px; /* Outer padding effect on the right */
+  margin-top: 15px; /* Outer padding effect on the left */
+  margin-bottom: 15px; 
+  max-width: 500px; /* Width for the table of contents box */
+}
+
+.toc h2 {
+  font-size: 1.2em;
+  margin-bottom: 5px;
+}
+
+.toc ul {
+  list-style-type: none; /* Remove default bullets */
+  font-size: 15px;
+  padding-left: 0;
+}
+
+.toc li {
+  margin: 5px 0;
+}
+
+.toc a {
+  color: #007bff; /* Link color */
+  text-decoration: none;
+}
+
+.toc a:hover {
+  text-decoration: underline; /* Underline on hover */
+}
+
+
+
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

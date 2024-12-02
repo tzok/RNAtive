@@ -1,0 +1,33 @@
+/* SelectableList.css */
+
+.selectable-list {
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping to the next row */
+    gap: 10px;
+    max-width: 100%; /* Prevents overflow */
+    justify-content: center;
+  }
+  
+  .list-item {
+    width: calc(20% - 10px); /* Fixed width for five items per row, minus the gap */
+    padding: 10px 0; /* Adjust padding for even spacing within the button */
+    text-align: center;
+    border: 1px solid gray;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    box-sizing: border-box;
+  }
+  
+  
+  .list-item:hover {
+    background-color: gray;
+  }
+  
+  .list-item.selected {
+    background-color: #2e3c56;
+    color: #fff;
+    /* border-color: gray; */
+    border: 2px solid #fff;
+  }
+  

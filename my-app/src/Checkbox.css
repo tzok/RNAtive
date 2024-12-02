@@ -1,0 +1,43 @@
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .checkbox {
+    width: 18px;
+    height: 18px;
+    appearance: none; /* Removes default browser styling */
+    background-color: #2e3c56; /* Unselected state background color */
+    border: 2px solid #ccc; /* Border for unselected checkbox */
+    border-radius: 4px; /* Optional: make it a square with rounded corners */
+    cursor: pointer;
+    outline: none;
+    transition: background-color 0.2s, border-color 0.2s;
+    position: relative; /* Required for the checkmark positioning */
+  }
+  
+  /* Style for the selected (checked) state */
+  .checkbox:checked {
+    background-color: #32518c; /* Selected state background color */
+    border-color: #32518c;
+  }
+  
+  /* Add the checkmark using ::after */
+  .checkbox:checked::after {
+    content: '';
+    position: absolute;
+    top: 0px;
+    left: 6px;
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  
+  /* Add hover effect */
+  .checkbox:hover {
+    border-color: #4a627f;
+  }
+  
