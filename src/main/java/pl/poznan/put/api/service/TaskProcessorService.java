@@ -20,6 +20,7 @@ import pl.poznan.put.InteractionNetworkFidelity;
 import pl.poznan.put.RankedModel;
 import pl.poznan.put.api.dto.*;
 import pl.poznan.put.api.exception.TaskNotFoundException;
+import pl.poznan.put.api.model.MolProbityFilter;
 import pl.poznan.put.api.model.TaskStatus;
 import pl.poznan.put.api.model.VisualizationTool;
 import pl.poznan.put.api.repository.TaskRepository;
@@ -29,6 +30,7 @@ import pl.poznan.put.model.BaseInteractions;
 import pl.poznan.put.notation.LeontisWesthof;
 import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
 import pl.poznan.put.pdb.analysis.PdbParser;
+import pl.poznan.put.rnalyzer.RnalyzerClient;
 import pl.poznan.put.structure.AnalyzedBasePair;
 import pl.poznan.put.structure.formats.BpSeq;
 import pl.poznan.put.structure.formats.ImmutableDefaultDotBracketFromPdb;
@@ -86,76 +88,9 @@ public class TaskProcessorService {
         return CompletableFuture.completedFuture(null);
       }
 
-      if (request.molProbityFilter() != MolProbityFilter.ALL) {
-        logger.info("Applying MolProbity filter: {}", request.molProbityFilter());
-        try (var rnalyzerClient = new RnalyzerClient()) {
-          rnalyzerClient.initializeSession();
-          var filteredModels = new ArrayList<AnalyzedModel>();
-          
-          for (var model : analyzedModels) {
-            var response = rnalyzerClient.analyzePdbContent(model.structure3D().toPdb());
-            var structure = response.structure();
-            
-            boolean isValid = true;
-            if (request.molProbityFilter() == MolProbityFilter.GOOD_ONLY) {
-              if (!"good".equalsIgnoreCase(structure.rankCategory())) {
-                logger.info("Model {} removed: overall rank category is {}", model.name(), structure.rankCategory());
-                isValid = false;
-              }
-              if (!"good".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
-                logger.info("Model {} removed: sugar pucker category is {}", model.name(), structure.probablyWrongSugarPuckersCategory());
-                isValid = false;
-              }
-              if (!"good".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
-                logger.info("Model {} removed: backbone conformations category is {}", model.name(), structure.badBackboneConformationsCategory());
-                isValid = false;
-              }
-              if (!"good".equalsIgnoreCase(structure.badBondsCategory())) {
-                logger.info("Model {} removed: bonds category is {}", model.name(), structure.badBondsCategory());
-                isValid = false;
-              }
-              if (!"good".equalsIgnoreCase(structure.badAnglesCategory())) {
-                logger.info("Model {} removed: angles category is {}", model.name(), structure.badAnglesCategory());
-                isValid = false;
-              }
-            } else if (request.molProbityFilter() == MolProbityFilter.GOOD_AND_CAUTION) {
-              if ("bad".equalsIgnoreCase(structure.rankCategory())) {
-                logger.info("Model {} removed: overall rank category is {}", model.name(), structure.rankCategory());
-                isValid = false;
-              }
-              if ("bad".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
-                logger.info("Model {} removed: sugar pucker category is {}", model.name(), structure.probablyWrongSugarPuckersCategory());
-                isValid = false;
-              }
-              if ("bad".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
-                logger.info("Model {} removed: backbone conformations category is {}", model.name(), structure.badBackboneConformationsCategory());
-                isValid = false;
-              }
-              if ("bad".equalsIgnoreCase(structure.badBondsCategory())) {
-                logger.info("Model {} removed: bonds category is {}", model.name(), structure.badBondsCategory());
-                isValid = false;
-              }
-              if ("bad".equalsIgnoreCase(structure.badAnglesCategory())) {
-                logger.info("Model {} removed: angles category is {}", model.name(), structure.badAnglesCategory());
-                isValid = false;
-              }
-            }
-            
-            if (isValid) {
-              filteredModels.add(model);
-            }
-          }
-          
-          if (filteredModels.isEmpty()) {
-            task.setStatus(TaskStatus.FAILED);
-            task.setMessage("All models were filtered out by MolProbity criteria");
-            taskRepository.save(task);
-            return CompletableFuture.completedFuture(null);
-          }
-          
-          analyzedModels = filteredModels;
-          logger.info("After MolProbity filtering: {} models remaining", analyzedModels.size());
-        }
+      analyzedModels = applyMolProbityFilter(analyzedModels, request, task);
+      if (analyzedModels == null) {
+        return CompletableFuture.completedFuture(null);
       }
 
       logger.info("Extracting sequence from the first model");
@@ -438,6 +373,83 @@ public class TaskProcessorService {
     } catch (Exception e) {
       logger.warn("Visualization generation failed", e);
       throw new RuntimeException("Visualization generation failed: " + e.getMessage(), e);
+    }
+  }
+
+  private List<AnalyzedModel> applyMolProbityFilter(
+      List<AnalyzedModel> models, ComputeRequest request, Task task) {
+    if (request.molProbityFilter() == MolProbityFilter.ALL) {
+      return models;
+    }
+
+    logger.info("Applying MolProbity filter: {}", request.molProbityFilter());
+    try (var rnalyzerClient = new RnalyzerClient()) {
+      rnalyzerClient.initializeSession();
+      var filteredModels = new ArrayList<AnalyzedModel>();
+
+      for (var model : models) {
+        var response = rnalyzerClient.analyzePdbContent(model.structure3D().toPdb());
+        var structure = response.structure();
+
+        boolean isValid = true;
+        if (request.molProbityFilter() == MolProbityFilter.GOOD_ONLY) {
+          if (!"good".equalsIgnoreCase(structure.rankCategory())) {
+            logger.info("Model {} removed: overall rank category is {}", model.name(), structure.rankCategory());
+            isValid = false;
+          }
+          if (!"good".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
+            logger.info("Model {} removed: sugar pucker category is {}", model.name(), structure.probablyWrongSugarPuckersCategory());
+            isValid = false;
+          }
+          if (!"good".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
+            logger.info("Model {} removed: backbone conformations category is {}", model.name(), structure.badBackboneConformationsCategory());
+            isValid = false;
+          }
+          if (!"good".equalsIgnoreCase(structure.badBondsCategory())) {
+            logger.info("Model {} removed: bonds category is {}", model.name(), structure.badBondsCategory());
+            isValid = false;
+          }
+          if (!"good".equalsIgnoreCase(structure.badAnglesCategory())) {
+            logger.info("Model {} removed: angles category is {}", model.name(), structure.badAnglesCategory());
+            isValid = false;
+          }
+        } else if (request.molProbityFilter() == MolProbityFilter.GOOD_AND_CAUTION) {
+          if ("bad".equalsIgnoreCase(structure.rankCategory())) {
+            logger.info("Model {} removed: overall rank category is {}", model.name(), structure.rankCategory());
+            isValid = false;
+          }
+          if ("bad".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
+            logger.info("Model {} removed: sugar pucker category is {}", model.name(), structure.probablyWrongSugarPuckersCategory());
+            isValid = false;
+          }
+          if ("bad".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
+            logger.info("Model {} removed: backbone conformations category is {}", model.name(), structure.badBackboneConformationsCategory());
+            isValid = false;
+          }
+          if ("bad".equalsIgnoreCase(structure.badBondsCategory())) {
+            logger.info("Model {} removed: bonds category is {}", model.name(), structure.badBondsCategory());
+            isValid = false;
+          }
+          if ("bad".equalsIgnoreCase(structure.badAnglesCategory())) {
+            logger.info("Model {} removed: angles category is {}", model.name(), structure.badAnglesCategory());
+            isValid = false;
+          }
+        }
+
+        if (isValid) {
+          filteredModels.add(model);
+        }
+      }
+
+      if (filteredModels.isEmpty()) {
+        task.setStatus(TaskStatus.FAILED);
+        task.setMessage("All models were filtered out by MolProbity criteria");
+        taskRepository.save(task);
+        return null;
+      }
+
+      logger.info("After MolProbity filtering: {} models remaining", filteredModels.size());
+      return filteredModels;
     }
   }
 }
