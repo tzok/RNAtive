@@ -8,21 +8,49 @@ import jakarta.xml.bind.annotation.XmlRootElement;
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlRootElement(name = "structure")
 public class Structure {
-    @XmlElement(name = "atoms")
-    private String atoms;
+  @XmlElement(name = "atoms")
+  private String atoms;
+
+  public Structure() {}
+
+  public Structure(String atoms) {
+    this.atoms = atoms;
+  }
+
+  public String getAtoms() {
+    return atoms;
+  }
+
+  public void setAtoms(String atoms) {
+    this.atoms = atoms;
+  }
+}
+package pl.poznan.put.rnalyzer.model;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.xml.bind.annotation.*;
+import java.util.List;
+
+@XmlRootElement(name = "structure")
+@XmlAccessorType(XmlAccessType.FIELD)
+public class Structure {
+    @XmlElementWrapper(name = "atoms")
+    @XmlElement(name = "atom")
+    @JsonProperty("atoms")
+    private List<String> atoms;
 
     public Structure() {
     }
 
-    public Structure(String atoms) {
+    public Structure(List<String> atoms) {
         this.atoms = atoms;
     }
 
-    public String getAtoms() {
+    public List<String> getAtoms() {
         return atoms;
     }
 
-    public void setAtoms(String atoms) {
+    public void setAtoms(List<String> atoms) {
         this.atoms = atoms;
     }
 }
