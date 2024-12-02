@@ -90,8 +90,17 @@ public class TaskProcessorService {
         return CompletableFuture.completedFuture(null);
       }
 
-      analyzedModels = applyMolProbityFilter(analyzedModels, request, task);
-      if (analyzedModels == null) {
+      if (analyzedModels.size() < 2) {
+        task.setStatus(TaskStatus.FAILED);
+        task.setMessage(
+            analyzedModels.isEmpty()
+                ? "All models were filtered out by MolProbity criteria"
+                : "Only one model remained after MolProbity filtering");
+
+        // Create a minimal result with just the removed models
+        var taskResult = new TaskResult(removedModels, List.of(), "");
+        task.setResult(objectMapper.writeValueAsString(taskResult));
+        taskRepository.save(task);
         return CompletableFuture.completedFuture(null);
       }
 
@@ -155,21 +164,35 @@ public class TaskProcessorService {
   }
 
   private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request) {
-    var analyzedModels =
-        request.files().parallelStream()
-            .map(
-                file -> {
-                  var jsonResult = analysisClient.analyze(file.content(), request.analyzer());
-                  try {
-                    var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
-                    var structure3D = new PdbParser().parse(file.content()).get(0);
-                    return new AnalyzedModel(file.name(), structure3D, structure2D);
-                  } catch (JsonProcessingException e) {
-                    logger.error("Failed to parse analysis result for file: {}", file.name(), e);
-                    return null;
-                  }
-                })
-            .collect(Collectors.toList());
+    var removedModels = new ArrayList<RankedModel>();
+    var analyzedModels = new ArrayList<AnalyzedModel>();
+
+    try (var rnalyzerClient = new RnalyzerClient()) {
+      if (request.molProbityFilter() != MolProbityFilter.ALL) {
+        rnalyzerClient.initializeSession();
+      }
+
+      for (var file : request.files()) {
+        try {
+          var structure3D = new PdbParser().parse(file.content()).get(0);
+          
+          // Apply MolProbity filtering early if enabled
+          if (request.molProbityFilter() != MolProbityFilter.ALL) {
+            var response = rnalyzerClient.analyzePdbContent(structure3D.toPdb(), file.name());
+            if (!isModelValid(file.name(), response.structure(), request.molProbityFilter(), removedModels)) {
+              continue; // Skip analysis for filtered models
+            }
+          }
+
+          // Only analyze models that passed MolProbity filtering
+          var jsonResult = analysisClient.analyze(file.content(), request.analyzer());
+          var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
+          analyzedModels.add(new AnalyzedModel(file.name(), structure3D, structure2D));
+        } catch (JsonProcessingException e) {
+          logger.error("Failed to parse analysis result for file: {}", file.name(), e);
+        }
+      }
+    }
 
     // Check if all models have the same sequence
     if (analyzedModels.stream().allMatch(Objects::nonNull)) {
@@ -421,7 +444,7 @@ public class TaskProcessorService {
   }
 
   private boolean isModelValid(
-      AnalyzedModel model,
+      String modelName,
       MolProbityResponse.Structure structure,
       MolProbityFilter filter,
       List<RankedModel> removedModels) {
@@ -533,16 +556,18 @@ public class TaskProcessorService {
   }
 
   private void addRemovalReason(
-      AnalyzedModel model, List<RankedModel> removedModels, String reason) {
+      String modelName, List<RankedModel> removedModels, String reason) {
 
-    logger.info("Model {} removed: {}", model.name(), reason);
+    logger.info("Model {} removed: {}", modelName, reason);
     var removedModel =
         removedModels.stream()
-            .filter(rm -> rm.getName().equals(model.name()))
+            .filter(rm -> rm.getName().equals(modelName))
             .findFirst()
             .orElseGet(
                 () -> {
-                  var rm = new RankedModel(model, Double.NaN, "");
+                  var rm = new RankedModel();
+                  rm.setName(modelName);
+                  rm.setInteractionNetworkFidelity(Double.NaN);
                   removedModels.add(rm);
                   return rm;
                 });
