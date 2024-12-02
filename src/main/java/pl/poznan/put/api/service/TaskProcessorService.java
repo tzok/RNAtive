@@ -387,6 +387,7 @@ public class TaskProcessorService {
     try (var rnalyzerClient = new RnalyzerClient()) {
       rnalyzerClient.initializeSession();
       var filteredModels = new ArrayList<AnalyzedModel>();
+      var removedModels = new ArrayList<RankedModel>();
 
       for (var model : models) {
         var response = rnalyzerClient.analyzePdbContent(model.structure3D().toPdb(), model.name());
@@ -395,41 +396,83 @@ public class TaskProcessorService {
         boolean isValid = true;
         if (request.molProbityFilter() == MolProbityFilter.GOOD_ONLY) {
           if (!"good".equalsIgnoreCase(structure.rankCategory())) {
-            logger.info(
-                "Model {} removed: overall rank category is {} (clashscore: {}, percentile rank:"
-                    + " {})",
-                model.name(),
+            var reason = String.format(
+                "Overall rank category is %s (clashscore: %s, percentile rank: %s)",
                 structure.rankCategory(),
                 structure.clashscore(),
                 structure.pctRank());
+            logger.info("Model {} removed: {}", model.name(), reason);
+            var removedModel = new RankedModel(model, Double.NaN, "");
+            removedModel.getRemovalReasons().add(reason);
+            removedModels.add(removedModel);
             isValid = false;
           }
           if (!"good".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
-            logger.info(
-                "Model {} removed: sugar pucker category is {} ({}%)",
-                model.name(),
+            var reason = String.format(
+                "Sugar pucker category is %s (%s%%)",
                 structure.probablyWrongSugarPuckersCategory(),
                 structure.pctProbablyWrongSugarPuckers());
+            logger.info("Model {} removed: {}", model.name(), reason);
+            var removedModel = removedModels.stream()
+                .filter(rm -> rm.getName().equals(model.name()))
+                .findFirst()
+                .orElseGet(() -> {
+                    var rm = new RankedModel(model, Double.NaN, "");
+                    removedModels.add(rm);
+                    return rm;
+                });
+            removedModel.getRemovalReasons().add(reason);
             isValid = false;
           }
           if (!"good".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
-            logger.info(
-                "Model {} removed: backbone conformations category is {} ({}%)",
-                model.name(),
+            var reason = String.format(
+                "Backbone conformations category is %s (%s%%)",
                 structure.badBackboneConformationsCategory(),
                 structure.pctBadBackboneConformations());
+            logger.info("Model {} removed: {}", model.name(), reason);
+            var removedModel = removedModels.stream()
+                .filter(rm -> rm.getName().equals(model.name()))
+                .findFirst()
+                .orElseGet(() -> {
+                    var rm = new RankedModel(model, Double.NaN, "");
+                    removedModels.add(rm);
+                    return rm;
+                });
+            removedModel.getRemovalReasons().add(reason);
             isValid = false;
           }
           if (!"good".equalsIgnoreCase(structure.badBondsCategory())) {
-            logger.info(
-                "Model {} removed: bonds category is {} ({}%)",
-                model.name(), structure.badBondsCategory(), structure.pctBadBonds());
+            var reason = String.format(
+                "Bonds category is %s (%s%%)",
+                structure.badBondsCategory(),
+                structure.pctBadBonds());
+            logger.info("Model {} removed: {}", model.name(), reason);
+            var removedModel = removedModels.stream()
+                .filter(rm -> rm.getName().equals(model.name()))
+                .findFirst()
+                .orElseGet(() -> {
+                    var rm = new RankedModel(model, Double.NaN, "");
+                    removedModels.add(rm);
+                    return rm;
+                });
+            removedModel.getRemovalReasons().add(reason);
             isValid = false;
           }
           if (!"good".equalsIgnoreCase(structure.badAnglesCategory())) {
-            logger.info(
-                "Model {} removed: angles category is {} ({}%)",
-                model.name(), structure.badAnglesCategory(), structure.pctBadAngles());
+            var reason = String.format(
+                "Angles category is %s (%s%%)",
+                structure.badAnglesCategory(),
+                structure.pctBadAngles());
+            logger.info("Model {} removed: {}", model.name(), reason);
+            var removedModel = removedModels.stream()
+                .filter(rm -> rm.getName().equals(model.name()))
+                .findFirst()
+                .orElseGet(() -> {
+                    var rm = new RankedModel(model, Double.NaN, "");
+                    removedModels.add(rm);
+                    return rm;
+                });
+            removedModel.getRemovalReasons().add(reason);
             isValid = false;
           }
         } else if (request.molProbityFilter() == MolProbityFilter.GOOD_AND_CAUTION) {
@@ -478,9 +521,15 @@ public class TaskProcessorService {
         }
       }
 
-      if (filteredModels.isEmpty()) {
+      if (filteredModels.size() < 2) {
         task.setStatus(TaskStatus.FAILED);
-        task.setMessage("All models were filtered out by MolProbity criteria");
+        task.setMessage(filteredModels.isEmpty() 
+            ? "All models were filtered out by MolProbity criteria"
+            : "Only one model remained after MolProbity filtering");
+            
+        // Create a minimal result with just the removed models
+        var taskResult = new TaskResult(removedModels, List.of(), "");
+        task.setResult(objectMapper.writeValueAsString(taskResult));
         taskRepository.save(task);
         return null;
       }
