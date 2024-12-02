@@ -22,46 +22,75 @@ public class RnalyzerClient implements AutoCloseable {
   }
 
   public void initializeSession() {
+    LOGGER.trace("Initializing RNAlyzer session");
     ResponseEntity<Void> response = restTemplate.postForEntity(BASE_URL, null, Void.class);
+    LOGGER.trace("Received response with status: {}", response.getStatusCode());
+    
     String location = Objects.requireNonNull(response.getHeaders().getLocation()).toString();
+    LOGGER.trace("Location header: {}", location);
+    
     Matcher matcher = RESOURCE_ID_PATTERN.matcher(location);
     if (matcher.find()) {
       resourceId = matcher.group(1);
       LOGGER.info("Initialized session with resource ID: {}", resourceId);
     } else {
+      LOGGER.error("Failed to extract resource ID from location: {}", location);
       throw new IllegalStateException("Could not extract resource ID from location: " + location);
     }
   }
 
   public MolProbityResponse analyzePdbContent(String pdbContent) {
     if (resourceId == null) {
+      LOGGER.error("Attempt to analyze PDB content without initialized session");
       throw new IllegalStateException("Session not initialized. Call initializeSession() first.");
     }
 
+    LOGGER.trace("Preparing XML content for PDB analysis");
     String xmlContent =
         String.format(
             "<structures><structure><atoms>%s</atoms></structure></structures>", pdbContent);
+    LOGGER.trace("XML content length: {} characters", xmlContent.length());
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_XML);
     headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+    LOGGER.trace("Set headers - Content-Type: {}, Accept: {}", 
+        headers.getContentType(), headers.getAccept());
 
     HttpEntity<String> requestEntity = new HttpEntity<>(xmlContent, headers);
     String url = String.format("%s/%s/molprobity", BASE_URL, resourceId);
+    LOGGER.trace("Sending request to URL: {}", url);
 
     ResponseEntity<MolProbityResponse> response =
         restTemplate.exchange(url, HttpMethod.PUT, requestEntity, MolProbityResponse.class);
+    LOGGER.trace("Received response with status: {}", response.getStatusCode());
 
-    return response.getBody();
+    MolProbityResponse molProbityResponse = response.getBody();
+    if (molProbityResponse != null) {
+      LOGGER.trace("Received MolProbity analysis for structure: {}", 
+          molProbityResponse.structure().description().filename());
+    } else {
+      LOGGER.warn("Received null response body from MolProbity analysis");
+    }
+
+    return molProbityResponse;
   }
 
   @Override
   public void close() {
     if (resourceId != null) {
       String url = String.format("%s/%s", BASE_URL, resourceId);
-      restTemplate.delete(url);
-      LOGGER.info("Cleaned up session with resource ID: {}", resourceId);
-      resourceId = null;
+      LOGGER.trace("Cleaning up session at URL: {}", url);
+      try {
+        restTemplate.delete(url);
+        LOGGER.info("Cleaned up session with resource ID: {}", resourceId);
+      } catch (Exception e) {
+        LOGGER.error("Failed to clean up session with resource ID: {}", resourceId, e);
+      } finally {
+        resourceId = null;
+      }
+    } else {
+      LOGGER.trace("No session to clean up");
     }
   }
 }
