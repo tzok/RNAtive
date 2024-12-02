@@ -1,5 +1,6 @@
 package pl.poznan.put;
 
+import java.util.ArrayList;
 import java.util.List;
 import pl.poznan.put.structure.AnalyzedBasePair;
 
@@ -19,7 +20,7 @@ public class RankedModel implements Comparable<RankedModel> {
   private int rank = -1;
 
   private String dotBracket;
-  
+
   private List<String> removalReasons = new ArrayList<>();
 
   // Default constructor for Jackson

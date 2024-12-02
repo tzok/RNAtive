@@ -31,6 +31,7 @@ import pl.poznan.put.model.BaseInteractions;
 import pl.poznan.put.notation.LeontisWesthof;
 import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
 import pl.poznan.put.pdb.analysis.PdbParser;
+import pl.poznan.put.rnalyzer.MolProbityResponse;
 import pl.poznan.put.rnalyzer.RnalyzerClient;
 import pl.poznan.put.structure.AnalyzedBasePair;
 import pl.poznan.put.structure.formats.BpSeq;
@@ -400,9 +401,10 @@ public class TaskProcessorService {
 
       if (filteredModels.size() < 2) {
         task.setStatus(TaskStatus.FAILED);
-        task.setMessage(filteredModels.isEmpty()
-            ? "All models were filtered out by MolProbity criteria"
-            : "Only one model remained after MolProbity filtering");
+        task.setMessage(
+            filteredModels.isEmpty()
+                ? "All models were filtered out by MolProbity criteria"
+                : "Only one model remained after MolProbity filtering");
 
         // Create a minimal result with just the removed models
         var taskResult = new TaskResult(removedModels, List.of(), "");
@@ -413,6 +415,8 @@ public class TaskProcessorService {
 
       logger.info("After MolProbity filtering: {} models remaining", filteredModels.size());
       return filteredModels;
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -421,7 +425,7 @@ public class TaskProcessorService {
       MolProbityResponse.Structure structure,
       MolProbityFilter filter,
       List<RankedModel> removedModels) {
-    
+
     if (filter == MolProbityFilter.GOOD_ONLY) {
       return validateGoodOnly(model, structure, removedModels);
     } else if (filter == MolProbityFilter.GOOD_AND_CAUTION) {
@@ -434,65 +438,82 @@ public class TaskProcessorService {
       AnalyzedModel model,
       MolProbityResponse.Structure structure,
       List<RankedModel> removedModels) {
-    
+
     if (!"good".equalsIgnoreCase(structure.rankCategory())) {
-      addRemovalReason(model, removedModels,
-          String.format("Overall rank category is %s (clashscore: %s, percentile rank: %s)",
+      addRemovalReason(
+          model,
+          removedModels,
+          String.format(
+              "Overall rank category is %s (clashscore: %s, percentile rank: %s)",
               structure.rankCategory(), structure.clashscore(), structure.pctRank()));
       return false;
     }
     if (!"good".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
-      addRemovalReason(model, removedModels,
-          String.format("Sugar pucker category is %s (%s%%)",
+      addRemovalReason(
+          model,
+          removedModels,
+          String.format(
+              "Sugar pucker category is %s (%s%%)",
               structure.probablyWrongSugarPuckersCategory(),
               structure.pctProbablyWrongSugarPuckers()));
       return false;
     }
     if (!"good".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
-      addRemovalReason(model, removedModels,
-          String.format("Backbone conformations category is %s (%s%%)",
+      addRemovalReason(
+          model,
+          removedModels,
+          String.format(
+              "Backbone conformations category is %s (%s%%)",
               structure.badBackboneConformationsCategory(),
               structure.pctBadBackboneConformations()));
       return false;
     }
     if (!"good".equalsIgnoreCase(structure.badBondsCategory())) {
-      addRemovalReason(model, removedModels,
-          String.format("Bonds category is %s (%s%%)",
-              structure.badBondsCategory(),
-              structure.pctBadBonds()));
+      addRemovalReason(
+          model,
+          removedModels,
+          String.format(
+              "Bonds category is %s (%s%%)",
+              structure.badBondsCategory(), structure.pctBadBonds()));
       return false;
     }
     if (!"good".equalsIgnoreCase(structure.badAnglesCategory())) {
-      addRemovalReason(model, removedModels,
-          String.format("Angles category is %s (%s%%)",
-              structure.badAnglesCategory(),
-              structure.pctBadAngles()));
+      addRemovalReason(
+          model,
+          removedModels,
+          String.format(
+              "Angles category is %s (%s%%)",
+              structure.badAnglesCategory(), structure.pctBadAngles()));
       return false;
     }
     return true;
   }
 
   private boolean validateGoodAndCaution(
-      AnalyzedModel model,
-      MolProbityResponse.Structure structure) {
-    
+      AnalyzedModel model, MolProbityResponse.Structure structure) {
+
     if ("bad".equalsIgnoreCase(structure.rankCategory())) {
       logger.info(
           "Model {} removed: overall rank category is {} (clashscore: {}, percentile rank: {})",
-          model.name(), structure.rankCategory(), structure.clashscore(), structure.pctRank());
+          model.name(),
+          structure.rankCategory(),
+          structure.clashscore(),
+          structure.pctRank());
       return false;
     }
     if ("bad".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
       logger.info(
           "Model {} removed: sugar pucker category is {} ({}%)",
-          model.name(), structure.probablyWrongSugarPuckersCategory(),
+          model.name(),
+          structure.probablyWrongSugarPuckersCategory(),
           structure.pctProbablyWrongSugarPuckers());
       return false;
     }
     if ("bad".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
       logger.info(
           "Model {} removed: backbone conformations category is {} ({}%)",
-          model.name(), structure.badBackboneConformationsCategory(),
+          model.name(),
+          structure.badBackboneConformationsCategory(),
           structure.pctBadBackboneConformations());
       return false;
     }
@@ -512,19 +533,19 @@ public class TaskProcessorService {
   }
 
   private void addRemovalReason(
-      AnalyzedModel model,
-      List<RankedModel> removedModels,
-      String reason) {
-    
+      AnalyzedModel model, List<RankedModel> removedModels, String reason) {
+
     logger.info("Model {} removed: {}", model.name(), reason);
-    var removedModel = removedModels.stream()
-        .filter(rm -> rm.getName().equals(model.name()))
-        .findFirst()
-        .orElseGet(() -> {
-          var rm = new RankedModel(model, Double.NaN, "");
-          removedModels.add(rm);
-          return rm;
-        });
+    var removedModel =
+        removedModels.stream()
+            .filter(rm -> rm.getName().equals(model.name()))
+            .findFirst()
+            .orElseGet(
+                () -> {
+                  var rm = new RankedModel(model, Double.NaN, "");
+                  removedModels.add(rm);
+                  return rm;
+                });
     removedModel.getRemovalReasons().add(reason);
   }
 }

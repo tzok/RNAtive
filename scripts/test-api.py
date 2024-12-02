@@ -27,7 +27,7 @@ def submit_job(files: List[Path], args, dot_bracket: Optional[str] = None) -> st
         "visualizationTool": args.visualization,
         "consensusMode": args.consensus_mode,
         "confidenceLevel": args.confidence,
-        "molprobityFilter": args.molprobity_filter,
+        "molProbityFilter": args.molprobity_filter,
     }
 
     if dot_bracket:
@@ -194,8 +194,8 @@ def main():
     submit_parser.add_argument(
         "--molprobity-filter",
         choices=["GOOD_ONLY", "GOOD_AND_CAUTION", "ALL"],
-        default="GOOD_ONLY",
-        help="MolProbity filtering level (default: GOOD_ONLY)",
+        default="GOOD_AND_CAUTION",
+        help="MolProbity filtering level (default: GOOD_AND_CAUTION)",
     )
     submit_parser.add_argument(
         "--analyzer",
