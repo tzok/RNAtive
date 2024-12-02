@@ -78,7 +78,6 @@ def get_results(task_id: str) -> None:
         )
     )
 
-
     print("\nCanonical Base Pairs:")
     print(
         tabulate(
@@ -236,7 +235,7 @@ def main():
                         if model_name not in model_reasons:
                             model_reasons[model_name] = []
                         model_reasons[model_name].append(reason_text)
-                
+
                 # Print grouped reasons
                 for model, reasons in model_reasons.items():
                     print(f"\n  {model}:")
