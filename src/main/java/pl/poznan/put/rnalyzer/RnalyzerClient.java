@@ -1,10 +1,16 @@
 package pl.poznan.put.rnalyzer;
 
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Marshaller;
+import java.io.StringWriter;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
+import pl.poznan.put.rnalyzer.model.Structure;
+import pl.poznan.put.rnalyzer.model.Structures;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
@@ -25,10 +31,10 @@ public class RnalyzerClient implements AutoCloseable {
     LOGGER.trace("Initializing RNAlyzer session");
     ResponseEntity<Void> response = restTemplate.postForEntity(BASE_URL, null, Void.class);
     LOGGER.trace("Received response with status: {}", response.getStatusCode());
-    
+
     String location = Objects.requireNonNull(response.getHeaders().getLocation()).toString();
     LOGGER.trace("Location header: {}", location);
-    
+
     Matcher matcher = RESOURCE_ID_PATTERN.matcher(location);
     if (matcher.find()) {
       resourceId = matcher.group(1);
@@ -50,12 +56,15 @@ public class RnalyzerClient implements AutoCloseable {
         String.format(
             "<structures><structure><atoms>%s</atoms></structure></structures>", pdbContent);
     LOGGER.trace("XML content length: {} characters", xmlContent.length());
+    LOGGER.trace("XML content:\n{}", xmlContent);
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_XML);
     headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-    LOGGER.trace("Set headers - Content-Type: {}, Accept: {}", 
-        headers.getContentType(), headers.getAccept());
+    LOGGER.trace(
+        "Set headers - Content-Type: {}, Accept: {}",
+        headers.getContentType(),
+        headers.getAccept());
 
     HttpEntity<String> requestEntity = new HttpEntity<>(xmlContent, headers);
     String url = String.format("%s/%s/molprobity", BASE_URL, resourceId);
@@ -67,7 +76,8 @@ public class RnalyzerClient implements AutoCloseable {
 
     MolProbityResponse molProbityResponse = response.getBody();
     if (molProbityResponse != null) {
-      LOGGER.trace("Received MolProbity analysis for structure: {}", 
+      LOGGER.trace(
+          "Received MolProbity analysis for structure: {}",
           molProbityResponse.structure().description().filename());
     } else {
       LOGGER.warn("Received null response body from MolProbity analysis");
