@@ -52,9 +52,18 @@ public class RnalyzerClient implements AutoCloseable {
     }
 
     LOGGER.trace("Preparing XML content for PDB analysis");
-    String xmlContent =
-        String.format(
-            "<structures><structure><atoms>%s</atoms></structure></structures>", pdbContent);
+    Structures structures = new Structures(List.of(new Structure(pdbContent)));
+    StringWriter writer = new StringWriter();
+    try {
+        JAXBContext context = JAXBContext.newInstance(Structures.class);
+        Marshaller marshaller = context.createMarshaller();
+        marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
+        marshaller.marshal(structures, writer);
+    } catch (JAXBException e) {
+        throw new RuntimeException("Failed to generate XML content", e);
+    }
+    
+    String xmlContent = writer.toString();
     LOGGER.trace("XML content length: {} characters", xmlContent.length());
     LOGGER.trace("XML content:\n{}", xmlContent);
 
