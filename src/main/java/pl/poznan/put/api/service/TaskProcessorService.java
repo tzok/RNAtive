@@ -40,6 +40,7 @@ import pl.poznan.put.utility.svg.Format;
 import pl.poznan.put.utility.svg.SVGHelper;
 
 @Service
+@Transactional
 public class TaskProcessorService {
   private static final Logger logger = LoggerFactory.getLogger(TaskProcessorService.class);
   private final TaskRepository taskRepository;

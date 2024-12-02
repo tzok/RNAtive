@@ -23,7 +23,7 @@ public class Task {
 
   @Lob private String message;
 
-  @ElementCollection
+  @ElementCollection(fetch = FetchType.EAGER)
   @CollectionTable(name = "removal_reasons", joinColumns = @JoinColumn(name = "task_id"))
   @Column(name = "reason", length = 1000)
   private List<String> removalReasons = new ArrayList<>();
