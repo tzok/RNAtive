@@ -96,10 +96,6 @@ public class TaskProcessorService {
             analyzedModels.isEmpty()
                 ? "All models were filtered out by MolProbity criteria"
                 : "Only one model remained after MolProbity filtering");
-
-        // Create a minimal result with just the removed models
-        var taskResult = new TaskResult(removedModels, List.of(), "");
-        task.setResult(objectMapper.writeValueAsString(taskResult));
         taskRepository.save(task);
         return CompletableFuture.completedFuture(null);
       }
@@ -175,11 +171,12 @@ public class TaskProcessorService {
       for (var file : request.files()) {
         try {
           var structure3D = new PdbParser().parse(file.content()).get(0);
-          
+
           // Apply MolProbity filtering early if enabled
           if (request.molProbityFilter() != MolProbityFilter.ALL) {
             var response = rnalyzerClient.analyzePdbContent(structure3D.toPdb(), file.name());
-            if (!isModelValid(file.name(), response.structure(), request.molProbityFilter(), removedModels)) {
+            if (!isModelValid(
+                file.name(), response.structure(), request.molProbityFilter(), removedModels)) {
               continue; // Skip analysis for filtered models
             }
           }
@@ -417,7 +414,7 @@ public class TaskProcessorService {
         var response = rnalyzerClient.analyzePdbContent(model.structure3D().toPdb(), model.name());
         var structure = response.structure();
 
-        if (isModelValid(model, structure, request.molProbityFilter(), removedModels)) {
+        if (isModelValid(model.name(), structure, request.molProbityFilter(), removedModels)) {
           filteredModels.add(model);
         }
       }
@@ -450,21 +447,18 @@ public class TaskProcessorService {
       List<RankedModel> removedModels) {
 
     if (filter == MolProbityFilter.GOOD_ONLY) {
-      return validateGoodOnly(model, structure, removedModels);
+      return validateGoodOnly(modelName, structure, removedModels);
     } else if (filter == MolProbityFilter.GOOD_AND_CAUTION) {
-      return validateGoodAndCaution(model, structure);
+      return validateGoodAndCaution(modelName, structure, removedModels);
     }
     return true;
   }
 
   private boolean validateGoodOnly(
-      AnalyzedModel model,
-      MolProbityResponse.Structure structure,
-      List<RankedModel> removedModels) {
-
+      String modelName, MolProbityResponse.Structure structure, List<RankedModel> removedModels) {
     if (!"good".equalsIgnoreCase(structure.rankCategory())) {
       addRemovalReason(
-          model,
+          modelName,
           removedModels,
           String.format(
               "Overall rank category is %s (clashscore: %s, percentile rank: %s)",
@@ -473,7 +467,7 @@ public class TaskProcessorService {
     }
     if (!"good".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
       addRemovalReason(
-          model,
+          modelName,
           removedModels,
           String.format(
               "Sugar pucker category is %s (%s%%)",
@@ -483,7 +477,7 @@ public class TaskProcessorService {
     }
     if (!"good".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
       addRemovalReason(
-          model,
+          modelName,
           removedModels,
           String.format(
               "Backbone conformations category is %s (%s%%)",
@@ -493,7 +487,7 @@ public class TaskProcessorService {
     }
     if (!"good".equalsIgnoreCase(structure.badBondsCategory())) {
       addRemovalReason(
-          model,
+          modelName,
           removedModels,
           String.format(
               "Bonds category is %s (%s%%)",
@@ -502,7 +496,7 @@ public class TaskProcessorService {
     }
     if (!"good".equalsIgnoreCase(structure.badAnglesCategory())) {
       addRemovalReason(
-          model,
+          modelName,
           removedModels,
           String.format(
               "Angles category is %s (%s%%)",
@@ -513,50 +507,58 @@ public class TaskProcessorService {
   }
 
   private boolean validateGoodAndCaution(
-      AnalyzedModel model, MolProbityResponse.Structure structure) {
-
+      String modelName, MolProbityResponse.Structure structure, List<RankedModel> removedModels) {
     if ("bad".equalsIgnoreCase(structure.rankCategory())) {
-      logger.info(
-          "Model {} removed: overall rank category is {} (clashscore: {}, percentile rank: {})",
-          model.name(),
-          structure.rankCategory(),
-          structure.clashscore(),
-          structure.pctRank());
+      addRemovalReason(
+          modelName,
+          removedModels,
+          String.format(
+              "Overall rank category is %s (clashscore: %s, percentile rank: %s)",
+              structure.rankCategory(), structure.clashscore(), structure.pctRank()));
       return false;
     }
     if ("bad".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
-      logger.info(
-          "Model {} removed: sugar pucker category is {} ({}%)",
-          model.name(),
-          structure.probablyWrongSugarPuckersCategory(),
-          structure.pctProbablyWrongSugarPuckers());
+      addRemovalReason(
+          modelName,
+          removedModels,
+          String.format(
+              "Sugar pucker category is %s (%s%%)",
+              structure.probablyWrongSugarPuckersCategory(),
+              structure.pctProbablyWrongSugarPuckers()));
       return false;
     }
     if ("bad".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
-      logger.info(
-          "Model {} removed: backbone conformations category is {} ({}%)",
-          model.name(),
-          structure.badBackboneConformationsCategory(),
-          structure.pctBadBackboneConformations());
+      addRemovalReason(
+          modelName,
+          removedModels,
+          String.format(
+              "Backbone conformations category is %s (%s%%)",
+              structure.badBackboneConformationsCategory(),
+              structure.pctBadBackboneConformations()));
       return false;
     }
     if ("bad".equalsIgnoreCase(structure.badBondsCategory())) {
-      logger.info(
-          "Model {} removed: bonds category is {} ({}%)",
-          model.name(), structure.badBondsCategory(), structure.pctBadBonds());
+      addRemovalReason(
+          modelName,
+          removedModels,
+          String.format(
+              "Bonds category is %s (%s%%)",
+              structure.badBondsCategory(), structure.pctBadBonds()));
       return false;
     }
     if ("bad".equalsIgnoreCase(structure.badAnglesCategory())) {
-      logger.info(
-          "Model {} removed: angles category is {} ({}%)",
-          model.name(), structure.badAnglesCategory(), structure.pctBadAngles());
+      addRemovalReason(
+          modelName,
+          removedModels,
+          String.format(
+              "Angles category is %s (%s%%)",
+              structure.badAnglesCategory(), structure.pctBadAngles()));
       return false;
     }
     return true;
   }
 
-  private void addRemovalReason(
-      String modelName, List<RankedModel> removedModels, String reason) {
+  private void addRemovalReason(String modelName, List<RankedModel> removedModels, String reason) {
 
     logger.info("Model {} removed: {}", modelName, reason);
     var removedModel =
