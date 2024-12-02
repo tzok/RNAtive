@@ -68,7 +68,7 @@ def get_results(task_id: str) -> None:
     response.raise_for_status()
     results = response.json()
 
-    # Display Model Rankings
+    # Display Model Rankings and Removal Reasons
     print("\nModel Rankings:")
     print(
         tabulate(
@@ -77,6 +77,16 @@ def get_results(task_id: str) -> None:
             tablefmt="grid",
         )
     )
+    
+    # Display removal reasons if present
+    if "removedModels" in results:
+        print("\nRemoved Models:")
+        for model in results["removedModels"]:
+            print(f"\nModel: {model['name']}")
+            if "removalReasons" in model and model["removalReasons"]:
+                print("Removal reasons:")
+                for reason in model["removalReasons"]:
+                    print(f"  - {reason}")
 
     print("\nCanonical Base Pairs:")
     print(
