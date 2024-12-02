@@ -82,7 +82,7 @@ for pdb_file in "$@"; do
 	fi
 
 	response=$(curl -s -D - -X POST "$BASE_URL")
-	resource_id=$(echo "$response" | grep -i "Location:" | grep -o '[^/]*$' | tr -d '\r')
+	resource_id=$(echo "$response" | grep -i "Location:" | grep -o '[^/]*$' | tr -d '')
 
 	if [ -z "$resource_id" ]; then
 		echo -e "${RED}Failed to initialize session${NC}"

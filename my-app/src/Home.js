@@ -10,11 +10,14 @@ import Slider from "./Slider";
 import Checkbox from "./Checkbox";
 import TextInput from "./TextInput2";
 import Dropdown from "./Dropdown";
+// import { REACT_APP_SERVER_ADDRESS } from "./config.js";
 
 import "./SendingTest.css";
 import SvgImg from "./SvgImg";
 import ResultTable from "./ResultTable";
 import FileDetails from "./FileDetails";
+import * as configs from "./config";
+
 //rnapuzzles standarized submissions najlepiej brać stamtąd RP 18 <--- example czy cos
 //specjalny riquest na serwer że rób przykład
 
@@ -51,16 +54,17 @@ function Home() {
   // Example uploaded files state and other required states
   const [taskIdComplete, setTaskIdComplete] = useState(null);
 
-  const serverAddress = process.env.REACT_APP_SERVER_ADDRESS; //"http://localhost:8080/api/compute"; // Replace with actual server address
+  const serverAddress = configs.default.SERVER_ADDRESS; // REACT_APP_SERVER_ADDRESS; // process.env.REACT_APP_SERVER_ADDRESS; //"http://localhost:8080/api/compute"; // Replace with actual server address
   const analyzer = "MCANNOTATE"; // Replace with actual analyzer value
   const visualizationTool = "VARNA"; // Replace with actual tool value
   const consensusMode = "CANONICAL";
   const confidenceLevel = "0.5";
-  const molprobityFilter = "true";
+  const molProbityFilter = "GOOD_AND_CAUTION";
 
   const handleSendData = async (pload = [], taskIdArg = "") => {
     const POLL_INTERVAL = 3000; // 3 seconds
     let taskId = taskIdArg || null;
+    console.log("SERVER:", serverAddress);
 
     try {
       // Step 1: Create and send the payload if taskId is not provided
@@ -94,18 +98,37 @@ function Home() {
           visualizationTool,
           consensusMode,
           confidenceLevel,
-          molprobityFilter,
+          molProbityFilter,
         };
         if (pload != []) {
           payload.analyzer = pload[0];
           payload.visualizationTool = pload[1];
           payload.consensusMode = pload[2];
           payload.confidenceLevel = pload[3];
-          payload.molprobityFilter = pload[4];
+          payload.molProbityFilter = pload[4]; //pload[4];
           if (pload[5] != "") {
             payload.dotBracket = pload[5];
           }
         }
+
+        //   payload = {
+        //     "files": [
+        //         {
+        //             "name": f.name,
+        //             "content": f.read_text(),
+        //         }
+        //         for f in files
+        //     ],
+        //     "analyzer": args.analyzer,
+        //     "visualizationTool": args.visualization,
+        //     "consensusMode": args.consensus_mode,
+        //     "confidenceLevel": args.confidence,
+        //     "molProbityFilter": args.molprobity_filter,
+        // }
+
+        // if dot_bracket:
+        //     payload["dotBracket"] = dot_bracket
+
         // [MCANNOTATE, BARNABA, RNAVIEW, FR3D, BPNET, RNAPOLIS]
         switch (payload.analyzer) {
           case "MC-Annotate":
@@ -160,6 +183,7 @@ function Home() {
             payload.visualizationTool = "RCHIE";
             break;
         }
+        console.log("TEST PAYLOAD:", payload.molProbityFilter);
         // Send the payload
         const response = await fetch(serverAddress, {
           method: "POST",
@@ -214,10 +238,11 @@ function Home() {
       const statusData = await statusResponse.json();
       console.log("Task status:", statusData);
 
-      const { status, message } = statusData;
+      const { status, message, removalReasons } = statusData;
 
       if (status === "FAILED") {
         console.error("FAILED:", message);
+        console.error("FAILED RESASONS:", removalReasons);
         console.error("Task failed:", message);
         setResponse({
           error: message || "Task failed with no additional message.",
@@ -339,6 +364,13 @@ function Home() {
 
   const handleSelect3 = (option2) => {
     setSelectedOption3(option2);
+  };
+
+  const molprobity = ["GOOD_ONLY", "GOOD_AND_CAUTION", "ALL"];
+  const [selectedMolprobity, setSelectedOption4] = useState(molprobity[0]); // Initial selected option
+
+  const handleSelect4 = (option2) => {
+    setSelectedOption4(option2);
   };
 
   const renderContent = () => {
@@ -528,6 +560,17 @@ function Home() {
                   onSelect={handleSelect3}
                 />
               </div>
+
+              <div className="dropdown-text-container">
+                <p className="dropdown-text">
+                  <b>Filter with mol probity?</b>
+                </p>
+                <Dropdown
+                  options={molprobity}
+                  value={selectedMolprobity}
+                  onSelect={handleSelect4}
+                />
+              </div>
               <div className="dropdown-text-container">
                 <p className="dropdown-text">
                   <b>Pick confidence level</b>
@@ -540,7 +583,7 @@ function Home() {
 
               {/* <p>Current Slider Value: {sliderValue.toFixed(2)}</p> */}
               {/* <p>Currently selected option: {selectedOption}</p> */}
-              <div className="dropdown-text-container">
+              {/* <div className="dropdown-text-container">
                 <p className="dropdown-text">
                   <b>Filter with mol probity? </b>
                 </p>
@@ -551,13 +594,13 @@ function Home() {
                 <p
                   style={{
                     fontSize:
-                      "18px" /* This font size is set using a 'string value' */,
+                      "18px" ,
                   }}
                 >
                   {" "}
                   {isChecked ? "Yes" : "No"}
                 </p>
-              </div>
+              </div> */}
 
               <div className="dropdown-text-container">
                 <p className="dropdown-text">
@@ -566,26 +609,31 @@ function Home() {
                 <TextInput value={text} onTextChange={handleTextChange} />
               </div>
             </div>
-            {
-              // payload.analyzer = pload[0];
-              // payload.visualizationTool = pload[1];
-              // payload.consensusMode = pload[2];
-              // payload.confidenceLevel = pload[3];
-              // payload.molprobityFilter = pload[4];
-            }
             <div style={{ marginBottom: "60px" }}></div>
             <div className="center-items">
               <button
                 className="send-button"
-                onClick={() =>
-                  handleSendData([
-                    selectedAnnotator,
-                    selectedVisualisator,
-                    selectedConsensus,
-                    sliderValue.toFixed(2),
-                    isChecked,
-                    text,
-                  ])
+                onClick={
+                  () =>
+                    handleSendData([
+                      selectedAnnotator,
+                      selectedVisualisator,
+                      selectedConsensus,
+                      sliderValue.toFixed(2),
+                      // isChecked,
+                      selectedMolprobity,
+                      //"GOOD_AND_CAUTION",
+                      text,
+                    ])
+                  // handleSendData([
+                  //   "BPNET",
+                  //   "VARNA",
+                  //   "CANONICAL",
+                  //   0.5,
+                  //   // isChecked,
+                  //   "GOOD_AND_CAUTION",
+                  //   "",
+                  // ])
                 }
               >
                 Send Data
