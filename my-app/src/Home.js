@@ -49,6 +49,8 @@ function Home() {
   };
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState(null);
+  const [removalReasondisp, setRemovalReasondisp] = useState(null);
+
   const [serverError, setServerError] = useState(null);
 
   // Example uploaded files state and other required states
@@ -72,6 +74,7 @@ function Home() {
         setIsLoading(true);
         setResponse(null);
         setServerError(null);
+        setRemovalReasondisp(null);
 
         // Log file details
         uploadedFiles.forEach(async (fileObj, index) => {
@@ -104,7 +107,13 @@ function Home() {
           payload.analyzer = pload[0];
           payload.visualizationTool = pload[1];
           payload.consensusMode = pload[2];
-          payload.confidenceLevel = pload[3];
+          if (payload[3] == 0) {
+            //enable fuzzy mode
+            payload.confidenceLevel = null;
+          } else {
+            payload.confidenceLevel = pload[3];
+          }
+
           payload.molProbityFilter = pload[4]; //pload[4];
           if (pload[5] != "") {
             payload.dotBracket = pload[5];
@@ -222,7 +231,19 @@ function Home() {
       }
     }
   };
+  const formatRemovalReasons = (removalReasons) => {
+    console.log("Input to formatRemovalReasons:", removalReasons); // Log input
 
+    const formattedReasons = Object.entries(removalReasons)
+      .map(([fileName, reasons]) => {
+        const reasonsList = reasons.map((reason) => `- ${reason}`).join("\n");
+        return `${fileName}\n${reasonsList}`;
+      })
+      .join("\n\n");
+
+    console.log("Output of formatRemovalReasons:", formattedReasons); // Log output
+    return formattedReasons;
+  };
   const pollTaskStatus = async (taskId, pollInterval, setResponse) => {
     while (true) {
       const statusResponse = await fetch(`${serverAddress}/${taskId}/status`, {
@@ -244,6 +265,9 @@ function Home() {
         console.error("FAILED:", message);
         console.error("FAILED RESASONS:", removalReasons);
         console.error("Task failed:", message);
+        const reasons = formatRemovalReasons(removalReasons);
+        console.log("Formatted reasons before setting state:", reasons);
+        setRemovalReasondisp(reasons);
         setResponse({
           error: message || "Task failed with no additional message.",
         });
@@ -256,6 +280,9 @@ function Home() {
 
       if (status === "COMPLETED") {
         console.log("Task completed successfully!");
+        const reasons = formatRemovalReasons(removalReasons);
+        console.log("Formatted reasons before setting state:", reasons);
+        setRemovalReasondisp(reasons);
         await fetchTaskResult(taskId, setResponse);
         return;
       }
@@ -366,7 +393,7 @@ function Home() {
     setSelectedOption3(option2);
   };
 
-  const molprobity = ["GOOD_ONLY", "GOOD_AND_CAUTION", "ALL"];
+  const molprobity = ["GOOD_AND_CAUTION", "GOOD_ONLY", "ALL"];
   const [selectedMolprobity, setSelectedOption4] = useState(molprobity[0]); // Initial selected option
 
   const handleSelect4 = (option2) => {
@@ -394,6 +421,11 @@ function Home() {
             <div className="error-container">
               <h2>Error</h2>
               <p>{serverError}</p>
+              {removalReasondisp != null ? (
+                <pre class="small-txt">{removalReasondisp}</pre>
+              ) : (
+                <p></p>
+              )}
               <button
                 className="reset-button"
                 onClick={() => {
@@ -449,6 +481,16 @@ function Home() {
                   filename={filename}
                 />
               ))}
+
+              {removalReasondisp != null || removalReasondisp != "" ? (
+                <div className="small-txt">
+                  <p>Files removed by MolProbity:</p>
+                  <pre class="small-txt">{removalReasondisp}</pre>
+                </div>
+              ) : (
+                <p></p>
+              )}
+
               {/* {response.filenames.map((filename, index) => (
             <FileDetails
               key={index}
@@ -579,6 +621,9 @@ function Home() {
                   value={sliderValue}
                   onValueChange={handleSliderChange}
                 />
+                <p className="dropdown-text">
+                  {sliderValue === 0 ? "Fuzzy mode: on" : "Fuzzy mode: off"}
+                </p>
               </div>
 
               {/* <p>Current Slider Value: {sliderValue.toFixed(2)}</p> */}
