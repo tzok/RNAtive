@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.bag.HashBag;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.math3.util.FastMath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +32,7 @@ import pl.poznan.put.api.util.DrawerVarnaTz;
 import pl.poznan.put.api.util.ReferenceStructureUtil;
 import pl.poznan.put.model.BaseInteractions;
 import pl.poznan.put.notation.LeontisWesthof;
+import pl.poznan.put.notation.NucleobaseEdge;
 import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
 import pl.poznan.put.pdb.analysis.PdbParser;
 import pl.poznan.put.rnalyzer.MolProbityResponse;
@@ -110,31 +113,55 @@ public class TaskProcessorService {
           ReferenceStructureUtil.readReferenceStructure(request.dotBracket(), sequence, firstModel);
       logger.info("Collecting all interactions");
       var allInteractions = collectAllInteractions(analyzedModels);
-      logger.info("Calculating threshold");
-      var threshold = calculateThreshold(request.confidenceLevel(), analyzedModels.size());
-      logger.info("Computing correct interactions");
-      var correctConsideredInteractions =
-          computeCorrectInteractions(
-              request.consensusMode(),
-              analyzedModels,
-              referenceStructure,
-              allInteractions,
-              threshold);
-      logger.info("Generating ranked models");
-      var rankedModels =
-          generateRankedModels(
-              request.consensusMode(), analyzedModels, correctConsideredInteractions);
 
-      logger.info("Generating dot bracket notation");
-      var dotBracket =
-          generateDotBracket(
-              firstModel,
-              computeCorrectInteractions(
-                  ConsensusMode.CANONICAL,
-                  analyzedModels,
-                  referenceStructure,
-                  allInteractions,
-                  threshold));
+      List<RankedModel> rankedModels;
+      String dotBracket;
+      Set<AnalyzedBasePair> correctConsideredInteractions;
+
+      if (request.confidenceLevel() == null) {
+        logger.info("Computing fuzzy interactions");
+        var fuzzyInteractions =
+            computeFuzzyInteractions(
+                request.consensusMode(), analyzedModels, referenceStructure, allInteractions);
+        logger.info("Computing fuzzy correct interactions (for visualization only)");
+        correctConsideredInteractions =
+            Stream.concat(
+                    correctFuzzyCanonicalPairs(fuzzyInteractions).stream(),
+                    Stream.concat(
+                        correctFuzzyNonCanonicalPairs(fuzzyInteractions).stream(),
+                        correctFuzzyStackings(fuzzyInteractions).stream()))
+                .collect(Collectors.toSet());
+        logger.info("Generating fuzzy ranked models");
+        rankedModels =
+            generateFuzzyRankedModels(request.consensusMode(), analyzedModels, fuzzyInteractions);
+        logger.info("Generating fuzzy dot bracket notation");
+        dotBracket = generateFuzzyDotBracket(firstModel, fuzzyInteractions);
+      } else {
+        logger.info("Calculating threshold");
+        var threshold = calculateThreshold(request.confidenceLevel(), analyzedModels.size());
+        logger.info("Computing correct interactions");
+        correctConsideredInteractions =
+            computeCorrectInteractions(
+                request.consensusMode(),
+                analyzedModels,
+                referenceStructure,
+                allInteractions,
+                threshold);
+        logger.info("Generating ranked models");
+        rankedModels =
+            generateRankedModels(
+                request.consensusMode(), analyzedModels, correctConsideredInteractions);
+        logger.info("Generating dot bracket notation");
+        dotBracket =
+            generateDotBracket(
+                firstModel,
+                computeCorrectInteractions(
+                    ConsensusMode.CANONICAL,
+                    analyzedModels,
+                    referenceStructure,
+                    allInteractions,
+                    threshold));
+      }
 
       logger.info("Creating task result");
       var taskResult = new TaskResult(rankedModels, referenceStructure, dotBracket);
@@ -161,6 +188,221 @@ public class TaskProcessorService {
       }
     }
     return CompletableFuture.completedFuture(null);
+  }
+
+  private String generateFuzzyDotBracket(
+      AnalyzedModel firstModel, Map<AnalyzedBasePair, Double> fuzzyInteractions) {
+    var residues = firstModel.residueIdentifiers();
+    var canonicalPairs = correctFuzzyCanonicalPairs(fuzzyInteractions);
+    logger.trace(
+        "Generating dot-bracket notation for {} residues and {} fuzzy canonical base pairs",
+        residues.size(),
+        canonicalPairs.size());
+    var bpseq = BpSeq.fromBasePairs(residues, canonicalPairs);
+    return conversionClient.convertBpseqToDotBracket(bpseq.toString());
+  }
+
+  private List<AnalyzedBasePair> correctFuzzyCanonicalPairs(
+      Map<AnalyzedBasePair, Double> fuzzyInteractions) {
+    var canonicalPairs =
+        fuzzyInteractions.entrySet().stream()
+            .filter(e -> e.getKey().isCanonical())
+            .sorted(Comparator.comparingDouble(Map.Entry::getValue))
+            .toList();
+
+    var used = new HashSet<PdbNamedResidueIdentifier>();
+    var filtered = new ArrayList<AnalyzedBasePair>();
+
+    for (var entry : canonicalPairs) {
+      logger.trace("Base pair: {} with probability {}", entry.getKey(), entry.getValue());
+      var key = entry.getKey();
+
+      if (used.contains(key.basePair().left()) || used.contains(key.basePair().right())) {
+        continue;
+      }
+
+      used.add(key.basePair().left());
+      used.add(key.basePair().right());
+      filtered.add(key);
+    }
+
+    return filtered;
+  }
+
+  private List<RankedModel> generateFuzzyRankedModels(
+      ConsensusMode consensusMode,
+      List<AnalyzedModel> analyzedModels,
+      Map<AnalyzedBasePair, Double> fuzzyInteractions) {
+    logger.info("Starting to generate fuzzy ranked models");
+    var rankedModels =
+        analyzedModels.stream()
+            .map(
+                model -> {
+                  logger.debug("Processing model: {}", model.name());
+                  var modelInteractions =
+                      model.streamBasePairs(consensusMode).collect(Collectors.toSet());
+                  logger.debug("Calculating fuzzy interaction network fidelity");
+                  var inf =
+                      InteractionNetworkFidelity.calculateFuzzy(
+                          fuzzyInteractions, modelInteractions);
+                  logger.debug("Computing canonical base pairs");
+                  var canonicalBasePairs =
+                      computeCorrectInteractions(
+                          ConsensusMode.CANONICAL, List.of(model), List.of(), new HashBag<>(), 0);
+                  logger.debug("Generating dot bracket for model");
+                  var dotBracket = generateDotBracket(model, canonicalBasePairs);
+                  return new RankedModel(model, inf, dotBracket);
+                })
+            .collect(Collectors.toList());
+
+    logger.info("Ranking models based on interaction network fidelity");
+    var infs =
+        rankedModels.stream()
+            .map(RankedModel::getInteractionNetworkFidelity)
+            .sorted(Comparator.reverseOrder())
+            .toList();
+    rankedModels.forEach(
+        rankedModel ->
+            rankedModel.setRank(infs.indexOf(rankedModel.getInteractionNetworkFidelity()) + 1));
+    rankedModels.sort(Comparator.reverseOrder());
+
+    logger.info("Finished generating ranked models");
+    return rankedModels;
+  }
+
+  private Set<AnalyzedBasePair> computeCorrectInteractions(
+      ConsensusMode consensusMode,
+      List<AnalyzedModel> analyzedModels,
+      List<AnalyzedBasePair> referenceStructure,
+      HashBag<AnalyzedBasePair> allInteractions,
+      int threshold) {
+    logger.info(
+        "Starting computation of correct interactions with consensus mode: {}", consensusMode);
+    var relevantBasePairs =
+        switch (consensusMode) {
+          case CANONICAL -> analyzedModels.stream()
+              .map(AnalyzedModel::canonicalBasePairs)
+              .flatMap(Collection::stream)
+              .collect(Collectors.toCollection(HashBag::new));
+          case NON_CANONICAL -> analyzedModels.stream()
+              .map(AnalyzedModel::nonCanonicalBasePairs)
+              .flatMap(Collection::stream)
+              .collect(Collectors.toCollection(HashBag::new));
+          case STACKING -> analyzedModels.stream()
+              .map(AnalyzedModel::stackings)
+              .flatMap(Collection::stream)
+              .collect(Collectors.toCollection(HashBag::new));
+          case ALL -> allInteractions;
+        };
+
+    logger.debug("Filtering relevant base pairs based on reference structure and threshold");
+    var correctConsideredInteractions =
+        relevantBasePairs.stream()
+            .filter(
+                classifiedBasePair ->
+                    referenceStructure.contains(classifiedBasePair)
+                        || relevantBasePairs.getCount(classifiedBasePair) >= threshold)
+            .collect(Collectors.toSet());
+
+    if (consensusMode != ConsensusMode.STACKING) {
+      logger.debug("Resolving conflicts in base pairs for consensus mode: {}", consensusMode);
+      for (var leontisWesthof : LeontisWesthof.values()) {
+        MultiValuedMap<PdbNamedResidueIdentifier, AnalyzedBasePair> map =
+            new ArrayListValuedHashMap<>();
+
+        correctConsideredInteractions.stream()
+            .filter(candidate -> candidate.leontisWesthof() == leontisWesthof)
+            .forEach(
+                candidate -> {
+                  var basePair = candidate.basePair();
+                  map.put(basePair.left(), candidate);
+                  map.put(basePair.right(), candidate);
+                });
+
+        var conflicting =
+            map.keySet().stream()
+                .filter(key -> map.get(key).size() > 1)
+                .flatMap(key -> map.get(key).stream())
+                .distinct()
+                .sorted(Comparator.comparingInt(allInteractions::getCount))
+                .collect(Collectors.toList());
+
+        while (!conflicting.isEmpty()) {
+          correctConsideredInteractions.remove(conflicting.get(0));
+
+          // Update the map after removing a conflicting base pair
+          map.clear();
+          correctConsideredInteractions.stream()
+              .filter(candidate -> candidate.leontisWesthof() == leontisWesthof)
+              .forEach(
+                  candidate -> {
+                    var basePair = candidate.basePair();
+                    map.put(basePair.left(), candidate);
+                    map.put(basePair.right(), candidate);
+                  });
+
+          conflicting =
+              map.keySet().stream()
+                  .filter(key -> map.get(key).size() > 1)
+                  .flatMap(key -> map.get(key).stream())
+                  .distinct()
+                  .sorted(Comparator.comparingInt(allInteractions::getCount))
+                  .toList();
+        }
+      }
+    }
+
+    logger.info("Finished computing correct interactions");
+    return correctConsideredInteractions;
+  }
+
+  private String generateDotBracket(
+      AnalyzedModel firstModel, Collection<AnalyzedBasePair> correctCanonicalBasePairs) {
+    var residues = firstModel.residueIdentifiers();
+    var canonicalPairs = new HashSet<>(correctCanonicalBasePairs);
+    logger.trace(
+        "Generating dot-bracket notation for {} residues and {} canonical base pairs",
+        residues.size(),
+        canonicalPairs.size());
+    canonicalPairs.forEach(pair -> logger.trace("Base pair: {}", pair));
+    var bpseq = BpSeq.fromBasePairs(residues, canonicalPairs);
+    return conversionClient.convertBpseqToDotBracket(bpseq.toString());
+  }
+
+  private Map<AnalyzedBasePair, Double> computeFuzzyInteractions(
+      ConsensusMode consensusMode,
+      List<AnalyzedModel> analyzedModels,
+      List<AnalyzedBasePair> referenceStructure,
+      HashBag<AnalyzedBasePair> allInteractions) {
+    logger.info(
+        "Starting computation of fuzzy interactions with consensus mode: {}", consensusMode);
+    var hashBag =
+        switch (consensusMode) {
+          case CANONICAL -> analyzedModels.stream()
+              .map(AnalyzedModel::canonicalBasePairs)
+              .flatMap(Collection::stream)
+              .collect(Collectors.toCollection(HashBag::new));
+          case NON_CANONICAL -> analyzedModels.stream()
+              .map(AnalyzedModel::nonCanonicalBasePairs)
+              .flatMap(Collection::stream)
+              .collect(Collectors.toCollection(HashBag::new));
+          case STACKING -> analyzedModels.stream()
+              .map(AnalyzedModel::stackings)
+              .flatMap(Collection::stream)
+              .collect(Collectors.toCollection(HashBag::new));
+          case ALL -> allInteractions;
+        };
+    return hashBag.stream()
+        .distinct()
+        .collect(
+            Collectors.toMap(
+                k -> k,
+                v -> {
+                  if (referenceStructure.contains(v)) {
+                    return 1.0;
+                  }
+                  return (double) (hashBag.getCount(v)) / analyzedModels.size();
+                }));
   }
 
   private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request, Task task) {
@@ -210,195 +452,6 @@ public class TaskProcessorService {
     }
 
     return analyzedModels;
-  }
-
-  private String extractSequence(AnalyzedModel firstModel) {
-    return firstModel.residueIdentifiers().stream()
-        .map(PdbNamedResidueIdentifier::oneLetterName)
-        .map(String::valueOf)
-        .collect(Collectors.joining());
-  }
-
-  private HashBag<AnalyzedBasePair> collectAllInteractions(List<AnalyzedModel> analyzedModels) {
-    return analyzedModels.stream()
-        .map(AnalyzedModel::basePairsAndStackings)
-        .flatMap(Collection::stream)
-        .collect(Collectors.toCollection(HashBag::new));
-  }
-
-  private int calculateThreshold(double confidenceLevel, int count) {
-    return (int) FastMath.ceil(confidenceLevel * count);
-  }
-
-  private Set<AnalyzedBasePair> computeCorrectInteractions(
-      ConsensusMode consensusMode,
-      List<AnalyzedModel> analyzedModels,
-      List<AnalyzedBasePair> referenceStructure,
-      HashBag<AnalyzedBasePair> allInteractions,
-      int threshold) {
-    logger.info(
-        "Starting computation of correct interactions with consensus mode: {}", consensusMode);
-    HashBag<AnalyzedBasePair> relevantBasePairs =
-        switch (consensusMode) {
-          case CANONICAL -> analyzedModels.stream()
-              .map(AnalyzedModel::canonicalBasePairs)
-              .flatMap(Collection::stream)
-              .collect(Collectors.toCollection(HashBag::new));
-          case NON_CANONICAL -> analyzedModels.stream()
-              .map(AnalyzedModel::nonCanonicalBasePairs)
-              .flatMap(Collection::stream)
-              .collect(Collectors.toCollection(HashBag::new));
-          case STACKING -> analyzedModels.stream()
-              .map(AnalyzedModel::stackings)
-              .flatMap(Collection::stream)
-              .collect(Collectors.toCollection(HashBag::new));
-          case ALL -> allInteractions;
-        };
-
-    logger.debug("Filtering relevant base pairs based on reference structure and threshold");
-    Set<AnalyzedBasePair> correctConsideredInteractions =
-        relevantBasePairs.stream()
-            .filter(
-                classifiedBasePair ->
-                    referenceStructure.contains(classifiedBasePair)
-                        || relevantBasePairs.getCount(classifiedBasePair) >= threshold)
-            .collect(Collectors.toSet());
-
-    if (consensusMode != ConsensusMode.STACKING) {
-      logger.debug("Resolving conflicts in base pairs for consensus mode: {}", consensusMode);
-      for (LeontisWesthof leontisWesthof : LeontisWesthof.values()) {
-        MultiValuedMap<PdbNamedResidueIdentifier, AnalyzedBasePair> map =
-            new ArrayListValuedHashMap<>();
-
-        correctConsideredInteractions.stream()
-            .filter(candidate -> candidate.leontisWesthof() == leontisWesthof)
-            .forEach(
-                candidate -> {
-                  var basePair = candidate.basePair();
-                  map.put(basePair.left(), candidate);
-                  map.put(basePair.right(), candidate);
-                });
-
-        List<AnalyzedBasePair> conflicting =
-            map.keySet().stream()
-                .filter(key -> map.get(key).size() > 1)
-                .flatMap(key -> map.get(key).stream())
-                .distinct()
-                .sorted(Comparator.comparingInt(allInteractions::getCount))
-                .collect(Collectors.toList());
-
-        while (!conflicting.isEmpty()) {
-          correctConsideredInteractions.remove(conflicting.get(0));
-
-          // Update the map after removing a conflicting base pair
-          map.clear();
-          correctConsideredInteractions.stream()
-              .filter(candidate -> candidate.leontisWesthof() == leontisWesthof)
-              .forEach(
-                  candidate -> {
-                    var basePair = candidate.basePair();
-                    map.put(basePair.left(), candidate);
-                    map.put(basePair.right(), candidate);
-                  });
-
-          conflicting =
-              map.keySet().stream()
-                  .filter(key -> map.get(key).size() > 1)
-                  .flatMap(key -> map.get(key).stream())
-                  .distinct()
-                  .sorted(Comparator.comparingInt(allInteractions::getCount))
-                  .toList();
-        }
-      }
-    }
-
-    logger.info("Finished computing correct interactions");
-    return correctConsideredInteractions;
-  }
-
-  private List<RankedModel> generateRankedModels(
-      ConsensusMode consensusMode,
-      List<AnalyzedModel> analyzedModels,
-      Set<AnalyzedBasePair> correctConsideredInteractions) {
-    logger.info("Starting to generate ranked models");
-    var rankedModels =
-        analyzedModels.stream()
-            .map(
-                model -> {
-                  logger.debug("Processing model: {}", model.name());
-                  var modelInteractions =
-                      model.streamBasePairs(consensusMode).collect(Collectors.toSet());
-                  logger.debug("Calculating interaction network fidelity");
-                  var inf =
-                      InteractionNetworkFidelity.calculate(
-                          correctConsideredInteractions, modelInteractions);
-                  logger.debug("Computing canonical base pairs");
-                  var canonicalBasePairs =
-                      computeCorrectInteractions(
-                          ConsensusMode.CANONICAL, List.of(model), List.of(), new HashBag<>(), 0);
-                  logger.debug("Generating dot bracket for model");
-                  var dotBracket = generateDotBracket(model, canonicalBasePairs);
-                  return new RankedModel(model, inf, dotBracket);
-                })
-            .collect(Collectors.toList());
-
-    logger.info("Ranking models based on interaction network fidelity");
-    var infs =
-        rankedModels.stream()
-            .map(RankedModel::getInteractionNetworkFidelity)
-            .sorted(Comparator.reverseOrder())
-            .toList();
-    rankedModels.forEach(
-        rankedModel ->
-            rankedModel.setRank(infs.indexOf(rankedModel.getInteractionNetworkFidelity()) + 1));
-    rankedModels.sort(Comparator.reverseOrder());
-
-    logger.info("Finished generating ranked models");
-    return rankedModels;
-  }
-
-  private String generateDotBracket(
-      AnalyzedModel firstModel, Collection<AnalyzedBasePair> correctCanonicalBasePairs) {
-    var residues = firstModel.residueIdentifiers();
-    var canonicalPairs = new HashSet<>(correctCanonicalBasePairs);
-    logger.trace(
-        "Generating dot-bracket notation for {} residues and {} canonical base pairs",
-        residues.size(),
-        canonicalPairs.size());
-    canonicalPairs.forEach(pair -> logger.trace("Base pair: {}", pair));
-    var bpseq = BpSeq.fromBasePairs(residues, canonicalPairs);
-    return conversionClient.convertBpseqToDotBracket(bpseq.toString());
-  }
-
-  private String generateVisualization(
-      VisualizationTool visualizationTool,
-      AnalyzedModel firstModel,
-      Set<AnalyzedBasePair> correctConsideredInteractions,
-      String dotBracket) {
-    try {
-      String svg;
-      if (visualizationTool == VisualizationTool.VARNA) {
-        var dotBracketObj =
-            ImmutableDefaultDotBracketFromPdb.of(
-                extractSequence(firstModel), dotBracket.split("\n")[1], firstModel.structure3D());
-        var svgDoc =
-            drawerVarnaTz.drawSecondaryStructure(
-                dotBracketObj,
-                firstModel.structure3D(),
-                new ArrayList<>(correctConsideredInteractions));
-        var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
-        svg = new String(svgBytes);
-      } else {
-        var visualizationInput =
-            visualizationService.prepareVisualizationInput(firstModel, dotBracket);
-        var visualizationJson = objectMapper.writeValueAsString(visualizationInput);
-        svg = visualizationClient.visualize(visualizationJson, visualizationTool);
-      }
-      return svg;
-    } catch (Exception e) {
-      logger.warn("Visualization generation failed", e);
-      throw new RuntimeException("Visualization generation failed: " + e.getMessage(), e);
-    }
   }
 
   private boolean isModelValid(
@@ -467,6 +520,11 @@ public class TaskProcessorService {
     return true;
   }
 
+  private void addRemovalReason(String modelName, Task task, String reason) {
+    logger.info("Model {} removed: {}", modelName, reason);
+    task.addRemovalReason(modelName, reason);
+  }
+
   private boolean validateGoodAndCaution(
       String modelName, MolProbityResponse.Structure structure, Task task) {
     if ("warning".equalsIgnoreCase(structure.rankCategory())) {
@@ -519,8 +577,133 @@ public class TaskProcessorService {
     return true;
   }
 
-  private void addRemovalReason(String modelName, Task task, String reason) {
-    logger.info("Model {} removed: {}", modelName, reason);
-    task.addRemovalReason(modelName, reason);
+  private String extractSequence(AnalyzedModel firstModel) {
+    return firstModel.residueIdentifiers().stream()
+        .map(PdbNamedResidueIdentifier::oneLetterName)
+        .map(String::valueOf)
+        .collect(Collectors.joining());
+  }
+
+  private HashBag<AnalyzedBasePair> collectAllInteractions(List<AnalyzedModel> analyzedModels) {
+    return analyzedModels.stream()
+        .map(AnalyzedModel::basePairsAndStackings)
+        .flatMap(Collection::stream)
+        .collect(Collectors.toCollection(HashBag::new));
+  }
+
+  private int calculateThreshold(double confidenceLevel, int count) {
+    return (int) FastMath.ceil(confidenceLevel * count);
+  }
+
+  private List<RankedModel> generateRankedModels(
+      ConsensusMode consensusMode,
+      List<AnalyzedModel> analyzedModels,
+      Set<AnalyzedBasePair> correctConsideredInteractions) {
+    logger.info("Starting to generate ranked models");
+    var rankedModels =
+        analyzedModels.stream()
+            .map(
+                model -> {
+                  logger.debug("Processing model: {}", model.name());
+                  var modelInteractions =
+                      model.streamBasePairs(consensusMode).collect(Collectors.toSet());
+                  logger.debug("Calculating interaction network fidelity");
+                  var inf =
+                      InteractionNetworkFidelity.calculate(
+                          correctConsideredInteractions, modelInteractions);
+                  logger.debug("Computing canonical base pairs");
+                  var canonicalBasePairs =
+                      computeCorrectInteractions(
+                          ConsensusMode.CANONICAL, List.of(model), List.of(), new HashBag<>(), 0);
+                  logger.debug("Generating dot bracket for model");
+                  var dotBracket = generateDotBracket(model, canonicalBasePairs);
+                  return new RankedModel(model, inf, dotBracket);
+                })
+            .collect(Collectors.toList());
+
+    logger.info("Ranking models based on interaction network fidelity");
+    var infs =
+        rankedModels.stream()
+            .map(RankedModel::getInteractionNetworkFidelity)
+            .sorted(Comparator.reverseOrder())
+            .toList();
+    rankedModels.forEach(
+        rankedModel ->
+            rankedModel.setRank(infs.indexOf(rankedModel.getInteractionNetworkFidelity()) + 1));
+    rankedModels.sort(Comparator.reverseOrder());
+
+    logger.info("Finished generating ranked models");
+    return rankedModels;
+  }
+
+  private String generateVisualization(
+      VisualizationTool visualizationTool,
+      AnalyzedModel firstModel,
+      Set<AnalyzedBasePair> correctConsideredInteractions,
+      String dotBracket) {
+    try {
+      String svg;
+      if (visualizationTool == VisualizationTool.VARNA) {
+        var dotBracketObj =
+            ImmutableDefaultDotBracketFromPdb.of(
+                extractSequence(firstModel), dotBracket.split("\n")[1], firstModel.structure3D());
+        var svgDoc =
+            drawerVarnaTz.drawSecondaryStructure(
+                dotBracketObj,
+                firstModel.structure3D(),
+                new ArrayList<>(correctConsideredInteractions));
+        var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
+        svg = new String(svgBytes);
+      } else {
+        var visualizationInput =
+            visualizationService.prepareVisualizationInput(firstModel, dotBracket);
+        var visualizationJson = objectMapper.writeValueAsString(visualizationInput);
+        svg = visualizationClient.visualize(visualizationJson, visualizationTool);
+      }
+      return svg;
+    } catch (Exception e) {
+      logger.warn("Visualization generation failed", e);
+      throw new RuntimeException("Visualization generation failed: " + e.getMessage(), e);
+    }
+  }
+
+  private List<AnalyzedBasePair> correctFuzzyNonCanonicalPairs(
+      Map<AnalyzedBasePair, Double> fuzzyInteractions) {
+    var pairs =
+        fuzzyInteractions.entrySet().stream()
+            .filter(e -> e.getKey().isNonCanonical())
+            .sorted(Comparator.comparingDouble(Map.Entry::getValue))
+            .toList();
+
+    var used = new HashSet<Pair<PdbNamedResidueIdentifier, NucleobaseEdge>>();
+    var filtered = new ArrayList<AnalyzedBasePair>();
+
+    for (var entry : pairs) {
+      logger.trace("Base pair: {} with probability {}", entry.getKey(), entry.getValue());
+      var key = entry.getKey();
+      Pair<PdbNamedResidueIdentifier, NucleobaseEdge> left =
+          Pair.of(key.basePair().left(), key.leontisWesthof().edge5());
+      Pair<PdbNamedResidueIdentifier, NucleobaseEdge> right =
+          Pair.of(key.basePair().right(), key.leontisWesthof().edge3());
+
+      if (used.contains(left) || used.contains(right)) {
+        continue;
+      }
+
+      used.add(left);
+      used.add(right);
+      filtered.add(key);
+    }
+
+    return filtered;
+  }
+
+  private List<AnalyzedBasePair> correctFuzzyStackings(
+      Map<AnalyzedBasePair, Double> fuzzyInteractions) {
+    return fuzzyInteractions.entrySet().stream()
+        .filter(e -> e.getKey().isStacking())
+        .sorted(Comparator.comparingDouble(Map.Entry::getValue))
+        .map(Map.Entry::getKey)
+        .toList();
   }
 }
