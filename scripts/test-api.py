@@ -178,8 +178,8 @@ def main():
     submit_parser.add_argument(
         "--confidence",
         type=float,
-        default=0.5,
-        help="Confidence level threshold (0.0-1.0, default: 0.5)",
+        default=None,
+        help="Confidence level threshold (0.0-1.0, default: fuzzy)",
     )
     submit_parser.add_argument(
         "--molprobity-filter",
