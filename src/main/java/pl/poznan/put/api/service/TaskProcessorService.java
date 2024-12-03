@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.bag.HashBag;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
@@ -31,6 +30,7 @@ import pl.poznan.put.api.repository.TaskRepository;
 import pl.poznan.put.api.util.DrawerVarnaTz;
 import pl.poznan.put.api.util.ReferenceStructureUtil;
 import pl.poznan.put.model.BaseInteractions;
+import pl.poznan.put.model.BasePair;
 import pl.poznan.put.notation.LeontisWesthof;
 import pl.poznan.put.notation.NucleobaseEdge;
 import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
@@ -73,6 +73,15 @@ public class TaskProcessorService {
     this.drawerVarnaTz = drawerVarnaTz;
   }
 
+  private static List<Pair<AnalyzedBasePair, Double>> sortFuzzySet(
+      Map<AnalyzedBasePair, Double> fuzzySet) {
+    // Sort the fuzzy canonical pairs by probability in descending order
+    return fuzzySet.entrySet().stream()
+        .map(entry -> Pair.of(entry.getKey(), entry.getValue()))
+        .sorted(Comparator.comparing(pair -> Pair.of(-pair.getRight(), pair.getLeft())))
+        .toList();
+  }
+
   @Async("taskExecutor")
   public CompletableFuture<Void> processTaskAsync(String taskId) {
     logger.info("Starting async processing of task {}", taskId);
@@ -86,7 +95,7 @@ public class TaskProcessorService {
       logger.info("Parsing task request");
       var request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
 
-      logger.info("Parsing and analyzing files");
+      logger.info("Parsing, analyzing and filtering files with MolProbity");
       var analyzedModels = parseAndAnalyzeFiles(request, task);
       if (analyzedModels.stream().anyMatch(Objects::isNull)) {
         task.setStatus(TaskStatus.FAILED);
@@ -95,7 +104,9 @@ public class TaskProcessorService {
         return CompletableFuture.completedFuture(null);
       }
 
-      if (analyzedModels.size() < 2) {
+      var modelCount = analyzedModels.size();
+
+      if (modelCount < 2) {
         task.setStatus(TaskStatus.FAILED);
         task.setMessage(
             analyzedModels.isEmpty()
@@ -108,11 +119,43 @@ public class TaskProcessorService {
       logger.info("Extracting sequence from the first model");
       var firstModel = analyzedModels.get(0);
       var sequence = extractSequence(firstModel);
+
       logger.info("Reading reference structure");
       var referenceStructure =
           ReferenceStructureUtil.readReferenceStructure(request.dotBracket(), sequence, firstModel);
+
       logger.info("Collecting all interactions");
-      var allInteractions = collectAllInteractions(analyzedModels);
+      var canonicalPairsBag =
+          analyzedModels.stream()
+              .flatMap(
+                  model ->
+                      model.structure2D().basePairs().stream()
+                          .filter(BasePair::isCanonical)
+                          .map(model::basePairToAnalyzed))
+              .collect(Collectors.toCollection(HashBag::new));
+      var nonCanonicalPairsBag =
+          analyzedModels.stream()
+              .flatMap(
+                  model ->
+                      model.structure2D().basePairs().stream()
+                          .filter(basePair -> !basePair.isCanonical())
+                          .map(model::basePairToAnalyzed))
+              .collect(Collectors.toCollection(HashBag::new));
+      var stackingsBag =
+          analyzedModels.stream()
+              .flatMap(
+                  model -> model.structure2D().stackings().stream().map(model::stackingToAnalyzed))
+              .collect(Collectors.toCollection(HashBag::new));
+      var allInteractionsBag = new HashBag<>(canonicalPairsBag);
+      allInteractionsBag.addAll(nonCanonicalPairsBag);
+      allInteractionsBag.addAll(stackingsBag);
+      var consideredInteractionsBag =
+          switch (request.consensusMode()) {
+            case CANONICAL -> canonicalPairsBag;
+            case NON_CANONICAL -> nonCanonicalPairsBag;
+            case STACKING -> stackingsBag;
+            case ALL -> allInteractionsBag;
+          };
 
       List<RankedModel> rankedModels;
       String dotBracket;
@@ -120,47 +163,59 @@ public class TaskProcessorService {
 
       if (request.confidenceLevel() == null) {
         logger.info("Computing fuzzy interactions");
-        var fuzzyInteractions =
-            computeFuzzyInteractions(
-                request.consensusMode(), analyzedModels, referenceStructure, allInteractions);
-        logger.info("Computing fuzzy correct interactions (for visualization only)");
-        correctConsideredInteractions =
-            Stream.concat(
-                    correctFuzzyCanonicalPairs(fuzzyInteractions).stream(),
-                    Stream.concat(
-                        correctFuzzyNonCanonicalPairs(fuzzyInteractions).stream(),
-                        correctFuzzyStackings(fuzzyInteractions).stream()))
-                .collect(Collectors.toSet());
+        var fuzzyCanonicalPairs =
+            computeFuzzyInteractions(canonicalPairsBag, referenceStructure, modelCount);
+        var fuzzyNonCanonicalPairs =
+            computeFuzzyInteractions(nonCanonicalPairsBag, referenceStructure, modelCount);
+        var fuzzyStackings = computeFuzzyInteractions(stackingsBag, referenceStructure, modelCount);
+        var fuzzyAllInteractions =
+            computeFuzzyInteractions(allInteractionsBag, referenceStructure, modelCount);
+        var fuzzyConsideredInteractions =
+            switch (request.consensusMode()) {
+              case CANONICAL -> fuzzyCanonicalPairs;
+              case NON_CANONICAL -> fuzzyNonCanonicalPairs;
+              case STACKING -> fuzzyStackings;
+              case ALL -> fuzzyAllInteractions;
+            };
+
         logger.info("Generating fuzzy ranked models");
         rankedModels =
-            generateFuzzyRankedModels(request.consensusMode(), analyzedModels, fuzzyInteractions);
+            generateFuzzyRankedModels(
+                analyzedModels, fuzzyConsideredInteractions, request.consensusMode());
+
         logger.info("Generating fuzzy dot bracket notation");
-        dotBracket = generateFuzzyDotBracket(firstModel, fuzzyInteractions);
+        dotBracket = generateFuzzyDotBracket(firstModel, fuzzyCanonicalPairs);
+
+        logger.info("Compute correct fuzzy interaction (for visualization)");
+        correctConsideredInteractions =
+            new HashSet<>(
+                switch (request.consensusMode()) {
+                  case CANONICAL -> correctFuzzyCanonicalPairs(fuzzyCanonicalPairs);
+                  case NON_CANONICAL -> correctFuzzyNonCanonicalPairs(fuzzyNonCanonicalPairs);
+                  case STACKING -> correctFuzzyStackings(fuzzyStackings);
+                  case ALL -> correctFuzzyAllInteraction(
+                      fuzzyCanonicalPairs, fuzzyNonCanonicalPairs, fuzzyStackings);
+                });
       } else {
         logger.info("Calculating threshold");
-        var threshold = calculateThreshold(request.confidenceLevel(), analyzedModels.size());
+        var threshold = calculateThreshold(request.confidenceLevel(), modelCount);
+
         logger.info("Computing correct interactions");
         correctConsideredInteractions =
             computeCorrectInteractions(
-                request.consensusMode(),
-                analyzedModels,
-                referenceStructure,
-                allInteractions,
-                threshold);
+                request.consensusMode(), consideredInteractionsBag, referenceStructure, threshold);
+
         logger.info("Generating ranked models");
         rankedModels =
             generateRankedModels(
                 request.consensusMode(), analyzedModels, correctConsideredInteractions);
+
         logger.info("Generating dot bracket notation");
         dotBracket =
             generateDotBracket(
                 firstModel,
                 computeCorrectInteractions(
-                    ConsensusMode.CANONICAL,
-                    analyzedModels,
-                    referenceStructure,
-                    allInteractions,
-                    threshold));
+                    ConsensusMode.CANONICAL, canonicalPairsBag, referenceStructure, threshold));
       }
 
       logger.info("Creating task result");
@@ -191,9 +246,9 @@ public class TaskProcessorService {
   }
 
   private String generateFuzzyDotBracket(
-      AnalyzedModel firstModel, Map<AnalyzedBasePair, Double> fuzzyInteractions) {
+      AnalyzedModel firstModel, Map<AnalyzedBasePair, Double> fuzzyCanonicalPairs) {
     var residues = firstModel.residueIdentifiers();
-    var canonicalPairs = correctFuzzyCanonicalPairs(fuzzyInteractions);
+    var canonicalPairs = correctFuzzyCanonicalPairs(fuzzyCanonicalPairs);
     logger.trace(
         "Generating dot-bracket notation for {} residues and {} fuzzy canonical base pairs",
         residues.size(),
@@ -203,36 +258,33 @@ public class TaskProcessorService {
   }
 
   private List<AnalyzedBasePair> correctFuzzyCanonicalPairs(
-      Map<AnalyzedBasePair, Double> fuzzyInteractions) {
-    var canonicalPairs =
-        fuzzyInteractions.entrySet().stream()
-            .filter(e -> e.getKey().isCanonical())
-            .sorted(Comparator.comparingDouble(Map.Entry::getValue))
-            .toList();
-
+      Map<AnalyzedBasePair, Double> fuzzyCanonicalPairs) {
     var used = new HashSet<PdbNamedResidueIdentifier>();
     var filtered = new ArrayList<AnalyzedBasePair>();
 
-    for (var entry : canonicalPairs) {
-      logger.trace("Base pair: {} with probability {}", entry.getKey(), entry.getValue());
-      var key = entry.getKey();
+    for (var entry : sortFuzzySet(fuzzyCanonicalPairs)) {
+      var analyzedBasePair = entry.getKey();
+      var basePair = analyzedBasePair.basePair();
+      var probability = entry.getValue();
 
-      if (used.contains(key.basePair().left()) || used.contains(key.basePair().right())) {
+      logger.trace("Base pair: {} with probability {}", analyzedBasePair, probability);
+
+      if (used.contains(basePair.left()) || used.contains(basePair.right())) {
         continue;
       }
 
-      used.add(key.basePair().left());
-      used.add(key.basePair().right());
-      filtered.add(key);
+      used.add(basePair.left());
+      used.add(basePair.right());
+      filtered.add(analyzedBasePair);
     }
 
     return filtered;
   }
 
   private List<RankedModel> generateFuzzyRankedModels(
-      ConsensusMode consensusMode,
       List<AnalyzedModel> analyzedModels,
-      Map<AnalyzedBasePair, Double> fuzzyInteractions) {
+      Map<AnalyzedBasePair, Double> fuzzyInteractions,
+      ConsensusMode consensusMode) {
     logger.info("Starting to generate fuzzy ranked models");
     var rankedModels =
         analyzedModels.stream()
@@ -248,7 +300,10 @@ public class TaskProcessorService {
                   logger.debug("Computing canonical base pairs");
                   var canonicalBasePairs =
                       computeCorrectInteractions(
-                          ConsensusMode.CANONICAL, List.of(model), List.of(), new HashBag<>(), 0);
+                          ConsensusMode.CANONICAL,
+                          new HashBag<>(model.canonicalBasePairs()),
+                          List.of(),
+                          0);
                   logger.debug("Generating dot bracket for model");
                   var dotBracket = generateDotBracket(model, canonicalBasePairs);
                   return new RankedModel(model, inf, dotBracket);
@@ -272,36 +327,16 @@ public class TaskProcessorService {
 
   private Set<AnalyzedBasePair> computeCorrectInteractions(
       ConsensusMode consensusMode,
-      List<AnalyzedModel> analyzedModels,
+      HashBag<AnalyzedBasePair> consideredInteractionsBag,
       List<AnalyzedBasePair> referenceStructure,
-      HashBag<AnalyzedBasePair> allInteractions,
       int threshold) {
-    logger.info(
-        "Starting computation of correct interactions with consensus mode: {}", consensusMode);
-    var relevantBasePairs =
-        switch (consensusMode) {
-          case CANONICAL -> analyzedModels.stream()
-              .map(AnalyzedModel::canonicalBasePairs)
-              .flatMap(Collection::stream)
-              .collect(Collectors.toCollection(HashBag::new));
-          case NON_CANONICAL -> analyzedModels.stream()
-              .map(AnalyzedModel::nonCanonicalBasePairs)
-              .flatMap(Collection::stream)
-              .collect(Collectors.toCollection(HashBag::new));
-          case STACKING -> analyzedModels.stream()
-              .map(AnalyzedModel::stackings)
-              .flatMap(Collection::stream)
-              .collect(Collectors.toCollection(HashBag::new));
-          case ALL -> allInteractions;
-        };
-
     logger.debug("Filtering relevant base pairs based on reference structure and threshold");
     var correctConsideredInteractions =
-        relevantBasePairs.stream()
+        consideredInteractionsBag.stream()
             .filter(
                 classifiedBasePair ->
                     referenceStructure.contains(classifiedBasePair)
-                        || relevantBasePairs.getCount(classifiedBasePair) >= threshold)
+                        || consideredInteractionsBag.getCount(classifiedBasePair) >= threshold)
             .collect(Collectors.toSet());
 
     if (consensusMode != ConsensusMode.STACKING) {
@@ -324,7 +359,7 @@ public class TaskProcessorService {
                 .filter(key -> map.get(key).size() > 1)
                 .flatMap(key -> map.get(key).stream())
                 .distinct()
-                .sorted(Comparator.comparingInt(allInteractions::getCount))
+                .sorted(Comparator.comparingInt(consideredInteractionsBag::getCount))
                 .collect(Collectors.toList());
 
         while (!conflicting.isEmpty()) {
@@ -346,7 +381,7 @@ public class TaskProcessorService {
                   .filter(key -> map.get(key).size() > 1)
                   .flatMap(key -> map.get(key).stream())
                   .distinct()
-                  .sorted(Comparator.comparingInt(allInteractions::getCount))
+                  .sorted(Comparator.comparingInt(consideredInteractionsBag::getCount))
                   .toList();
         }
       }
@@ -370,29 +405,11 @@ public class TaskProcessorService {
   }
 
   private Map<AnalyzedBasePair, Double> computeFuzzyInteractions(
-      ConsensusMode consensusMode,
-      List<AnalyzedModel> analyzedModels,
+      HashBag<AnalyzedBasePair> consideredInteractionsBag,
       List<AnalyzedBasePair> referenceStructure,
-      HashBag<AnalyzedBasePair> allInteractions) {
-    logger.info(
-        "Starting computation of fuzzy interactions with consensus mode: {}", consensusMode);
-    var hashBag =
-        switch (consensusMode) {
-          case CANONICAL -> analyzedModels.stream()
-              .map(AnalyzedModel::canonicalBasePairs)
-              .flatMap(Collection::stream)
-              .collect(Collectors.toCollection(HashBag::new));
-          case NON_CANONICAL -> analyzedModels.stream()
-              .map(AnalyzedModel::nonCanonicalBasePairs)
-              .flatMap(Collection::stream)
-              .collect(Collectors.toCollection(HashBag::new));
-          case STACKING -> analyzedModels.stream()
-              .map(AnalyzedModel::stackings)
-              .flatMap(Collection::stream)
-              .collect(Collectors.toCollection(HashBag::new));
-          case ALL -> allInteractions;
-        };
-    return hashBag.stream()
+      int modelCount) {
+    logger.info("Starting computation of fuzzy interactions");
+    return consideredInteractionsBag.stream()
         .distinct()
         .collect(
             Collectors.toMap(
@@ -401,7 +418,7 @@ public class TaskProcessorService {
                   if (referenceStructure.contains(v)) {
                     return 1.0;
                   }
-                  return (double) (hashBag.getCount(v)) / analyzedModels.size();
+                  return (double) (consideredInteractionsBag.getCount(v)) / modelCount;
                 }));
   }
 
@@ -584,13 +601,6 @@ public class TaskProcessorService {
         .collect(Collectors.joining());
   }
 
-  private HashBag<AnalyzedBasePair> collectAllInteractions(List<AnalyzedModel> analyzedModels) {
-    return analyzedModels.stream()
-        .map(AnalyzedModel::basePairsAndStackings)
-        .flatMap(Collection::stream)
-        .collect(Collectors.toCollection(HashBag::new));
-  }
-
   private int calculateThreshold(double confidenceLevel, int count) {
     return (int) FastMath.ceil(confidenceLevel * count);
   }
@@ -614,7 +624,10 @@ public class TaskProcessorService {
                   logger.debug("Computing canonical base pairs");
                   var canonicalBasePairs =
                       computeCorrectInteractions(
-                          ConsensusMode.CANONICAL, List.of(model), List.of(), new HashBag<>(), 0);
+                          ConsensusMode.CANONICAL,
+                          new HashBag<>(model.canonicalBasePairs()),
+                          List.of(),
+                          0);
                   logger.debug("Generating dot bracket for model");
                   var dotBracket = generateDotBracket(model, canonicalBasePairs);
                   return new RankedModel(model, inf, dotBracket);
@@ -668,23 +681,15 @@ public class TaskProcessorService {
   }
 
   private List<AnalyzedBasePair> correctFuzzyNonCanonicalPairs(
-      Map<AnalyzedBasePair, Double> fuzzyInteractions) {
-    var pairs =
-        fuzzyInteractions.entrySet().stream()
-            .filter(e -> e.getKey().isNonCanonical())
-            .sorted(Comparator.comparingDouble(Map.Entry::getValue))
-            .toList();
-
+      Map<AnalyzedBasePair, Double> fuzzyNonCanonicalPairs) {
     var used = new HashSet<Pair<PdbNamedResidueIdentifier, NucleobaseEdge>>();
     var filtered = new ArrayList<AnalyzedBasePair>();
 
-    for (var entry : pairs) {
+    for (var entry : sortFuzzySet(fuzzyNonCanonicalPairs)) {
       logger.trace("Base pair: {} with probability {}", entry.getKey(), entry.getValue());
       var key = entry.getKey();
-      Pair<PdbNamedResidueIdentifier, NucleobaseEdge> left =
-          Pair.of(key.basePair().left(), key.leontisWesthof().edge5());
-      Pair<PdbNamedResidueIdentifier, NucleobaseEdge> right =
-          Pair.of(key.basePair().right(), key.leontisWesthof().edge3());
+      var left = Pair.of(key.basePair().left(), key.leontisWesthof().edge5());
+      var right = Pair.of(key.basePair().right(), key.leontisWesthof().edge3());
 
       if (used.contains(left) || used.contains(right)) {
         continue;
@@ -699,11 +704,17 @@ public class TaskProcessorService {
   }
 
   private List<AnalyzedBasePair> correctFuzzyStackings(
-      Map<AnalyzedBasePair, Double> fuzzyInteractions) {
-    return fuzzyInteractions.entrySet().stream()
-        .filter(e -> e.getKey().isStacking())
-        .sorted(Comparator.comparingDouble(Map.Entry::getValue))
-        .map(Map.Entry::getKey)
-        .toList();
+      Map<AnalyzedBasePair, Double> fuzzyStackings) {
+    return sortFuzzySet(fuzzyStackings).stream().map(Pair::getLeft).toList();
+  }
+
+  private List<AnalyzedBasePair> correctFuzzyAllInteraction(
+      Map<AnalyzedBasePair, Double> fuzzyCanonicalPairs,
+      Map<AnalyzedBasePair, Double> fuzzyNonCanonicalPairs,
+      Map<AnalyzedBasePair, Double> fuzzyStackings) {
+    var result = correctFuzzyCanonicalPairs(fuzzyCanonicalPairs);
+    result.addAll(correctFuzzyNonCanonicalPairs(fuzzyNonCanonicalPairs));
+    result.addAll(correctFuzzyStackings(fuzzyStackings));
+    return result;
   }
 }

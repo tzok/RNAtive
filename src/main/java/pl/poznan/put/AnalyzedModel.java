@@ -60,7 +60,7 @@ public record AnalyzedModel(String name, PdbModel structure3D, BaseInteractions 
         .collect(Collectors.toList());
   }
 
-  private AnalyzedBasePair basePairToAnalyzed(BasePair basePair) {
+  public AnalyzedBasePair basePairToAnalyzed(BasePair basePair) {
     return ImmutableAnalyzedBasePair.builder()
         .basePair(
             ImmutableBasePair.of(
@@ -75,7 +75,7 @@ public record AnalyzedModel(String name, PdbModel structure3D, BaseInteractions 
         .build();
   }
 
-  private AnalyzedBasePair stackingToAnalyzed(Stacking stacking) {
+  public AnalyzedBasePair stackingToAnalyzed(Stacking stacking) {
     return ImmutableAnalyzedBasePair.builder()
         .basePair(
             ImmutableBasePair.of(
