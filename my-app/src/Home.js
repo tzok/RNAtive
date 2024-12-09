@@ -216,7 +216,7 @@ function Home() {
         const { taskId: newTaskId } = await response.json();
         taskId = newTaskId;
 
-        navigate(`/${newTaskId}`, { replace: true }); //navigate to new taskid ???
+        navigate(`/${newTaskId}`, { replace: true }); //navigate to new taskid
         console.log("Task submitted. Task ID:", taskId);
       } else {
         console.log(`Using provided Task ID: ${taskId}`);
@@ -449,6 +449,7 @@ function Home() {
                   setServerError(null);
                   setIsLoading(false);
                   setResponse(null);
+                  navigate(`/`, { replace: true }); //navigate to no taskid
                 }}
               >
                 Retry
@@ -525,7 +526,10 @@ function Home() {
               {/* <pre>{JSON.stringify(response, null, 2)}</pre> */}
               <button
                 className="reset-button"
-                onClick={() => setResponse(null)}
+                onClick={() => {
+                  navigate(`/`, { replace: true }); //navigate to no taskid
+                  setResponse(null);
+                }}
               >
                 Reset
               </button>
