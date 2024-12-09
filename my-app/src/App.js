@@ -14,6 +14,7 @@ function App() {
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/:id" element={<Home />} />
         <Route path="/Onas" element={<Onas />} />
         <Route path="/Help" element={<Help />} />
         <Route path="/Cite" element={<Cite />} />
@@ -24,3 +25,9 @@ function App() {
 }
 
 export default App;
+
+/*
+<Route path="/" element={<Home />} />
+  <Route path="/Home/" element={<Home />} />
+  <Route path="/Home/:id" element={<Home />} />
+*/

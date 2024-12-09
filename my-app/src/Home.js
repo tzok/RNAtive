@@ -2,7 +2,8 @@ import logo from "./logo.svg";
 import "./App.css";
 import Navbar from "./Navbar";
 // Home.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import "./Home.css";
 import SelectableList from "./SelectableList";
@@ -41,7 +42,13 @@ import * as configs from "./config";
 //tabelki dla par kanonicznych niekanonicznch i stackingu --> dopiero jak się zapytam o model dany to dostane dane
 //może być svg wizualizacji struktury 2gorzędowej
 
+//sprawdzić czy github mi dodaje windowsowe entery!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 function Home() {
+  //getting the id from params
+  const { id } = useParams();
+  const navigate = useNavigate();
+
   //sending
   const [text2, setText2] = useState("");
   const handleTextChange2 = (newText) => {
@@ -111,7 +118,7 @@ function Home() {
             //enable fuzzy mode
             payload.confidenceLevel = null;
           } else {
-            payload.confidenceLevel = pload[3];
+            payload.confidenceLevel = parseFloat(pload[3]);
           }
 
           payload.molProbityFilter = pload[4]; //pload[4];
@@ -208,6 +215,8 @@ function Home() {
 
         const { taskId: newTaskId } = await response.json();
         taskId = newTaskId;
+
+        navigate(`/${newTaskId}`, { replace: true }); //navigate to new taskid ???
         console.log("Task submitted. Task ID:", taskId);
       } else {
         console.log(`Using provided Task ID: ${taskId}`);
@@ -399,6 +408,14 @@ function Home() {
   const handleSelect4 = (option2) => {
     setSelectedOption4(option2);
   };
+
+  useEffect(() => {
+    if (id) {
+      console.log("Page loaded with ID:", id);
+      handleSendData([], id);
+      // Perform actions with the ID if necessary (e.g., fetch data based on the ID)
+    }
+  }, [id]);
 
   const renderContent = () => {
     if (isLoading) {
