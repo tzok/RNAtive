@@ -361,6 +361,51 @@ function Home() {
     setUploadedFiles((prevFiles) => prevFiles.filter((f) => f.id !== fileId));
   };
 
+  const loadExampleFiles = async () => {
+    try {
+      // List of example files
+      const exampleFiles = ["M6_git.pdb", "M6.pdb"];
+
+      // Fetch each file from the public folder
+      const files = await Promise.all(
+        exampleFiles.map(async (fileName) => {
+          const response = await fetch(`/examples/${fileName}`);
+          const blob = await response.blob();
+          return new File([blob], fileName, { type: blob.type });
+        })
+      );
+
+      // Convert fetched files into dropzone-compatible format
+      const newFiles = files.map((file, index) => ({
+        id: Date.now() + index,
+        file,
+      }));
+
+      setUploadedFiles(newFiles); // Replace current files with examples
+    } catch (error) {
+      console.error("Error loading example files:", error);
+    }
+  };
+
+  const previewExampleFiles = () => {
+    const exampleFiles = ["M6_git.pdb", "M6.pdb"]; //TODO, najlepiej jakby to był zip z plikami przykładowymi, bo przeglądarka się oburza na kilka pobrań naraz
+
+    exampleFiles.forEach(async (fileName) => {
+      try {
+        const response = await fetch(`/examples/${fileName}`);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+        link.click();
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error(`Error downloading ${fileName}:`, error);
+      }
+    });
+  };
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
   const consensuses = ["Canonical", "Non-canonical", "Stacking", "All"]; //CANONICAL (domyślny), NON_CANONICAL , STACKING, ALL
@@ -544,17 +589,23 @@ function Home() {
       <div>
         <header className="App-header">
           <div class="rounded-border">
-            <p
+            <button className="send-button" onClick={loadExampleFiles}>
+              Load Example
+            </button>
+            <button className="send-button" onClick={previewExampleFiles}>
+              Preview Example Files
+            </button>
+            {/* <p
               style={{
                 fontSize:
-                  "25px" /* This font size is set using a 'string value' */,
+                  "25px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
               <b>Drop pdb files here</b>
-            </p>
+            </p> */}
             <div className="home-container">
               <div className="dropzone-container" {...getRootProps()}>
                 <input {...getInputProps()} />
@@ -600,10 +651,6 @@ function Home() {
                   value={selectedConsensus}
                   onSelect={handleSelect}
                 />
-              </div>
-
-              {/* <p>Currently selected option: {selectedOption}</p> */}
-              <div className="dropdown-text-container">
                 <p className="dropdown-text">
                   <b>Pick annotator</b>
                 </p>
@@ -613,6 +660,18 @@ function Home() {
                   onSelect={handleSelect2}
                 />
               </div>
+
+              {/* <p>Currently selected option: {selectedOption}</p> */}
+              {/* <div className="dropdown-text-container">
+                <p className="dropdown-text">
+                  <b>Pick annotator</b>
+                </p>
+                <Dropdown
+                  options={annotators}
+                  value={selectedAnnotator}
+                  onSelect={handleSelect2}
+                />
+              </div> */}
               <div className="dropdown-text-container">
                 <p className="dropdown-text">
                   <b>Pick visulalisator</b>
@@ -622,9 +681,6 @@ function Home() {
                   value={selectedVisualisator}
                   onSelect={handleSelect3}
                 />
-              </div>
-
-              <div className="dropdown-text-container">
                 <p className="dropdown-text">
                   <b>Filter with mol probity?</b>
                 </p>
@@ -634,6 +690,17 @@ function Home() {
                   onSelect={handleSelect4}
                 />
               </div>
+
+              {/* <div className="dropdown-text-container">
+                <p className="dropdown-text">
+                  <b>Filter with mol probity?</b>
+                </p>
+                <Dropdown
+                  options={molprobity}
+                  value={selectedMolprobity}
+                  onSelect={handleSelect4}
+                />
+              </div> */}
               <div className="dropdown-text-container">
                 <p className="dropdown-text">
                   <b>Pick confidence level</b>
