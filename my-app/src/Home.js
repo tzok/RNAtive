@@ -523,7 +523,6 @@ function Home() {
               <div className="center-items">
                 <SvgImg serverAddress={serverAddress} taskId={taskIdComplete} />
               </div>
-
               <div className="center-items-normal-txt">
                 <p>Canonical pairs:</p>
               </div>
@@ -536,6 +535,15 @@ function Home() {
                 <p>Ranking:</p>
               </div>
               <ResultTable ranking={response.ranking} />
+
+              <div className="center-items-normal-txt">
+                <p>Dot bracket:</p>
+              </div>
+              <p className="small-txt">{response.dotBracket}</p>
+
+              <div className="center-items-normal-txt">
+                <p>Results for each file:</p>
+              </div>
               {response.fileNames.map((filename, index) => (
                 <FileDetails
                   key={index}
