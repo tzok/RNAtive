@@ -10,6 +10,7 @@ import SelectableList from "./SelectableList";
 import Slider from "./Slider";
 import Checkbox from "./Checkbox";
 import TextInput from "./TextInput2";
+import TextInputWide from "./TextInputWide";
 import Dropdown from "./Dropdown";
 // import { REACT_APP_SERVER_ADDRESS } from "./config.js";
 
@@ -747,7 +748,7 @@ function Home() {
                 <p className="dropdown-text">
                   <b>Dot bracket parameter: </b>
                 </p>
-                <TextInput value={text} onTextChange={handleTextChange} />
+                <TextInputWide value={text} onTextChange={handleTextChange} />
               </div>
             </div>
             <div style={{ marginBottom: "60px" }}></div>

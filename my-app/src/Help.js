@@ -35,17 +35,13 @@ const Help = () => {
           >
             <ol>
               <li>
-                <a href="#dolor1">Go to Paragraph 1</a>
+                <a href="#dolor1">What is RNAtive</a>
               </li>
               <li>
-                <a href="#dolor2">
-                  Go to Paragraph with a very long name to see what happens if
-                  someone decides to call a paragraph with sucha a long name
-                  that certainly would need to be in several lines of text
-                </a>
+                <a href="#dolor2">How to use RNAtive</a>
               </li>
               <li>
-                <a href="#dolor3">Go to Paragraph 3</a>
+                <a href="#dolor3">How to use RNAtive</a>
               </li>
               <li>
                 <a href="#dolor4">Go to Paragraph 4</a>
@@ -75,22 +71,18 @@ const Help = () => {
               justifyContent: "center",
             }}
           >
-            <b>Dolor 1</b>
+            <b>What is RNAtive</b>
           </p>
           <p
             style={{
               fontSize: "18px",
             }}
           >
-            RNAtive is Vivamus vel facilisis ligula. In ac arcu ac ex fringilla
-            tincidunt. Suspendisse vel feugiat sem. Etiam laoreet accumsan quam
-            sodales volutpat. Vestibulum vestibulum nibh id massa tempor auctor.
-            Phasellus et tortor fermentum, condimentum lacus quis, viverra nisl.
-            Cras tristique venenatis leo quis blandit. In non interdum felis,
-            eget ultrices eros. Pellentesque neque augue, molestie in quam
-            facilisis, semper posuere leo. Donec mollis tortor non magna
-            eleifend lacinia a aliquet massa. Maecenas egestas elementum massa,
-            et sagittis massa maximus sodales. Nam condimentum condimentum dui.
+            RNAtive is a system that allows its users to rank a set of different
+            models of the same RNA structure to determine which ones are the
+            most realistic. RNAtive will return both the evaluation of
+            individual pdb files provided, and its proposition of the most
+            realistic actual looks of the molecule.
             <br></br>
             <div
               style={{
@@ -112,15 +104,24 @@ const Help = () => {
                 justifyContent: "center",
               }}
             >
-              <b>Dolor 2</b>
+              <b>How to use RNAtive</b>
             </p>
-            Sed cursus quam ut est imperdiet, a molestie massa dignissim. Nunc
-            commodo dictum dignissim. In dolor turpis, pharetra a malesuada eu,
-            eleifend vitae ipsum. Quisque quam neque, congue ac ultricies vel,
-            blandit id urna. Morbi tempor tempus venenatis. Aliquam erat
-            volutpat. Vestibulum vitae ante eu massa efficitur sollicitudin ac
-            vel velit. Nam sed diam eros. Sed vel cursus risus, ut laoreet
-            felis.
+            Example mode
+            <br></br>
+            To test out the system without using any pdb files of your own, you
+            can click the "Load Example" button on the top of the form at the
+            home page. This will automatically load example pdb files to be send
+            to the server. To send it for evaluation, press the "Send Data"
+            button at the bottom of the form.
+            <br></br>
+            The "Preview Files" button will download those example pdb files to
+            your computer, so you can evaluate their formatting or do other
+            things with them.
+            <br></br>
+            User's pdb files
+            <br></br>
+            To evaluate your own pdb files, please drop them in the dropzone or
+            click on the dropzone and select the .pdb files from your computer.
             <br></br>
             <br></br>
             <p
@@ -132,14 +133,9 @@ const Help = () => {
                 justifyContent: "center",
               }}
             >
-              <b>Dolor 3</b>
+              <b>Parameters</b>
             </p>
-            Praesent libero turpis, laoreet vel justo a, luctus fermentum dolor.
-            Praesent pharetra odio non egestas sollicitudin. Sed sed elit porta,
-            rutrum lorem eu, porttitor ligula. Interdum et malesuada fames ac
-            ante ipsum primis in faucibus. Aenean ullamcorper arcu elit, a
-            pulvinar tortor rhoncus eu. Aliquam neque enim, egestas sed
-            porttitor pharetra, egestas in orci. Sed sed sodales ligula.
+            There are multiple parameters to be selected
             <br></br>
             <br></br>
             <p
