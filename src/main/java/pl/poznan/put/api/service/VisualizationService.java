@@ -11,11 +11,13 @@ import pl.poznan.put.model.BaseInteractions;
 import pl.poznan.put.pdb.analysis.PdbModel;
 import pl.poznan.put.pdb.analysis.PdbResidue;
 import pl.poznan.put.structure.AnalyzedBasePair;
+import pl.poznan.put.structure.formats.DotBracketFromPdb;
 
 @Service
 public class VisualizationService {
 
-  public VisualizationInput prepareVisualizationInput(AnalyzedModel model, String dotBracket) {
+  public VisualizationInput prepareVisualizationInput(
+      AnalyzedModel model, DotBracketFromPdb dotBracket) {
     PdbModel structure3D = model.structure3D();
     BaseInteractions structure2D = model.structure2D();
 
@@ -26,7 +28,11 @@ public class VisualizationService {
     // Create residues list
     List<Residue> residues = new ArrayList<>();
     List<Chain> chains = new ArrayList<>();
-    List<Strand> strands = new ArrayList<>();
+
+    List<Strand> strands =
+        dotBracket.strands().stream()
+            .map(strand -> new Strand(strand.name(), strand.sequence(), strand.structure()))
+            .toList();
 
     residuesByChain.forEach(
         (chainId, chainResidues) -> {
@@ -38,18 +44,6 @@ public class VisualizationService {
 
           residues.addAll(chainResiduesList);
           chains.add(new Chain(chainId, chainResiduesList));
-
-          // Create strand
-          String sequence =
-              chainResidues.stream()
-                  .map(PdbResidue::oneLetterName)
-                  .map(String::valueOf)
-                  .collect(Collectors.joining());
-
-          // For now, using dot-bracket if provided, otherwise empty structure
-          String structure =
-              dotBracket != null ? dotBracket.split("\n")[1] : ".".repeat(sequence.length());
-          strands.add(new Strand(chainId, sequence, structure));
         });
 
     // Handle non-canonical interactions

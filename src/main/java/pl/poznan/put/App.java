@@ -426,7 +426,7 @@ public class App {
         analyzedModel.streamBasePairs(consensusMode).collect(Collectors.toSet());
     double interactionNetworkFidelity =
         InteractionNetworkFidelity.calculate(referenceInteractions, modelInteractions);
-    return new RankedModel(analyzedModel, interactionNetworkFidelity, ""); // TODO: dot-bracket
+    return new RankedModel(analyzedModel, interactionNetworkFidelity, null); // TODO: dot-bracket
   }
 
   private Set<AnalyzedBasePair> correctInteractions(int threshold) {

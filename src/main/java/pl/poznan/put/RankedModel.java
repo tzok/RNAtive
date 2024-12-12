@@ -2,6 +2,7 @@ package pl.poznan.put;
 
 import java.util.List;
 import pl.poznan.put.structure.AnalyzedBasePair;
+import pl.poznan.put.structure.formats.*;
 
 public class RankedModel implements Comparable<RankedModel> {
   private String name;
@@ -24,14 +25,16 @@ public class RankedModel implements Comparable<RankedModel> {
   public RankedModel() {}
 
   public RankedModel(
-      AnalyzedModel analyzedModel, double interactionNetworkFidelity, String dotBracket) {
+      AnalyzedModel analyzedModel,
+      double interactionNetworkFidelity,
+      DefaultDotBracketFromPdb dotBracket) {
     this.name = analyzedModel.name();
     this.basePairsAndStackings = analyzedModel.basePairsAndStackings();
     this.canonicalBasePairs = analyzedModel.canonicalBasePairs();
     this.nonCanonicalBasePairs = analyzedModel.nonCanonicalBasePairs();
     this.stackings = analyzedModel.stackings();
     this.interactionNetworkFidelity = interactionNetworkFidelity;
-    this.dotBracket = dotBracket;
+    this.dotBracket = dotBracket.toStringWithStrands();
   }
 
   public String getName() {

@@ -5,22 +5,21 @@ import java.util.List;
 import java.util.stream.Collectors;
 import pl.poznan.put.AnalyzedModel;
 import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
-import pl.poznan.put.structure.AnalyzedBasePair;
-import pl.poznan.put.structure.DotBracketSymbol;
-import pl.poznan.put.structure.ImmutableAnalyzedBasePair;
-import pl.poznan.put.structure.ImmutableBasePair;
+import pl.poznan.put.structure.*;
+import pl.poznan.put.structure.formats.DefaultDotBracket;
 import pl.poznan.put.structure.formats.DefaultDotBracketFromPdb;
 import pl.poznan.put.structure.formats.ImmutableDefaultDotBracketFromPdb;
 
 public class ReferenceStructureUtil {
-  public static List<AnalyzedBasePair> readReferenceStructure(
-      String dotBracket, String sequence, AnalyzedModel model) {
+  public static List<BasePair> readReferenceStructure(String dotBracket, AnalyzedModel model) {
     if (dotBracket == null || dotBracket.isEmpty()) {
       return Collections.emptyList();
     }
 
-    DefaultDotBracketFromPdb structure =
-        ImmutableDefaultDotBracketFromPdb.of(sequence, dotBracket, model.structure3D());
+    var dotBracketObj = DefaultDotBracket.fromString(dotBracket);
+    var structure =
+        ImmutableDefaultDotBracketFromPdb.of(
+            dotBracketObj.sequence(), dotBracketObj.structure(), model.structure3D());
 
     return structure.pairs().keySet().stream()
         .map(
@@ -32,7 +31,6 @@ public class ReferenceStructureUtil {
                   model.findResidue(structure.identifier(paired)).namedResidueIdentifier();
               return ImmutableBasePair.of(left, right);
             })
-        .map(ImmutableAnalyzedBasePair::of)
         .collect(Collectors.toList());
   }
 }

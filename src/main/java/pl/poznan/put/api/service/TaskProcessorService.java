@@ -38,8 +38,7 @@ import pl.poznan.put.pdb.analysis.PdbParser;
 import pl.poznan.put.rnalyzer.MolProbityResponse;
 import pl.poznan.put.rnalyzer.RnalyzerClient;
 import pl.poznan.put.structure.AnalyzedBasePair;
-import pl.poznan.put.structure.formats.BpSeq;
-import pl.poznan.put.structure.formats.ImmutableDefaultDotBracketFromPdb;
+import pl.poznan.put.structure.formats.*;
 import pl.poznan.put.utility.svg.Format;
 import pl.poznan.put.utility.svg.SVGHelper;
 
@@ -116,13 +115,11 @@ public class TaskProcessorService {
         return CompletableFuture.completedFuture(null);
       }
 
-      logger.info("Extracting sequence from the first model");
-      var firstModel = analyzedModels.get(0);
-      var sequence = extractSequence(firstModel);
-
       logger.info("Reading reference structure");
+      var firstModel = analyzedModels.get(0);
       var referenceStructure =
-          ReferenceStructureUtil.readReferenceStructure(request.dotBracket(), sequence, firstModel);
+          ReferenceStructureUtil.readReferenceStructure(request.dotBracket(), firstModel);
+      System.out.println("referenceStructure: " + referenceStructure);
 
       logger.info("Collecting all interactions");
       var canonicalPairsBag =
@@ -158,7 +155,7 @@ public class TaskProcessorService {
           };
 
       List<RankedModel> rankedModels;
-      String dotBracket;
+      DefaultDotBracketFromPdb dotBracket;
       Set<AnalyzedBasePair> correctConsideredInteractions;
 
       if (request.confidenceLevel() == null) {
@@ -219,7 +216,8 @@ public class TaskProcessorService {
       }
 
       logger.info("Creating task result");
-      var taskResult = new TaskResult(rankedModels, referenceStructure, dotBracket);
+      var taskResult =
+          new TaskResult(rankedModels, referenceStructure, dotBracket.toStringWithStrands());
       var resultJson = objectMapper.writeValueAsString(taskResult);
       task.setResult(resultJson);
 
@@ -245,16 +243,19 @@ public class TaskProcessorService {
     return CompletableFuture.completedFuture(null);
   }
 
-  private String generateFuzzyDotBracket(
-      AnalyzedModel firstModel, Map<AnalyzedBasePair, Double> fuzzyCanonicalPairs) {
-    var residues = firstModel.residueIdentifiers();
+  private DefaultDotBracketFromPdb generateFuzzyDotBracket(
+      AnalyzedModel model, Map<AnalyzedBasePair, Double> fuzzyCanonicalPairs) {
+    var residues = model.residueIdentifiers();
     var canonicalPairs = correctFuzzyCanonicalPairs(fuzzyCanonicalPairs);
     logger.trace(
         "Generating dot-bracket notation for {} residues and {} fuzzy canonical base pairs",
         residues.size(),
         canonicalPairs.size());
     var bpseq = BpSeq.fromBasePairs(residues, canonicalPairs);
-    return conversionClient.convertBpseqToDotBracket(bpseq.toString());
+    var converted = conversionClient.convertBpseqToDotBracket(bpseq.toString());
+    var sequence = converted.split("\n")[0];
+    var structure = converted.split("\n")[1];
+    return ImmutableDefaultDotBracketFromPdb.of(sequence, structure, model.structure3D());
   }
 
   private List<AnalyzedBasePair> correctFuzzyCanonicalPairs(
@@ -328,14 +329,14 @@ public class TaskProcessorService {
   private Set<AnalyzedBasePair> computeCorrectInteractions(
       ConsensusMode consensusMode,
       HashBag<AnalyzedBasePair> consideredInteractionsBag,
-      List<AnalyzedBasePair> referenceStructure,
+      List<pl.poznan.put.structure.BasePair> referenceStructure,
       int threshold) {
     logger.debug("Filtering relevant base pairs based on reference structure and threshold");
     var correctConsideredInteractions =
         consideredInteractionsBag.stream()
             .filter(
                 classifiedBasePair ->
-                    referenceStructure.contains(classifiedBasePair)
+                    referenceStructure.contains(classifiedBasePair.basePair())
                         || consideredInteractionsBag.getCount(classifiedBasePair) >= threshold)
             .collect(Collectors.toSet());
 
@@ -391,9 +392,9 @@ public class TaskProcessorService {
     return correctConsideredInteractions;
   }
 
-  private String generateDotBracket(
-      AnalyzedModel firstModel, Collection<AnalyzedBasePair> correctCanonicalBasePairs) {
-    var residues = firstModel.residueIdentifiers();
+  private DefaultDotBracketFromPdb generateDotBracket(
+      AnalyzedModel model, Collection<AnalyzedBasePair> correctCanonicalBasePairs) {
+    var residues = model.residueIdentifiers();
     var canonicalPairs = new HashSet<>(correctCanonicalBasePairs);
     logger.trace(
         "Generating dot-bracket notation for {} residues and {} canonical base pairs",
@@ -401,12 +402,15 @@ public class TaskProcessorService {
         canonicalPairs.size());
     canonicalPairs.forEach(pair -> logger.trace("Base pair: {}", pair));
     var bpseq = BpSeq.fromBasePairs(residues, canonicalPairs);
-    return conversionClient.convertBpseqToDotBracket(bpseq.toString());
+    var converted = conversionClient.convertBpseqToDotBracket(bpseq.toString());
+    var sequence = converted.split("\n")[0];
+    var structure = converted.split("\n")[1];
+    return ImmutableDefaultDotBracketFromPdb.of(sequence, structure, model.structure3D());
   }
 
   private Map<AnalyzedBasePair, Double> computeFuzzyInteractions(
       HashBag<AnalyzedBasePair> consideredInteractionsBag,
-      List<AnalyzedBasePair> referenceStructure,
+      List<pl.poznan.put.structure.BasePair> referenceStructure,
       int modelCount) {
     logger.info("Starting computation of fuzzy interactions");
     return consideredInteractionsBag.stream()
@@ -415,7 +419,7 @@ public class TaskProcessorService {
             Collectors.toMap(
                 k -> k,
                 v -> {
-                  if (referenceStructure.contains(v)) {
+                  if (referenceStructure.contains(v.basePair())) {
                     return 1.0;
                   }
                   return (double) (consideredInteractionsBag.getCount(v)) / modelCount;
@@ -594,13 +598,6 @@ public class TaskProcessorService {
     return true;
   }
 
-  private String extractSequence(AnalyzedModel firstModel) {
-    return firstModel.residueIdentifiers().stream()
-        .map(PdbNamedResidueIdentifier::oneLetterName)
-        .map(String::valueOf)
-        .collect(Collectors.joining());
-  }
-
   private int calculateThreshold(double confidenceLevel, int count) {
     return (int) FastMath.ceil(confidenceLevel * count);
   }
@@ -653,16 +650,13 @@ public class TaskProcessorService {
       VisualizationTool visualizationTool,
       AnalyzedModel firstModel,
       Set<AnalyzedBasePair> correctConsideredInteractions,
-      String dotBracket) {
+      DotBracketFromPdb dotBracket) {
     try {
       String svg;
       if (visualizationTool == VisualizationTool.VARNA) {
-        var dotBracketObj =
-            ImmutableDefaultDotBracketFromPdb.of(
-                extractSequence(firstModel), dotBracket.split("\n")[1], firstModel.structure3D());
         var svgDoc =
             drawerVarnaTz.drawSecondaryStructure(
-                dotBracketObj,
+                dotBracket,
                 firstModel.structure3D(),
                 new ArrayList<>(correctConsideredInteractions));
         var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
