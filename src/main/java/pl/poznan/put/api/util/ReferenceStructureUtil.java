@@ -7,7 +7,6 @@ import pl.poznan.put.AnalyzedModel;
 import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
 import pl.poznan.put.structure.*;
 import pl.poznan.put.structure.formats.DefaultDotBracket;
-import pl.poznan.put.structure.formats.DefaultDotBracketFromPdb;
 import pl.poznan.put.structure.formats.ImmutableDefaultDotBracketFromPdb;
 
 public class ReferenceStructureUtil {
@@ -17,12 +16,13 @@ public class ReferenceStructureUtil {
     }
 
     var dotBracketObj = DefaultDotBracket.fromString(dotBracket);
-    int modelResidueCount = (int) model.structure3D().residues().count();
-    
+    int modelResidueCount = model.structure3D().residues().size();
+
     if (dotBracketObj.sequence().length() != modelResidueCount) {
-      throw new InvalidSequenceLengthException(modelResidueCount, dotBracketObj.sequence().length());
+      throw new InvalidSequenceLengthException(
+          modelResidueCount, dotBracketObj.sequence().length());
     }
-    
+
     var structure =
         ImmutableDefaultDotBracketFromPdb.of(
             dotBracketObj.sequence(), dotBracketObj.structure(), model.structure3D());
