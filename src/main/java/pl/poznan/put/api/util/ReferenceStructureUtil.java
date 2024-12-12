@@ -23,6 +23,14 @@ public class ReferenceStructureUtil {
           modelResidueCount, dotBracketObj.sequence().length());
     }
 
+    String modelSequence = model.structure3D().residues().stream()
+        .map(r -> r.name().substring(0, 1))
+        .collect(Collectors.joining());
+
+    if (!dotBracketObj.sequence().equalsIgnoreCase(modelSequence)) {
+      throw new InvalidSequenceException(modelSequence, dotBracketObj.sequence());
+    }
+
     var structure =
         ImmutableDefaultDotBracketFromPdb.of(
             dotBracketObj.sequence(), dotBracketObj.structure(), model.structure3D());
