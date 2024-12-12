@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import pl.poznan.put.AnalyzedModel;
 import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
+import pl.poznan.put.pdb.analysis.PdbResidue;
 import pl.poznan.put.structure.*;
 import pl.poznan.put.structure.formats.DefaultDotBracket;
 import pl.poznan.put.structure.formats.ImmutableDefaultDotBracketFromPdb;
@@ -23,9 +24,12 @@ public class ReferenceStructureUtil {
           modelResidueCount, dotBracketObj.sequence().length());
     }
 
-    String modelSequence = model.structure3D().residues().stream()
-        .map(r -> r.name().substring(0, 1))
-        .collect(Collectors.joining());
+    String modelSequence =
+        model.structure3D().residues().stream()
+            .map(PdbResidue::oneLetterName)
+            .map(String::valueOf)
+            .map(String::toUpperCase)
+            .collect(Collectors.joining());
 
     if (!dotBracketObj.sequence().equalsIgnoreCase(modelSequence)) {
       throw new InvalidSequenceException(modelSequence, dotBracketObj.sequence());
