@@ -17,6 +17,12 @@ public class ReferenceStructureUtil {
     }
 
     var dotBracketObj = DefaultDotBracket.fromString(dotBracket);
+    int modelResidueCount = (int) model.structure3D().residues().count();
+    
+    if (dotBracketObj.sequence().length() != modelResidueCount) {
+      throw new InvalidSequenceLengthException(modelResidueCount, dotBracketObj.sequence().length());
+    }
+    
     var structure =
         ImmutableDefaultDotBracketFromPdb.of(
             dotBracketObj.sequence(), dotBracketObj.structure(), model.structure3D());
