@@ -538,6 +538,10 @@ function Home() {
               </div>
               <ResultTable ranking={response.canonicalPairs} />
               <div className="center-items-normal-txt">
+                <p>Non-canonical pairs:</p>
+              </div>
+              <ResultTable ranking={response.nonCanonicalPairs} />
+              <div className="center-items-normal-txt">
                 <p>Stackings:</p>
               </div>
               <ResultTable ranking={response.stackings} />
