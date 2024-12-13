@@ -462,6 +462,15 @@ function Home() {
       // Perform actions with the ID if necessary (e.g., fetch data based on the ID)
     }
   }, [id]);
+  const formatBracketTxt = (text) => {
+    // Split the text by "\n" and return an array of JSX elements
+    return text.split("\n").map((line, index) => (
+      <React.Fragment key={index}>
+        {line}
+        <br />
+      </React.Fragment>
+    ));
+  };
 
   const renderContent = () => {
     if (isLoading) {
@@ -540,7 +549,9 @@ function Home() {
               <div className="center-items-normal-txt">
                 <p>Dot bracket:</p>
               </div>
-              <p className="small-txt">{response.dotBracket}</p>
+              <p className="small-txt-bracket">
+                {formatBracketTxt(response.dotBracket)}
+              </p>
 
               <div className="center-items-normal-txt">
                 <p>Results for each file:</p>

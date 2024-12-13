@@ -27,6 +27,16 @@ const FileDetails = ({ taskId, serverAddress, filename }) => {
     setIsExpanded(!isExpanded);
   };
 
+  const formatBracketTxt = (text) => {
+    // Split the text by "\n" and return an array of JSX elements
+    return text.split("\n").map((line, index) => (
+      <React.Fragment key={index}>
+        {line}
+        <br />
+      </React.Fragment>
+    ));
+  };
+
   return (
     <div className="file-details-container">
       <div className="file-details-header" onClick={toggleExpand}>
@@ -57,8 +67,10 @@ const FileDetails = ({ taskId, serverAddress, filename }) => {
               <div className="center-items-normal-txt">
                 <p>Dot bracket:</p>
               </div>
-              <div className="center-items">
-                <p>{response.dotBracket}</p>
+              <div className="center-bracket-normal-txt">
+                <p className="small-txt-bracket">
+                  {formatBracketTxt(response.dotBracket)}
+                </p>
               </div>
 
               {/* {JSON.stringify(response, null, 2)} */}

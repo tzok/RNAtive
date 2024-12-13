@@ -64,3 +64,21 @@
     color: white;
     font-size: 18px;
 }
+
+.center-bracket-normal-txt {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    white-space: normal; /* Allows wrapping */
+    word-wrap: break-word; /* Breaks long words if necessary */
+    width: 400px; /* Restricts the width to 30% of the container */
+    font-size: 18px;
+}
+.small-txt-bracket {
+    font-size: 16px;
+    white-space: normal; /* Allows wrapping */
+    word-wrap: break-word; /* Breaks long words if necessary */
+    width: 400px; /* Restricts the width to 30% of the container */
+    line-height: 1.5; /* Optional: Adds spacing between lines for readability */
+  }
