@@ -64,7 +64,7 @@ const Help = () => {
                 <a href="#dolor4">Getting already submitted results</a>
               </li>
               <li>
-                <a href="#dolor5">Go to Paragraph 5</a>
+                <a href="#dolor5">Results</a>
               </li>
               <li>
                 <a href="#dolor6">Go to Paragraph 6</a>
