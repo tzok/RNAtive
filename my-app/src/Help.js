@@ -9,7 +9,7 @@ const Help = () => {
         <div class="rounded-border">
           <p
             style={{
-              fontSize: "30px",
+              fontSize: "25px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -20,7 +20,7 @@ const Help = () => {
 
           <p
             style={{
-              fontSize: "25px",
+              fontSize: "18px",
             }}
           >
             <b>Table of contents:</b>
@@ -65,9 +65,6 @@ const Help = () => {
               </li>
               <li>
                 <a href="#dolor5">Results</a>
-              </li>
-              <li>
-                <a href="#dolor6">Go to Paragraph 6</a>
               </li>
             </ol>
           </div>
@@ -225,7 +222,7 @@ const Help = () => {
             </p>
             RNAtive returns the following:
             <ol>
-              <li>Id code for this computation</li>
+              <li>Id code of this computation</li>
               <li>Visualization by the selected visualizator</li>
               <li>Cannonical pairs in consensus molecule</li>
               <li>Non cannonical pairs in consensus molecule</li>
@@ -242,25 +239,6 @@ const Help = () => {
                 </ol>
               </li>
             </ol>
-            <br></br>
-            <br></br>
-            <p
-              id="dolor6"
-              style={{
-                fontSize: "25px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <b>Dolor 6</b>
-            </p>
-            Praesent libero turpis, laoreet vel justo a, luctus fermentum dolor.
-            Praesent pharetra odio non egestas sollicitudin. Sed sed elit porta,
-            rutrum lorem eu, porttitor ligula. Interdum et malesuada fames ac
-            ante ipsum primis in faucibus. Aenean ullamcorper arcu elit, a
-            pulvinar tortor rhoncus eu. Aliquam neque enim, egestas sed
-            porttitor pharetra, egestas in orci. Sed sed sodales ligula.
             <br></br>
             <br></br>
           </p>

@@ -1,6 +1,7 @@
 import logo from "./logo.svg";
 import "./App.css";
 import Navbar from "./Navbar";
+import Footer from "./Footer";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Onas from "./Onas";
 import Home from "./Home";
@@ -20,6 +21,7 @@ function App() {
         <Route path="/Cite" element={<Cite />} />
         {/* Add more routes as needed */}
       </Routes>
+      <Footer />
     </Router>
   );
 }

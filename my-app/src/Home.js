@@ -479,7 +479,15 @@ function Home() {
           <div class="rounded-border">
             <div className="spinner-container">
               <div className="spinner"></div>
-              <p>Sending data...</p>
+
+              {id ? (
+                <div>
+                  <p>Waiting for completion...</p>
+                  <p>Your task ID: {id}</p>
+                </div>
+              ) : (
+                <p>Sending data...</p>
+              )}
             </div>
           </div>
         </header>

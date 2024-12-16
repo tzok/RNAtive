@@ -66,11 +66,13 @@
 
 .toc li {
   margin: 5px 0;
+  font-size: 18px;
 }
 
 .toc a {
   color: #007bff; /* Link color */
   text-decoration: none;
+  font-size: 18px;
 }
 
 .toc a:hover {
