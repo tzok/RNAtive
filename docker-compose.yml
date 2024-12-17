@@ -1,6 +1,11 @@
 version: '3.8'
 
 services:
+  frontend:
+    build: my-app
+    ports:
+      - "3000:3000"
+
   app:
     build: .
     ports:
