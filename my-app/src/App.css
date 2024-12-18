@@ -92,3 +92,12 @@
     transform: rotate(360deg);
   }
 }
+
+.ant-card {
+  color: white !important;
+  background-color: #282c34 !important;
+}
+
+.ant-card-head-title {
+  color: white !important;
+}
