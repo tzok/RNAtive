@@ -8,13 +8,7 @@ const TextInput = ({ value = "", onTextChange }) => {
 
   return (
     <div className="text-input-container">
-      <input
-        type="text"
-        value={value}
-        onChange={handleInputChange}
-        className="text-input"
-        placeholder="Enter text here..."
-      />
+      <input type="text" value={value} onChange={handleInputChange} className="text-input" placeholder="Enter text here..." />
     </div>
   );
 };

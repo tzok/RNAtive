@@ -8,12 +8,7 @@ const Checkbox = ({ checked = false, onCheckChange }) => {
 
   return (
     <div className="checkbox-container">
-      <input
-        type="checkbox"
-        className="checkbox"
-        checked={checked}
-        onChange={handleCheckboxChange}
-      />
+      <input type="checkbox" className="checkbox" checked={checked} onChange={handleCheckboxChange} />
     </div>
   );
 };

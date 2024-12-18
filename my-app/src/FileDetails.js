@@ -10,9 +10,7 @@ const FileDetails = ({ taskId, serverAddress, filename }) => {
     if (!isExpanded) {
       setLoading(true);
       try {
-        const response = await fetch(
-          `${serverAddress}/${taskId}/result/${filename}`
-        );
+        const response = await fetch(`${serverAddress}/${taskId}/result/${filename}`);
         if (!response.ok) {
           throw new Error("Failed to fetch file details");
         }
@@ -68,9 +66,7 @@ const FileDetails = ({ taskId, serverAddress, filename }) => {
                 <p>Dot bracket:</p>
               </div>
               <div className="center-bracket-normal-txt">
-                <p className="small-txt-bracket">
-                  {formatBracketTxt(response.dotBracket)}
-                </p>
+                <p className="small-txt-bracket">{formatBracketTxt(response.dotBracket)}</p>
               </div>
 
               {/* {JSON.stringify(response, null, 2)} */}

@@ -43,21 +43,13 @@ const ResultTable = ({ ranking }) => {
       </table>
       {rows.length > rowsPerPage && (
         <div className="pagination">
-          <button
-            onClick={handlePrevPage}
-            disabled={currentPage === 0}
-            className="pagination-btn"
-          >
+          <button onClick={handlePrevPage} disabled={currentPage === 0} className="pagination-btn">
             ◀ Prev
           </button>
           <span className="page-info">
             Page {currentPage + 1} of {Math.ceil(rows.length / rowsPerPage)}
           </span>
-          <button
-            onClick={handleNextPage}
-            disabled={startIndex + rowsPerPage >= rows.length}
-            className="pagination-btn"
-          >
+          <button onClick={handleNextPage} disabled={startIndex + rowsPerPage >= rows.length} className="pagination-btn">
             Next ▶
           </button>
         </div>

@@ -8,7 +8,7 @@ import About from "./About";
 import Home from "./Home";
 import Help from "./Help";
 import Cite from "./Cite";
-import { Flex, Layout, Menu } from "antd";
+import { Layout, Menu } from "antd";
 
 const { Header, Footer, Sider, Content } = Layout;
 
@@ -53,9 +53,10 @@ function App() {
           />
           <NavMenu />
         </Header>
-        <Content style={{
+        <Content
+          style={{
             padding: "24px",
-        }}>
+          }}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/:id" element={<Home />} />

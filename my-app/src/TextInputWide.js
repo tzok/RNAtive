@@ -13,10 +13,7 @@ const TextInputWide = ({ value = "", onTextChange }) => {
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = "auto"; // Reset height to measure full content
-      textarea.style.height = `${Math.min(
-        textarea.scrollHeight,
-        10 * parseFloat(getComputedStyle(textarea).lineHeight)
-      )}px`; // Max height for 10 lines
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 10 * parseFloat(getComputedStyle(textarea).lineHeight))}px`; // Max height for 10 lines
     }
   };
 

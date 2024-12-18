@@ -98,7 +98,7 @@ function Home() {
           uploadedFiles.map(async (fileObj) => ({
             name: fileObj.file.name,
             content: await fileObj.file.text(), // Reads file content as text
-          }))
+          })),
         );
 
         // Prepare the payload
@@ -260,9 +260,7 @@ function Home() {
       });
 
       if (!statusResponse.ok) {
-        throw new Error(
-          `Failed to get status. Status: ${statusResponse.status}`
-        );
+        throw new Error(`Failed to get status. Status: ${statusResponse.status}`);
       }
 
       const statusData = await statusResponse.json();
@@ -309,9 +307,7 @@ function Home() {
       });
 
       if (!resultResponse.ok) {
-        throw new Error(
-          `Failed to get result. Status: ${resultResponse.status}`
-        );
+        throw new Error(`Failed to get result. Status: ${resultResponse.status}`);
       }
 
       const resultData = await resultResponse.json();
@@ -372,7 +368,7 @@ function Home() {
           const response = await fetch(`/examples/${fileName}`);
           const blob = await response.blob();
           return new File([blob], fileName, { type: blob.type });
-        })
+        }),
       );
 
       // Convert fetched files into dropzone-compatible format
@@ -424,14 +420,7 @@ function Home() {
   //   setSelectedOption(option);
   // };
 
-  const annotators = [
-    "MC-Annotate",
-    "BARNABA",
-    "RNAview",
-    "FR3D",
-    "BPnet",
-    "RNApolis",
-  ]; //CANONICAL (domyślny), NON_CANONICAL , STACKING, ALL
+  const annotators = ["MC-Annotate", "BARNABA", "RNAview", "FR3D", "BPnet", "RNApolis"]; //CANONICAL (domyślny), NON_CANONICAL , STACKING, ALL
   const [selectedAnnotator, setSelectedOption2] = useState(annotators[0]); // Initial selected option
 
   const handleSelect2 = (option2) => {
@@ -439,9 +428,7 @@ function Home() {
   };
 
   const visulalisators = ["VARNA", "RNApuzzler", "PseudoViewer", "R-Chie"];
-  const [selectedVisualisator, setSelectedOption3] = useState(
-    visulalisators[0]
-  ); // Initial selected option
+  const [selectedVisualisator, setSelectedOption3] = useState(visulalisators[0]); // Initial selected option
 
   const handleSelect3 = (option2) => {
     setSelectedOption3(option2);
@@ -500,11 +487,7 @@ function Home() {
             <div className="error-container">
               <h2>Error</h2>
               <p>{serverError}</p>
-              {removalReasondisp != null ? (
-                <pre class="small-txt">{removalReasondisp}</pre>
-              ) : (
-                <p></p>
-              )}
+              {removalReasondisp != null ? <pre class="small-txt">{removalReasondisp}</pre> : <p></p>}
               <button
                 className="reset-button"
                 onClick={() => {
@@ -512,8 +495,7 @@ function Home() {
                   setIsLoading(false);
                   setResponse(null);
                   navigate(`/`, { replace: true }); //navigate to no taskid
-                }}
-              >
+                }}>
                 Retry
               </button>
             </div>
@@ -560,20 +542,13 @@ function Home() {
               <div className="center-items-normal-txt">
                 <p>Dot bracket:</p>
               </div>
-              <p className="small-txt-bracket">
-                {formatBracketTxt(response.dotBracket)}
-              </p>
+              <p className="small-txt-bracket">{formatBracketTxt(response.dotBracket)}</p>
 
               <div className="center-items-normal-txt">
                 <p>Results for each file:</p>
               </div>
               {response.fileNames.map((filename, index) => (
-                <FileDetails
-                  key={index}
-                  taskId={taskIdComplete}
-                  serverAddress={serverAddress}
-                  filename={filename}
-                />
+                <FileDetails key={index} taskId={taskIdComplete} serverAddress={serverAddress} filename={filename} />
               ))}
 
               {removalReasondisp != null || removalReasondisp != "" ? (
@@ -605,8 +580,7 @@ function Home() {
                 onClick={() => {
                   navigate(`/`, { replace: true }); //navigate to no taskid
                   setResponse(null);
-                }}
-              >
+                }}>
                 Reset
               </button>
             </div>
@@ -640,11 +614,7 @@ function Home() {
             <div className="home-container">
               <div className="dropzone-container" {...getRootProps()}>
                 <input {...getInputProps()} />
-                {isDragActive ? (
-                  <p>Drop the files here ...</p>
-                ) : (
-                  <p>Drag & drop files here, or click to select files</p>
-                )}
+                {isDragActive ? <p>Drop the files here ...</p> : <p>Drag & drop files here, or click to select files</p>}
               </div>
 
               <div className="file-list">
@@ -652,19 +622,14 @@ function Home() {
                   <div key={fileWrapper.id} className="file-item">
                     <span
                       style={{
-                        fontSize:
-                          "18px" /* This font size is set using a 'string value' */,
+                        fontSize: "18px" /* This font size is set using a 'string value' */,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                      }}
-                    >
+                      }}>
                       {fileWrapper.file.name}
                     </span>
-                    <button
-                      className="delete-button"
-                      onClick={() => removeFile(fileWrapper.id)}
-                    >
+                    <button className="delete-button" onClick={() => removeFile(fileWrapper.id)}>
                       X
                     </button>
                   </div>
@@ -677,19 +642,11 @@ function Home() {
                 <p className="dropdown-text">
                   <b>Pick consensus mode</b>
                 </p>
-                <Dropdown
-                  options={consensuses}
-                  value={selectedConsensus}
-                  onSelect={handleSelect}
-                />
+                <Dropdown options={consensuses} value={selectedConsensus} onSelect={handleSelect} />
                 <p className="dropdown-text">
                   <b>Pick annotator</b>
                 </p>
-                <Dropdown
-                  options={annotators}
-                  value={selectedAnnotator}
-                  onSelect={handleSelect2}
-                />
+                <Dropdown options={annotators} value={selectedAnnotator} onSelect={handleSelect2} />
               </div>
 
               {/* <p>Currently selected option: {selectedOption}</p> */}
@@ -707,19 +664,11 @@ function Home() {
                 <p className="dropdown-text">
                   <b>Pick visulalisator</b>
                 </p>
-                <Dropdown
-                  options={visulalisators}
-                  value={selectedVisualisator}
-                  onSelect={handleSelect3}
-                />
+                <Dropdown options={visulalisators} value={selectedVisualisator} onSelect={handleSelect3} />
                 <p className="dropdown-text">
                   <b>Filter with mol probity?</b>
                 </p>
-                <Dropdown
-                  options={molprobity}
-                  value={selectedMolprobity}
-                  onSelect={handleSelect4}
-                />
+                <Dropdown options={molprobity} value={selectedMolprobity} onSelect={handleSelect4} />
               </div>
 
               {/* <div className="dropdown-text-container">
@@ -736,13 +685,8 @@ function Home() {
                 <p className="dropdown-text">
                   <b>Pick confidence level</b>
                 </p>
-                <Slider
-                  value={sliderValue}
-                  onValueChange={handleSliderChange}
-                />
-                <p className="dropdown-text">
-                  {sliderValue === 0 ? "Fuzzy mode: on" : "Fuzzy mode: off"}
-                </p>
+                <Slider value={sliderValue} onValueChange={handleSliderChange} />
+                <p className="dropdown-text">{sliderValue === 0 ? "Fuzzy mode: on" : "Fuzzy mode: off"}</p>
               </div>
 
               {/* <p>Current Slider Value: {sliderValue.toFixed(2)}</p> */}
@@ -798,18 +742,15 @@ function Home() {
                   //   "GOOD_AND_CAUTION",
                   //   "",
                   // ])
-                }
-              >
+                }>
                 Send Data
               </button>
             </div>
             <div className="center-items">
               <p
                 style={{
-                  fontSize:
-                    "18px" /* This font size is set using a 'string value' */,
-                }}
-              >
+                  fontSize: "18px" /* This font size is set using a 'string value' */,
+                }}>
                 or get already calculated results:
               </p>
             </div>
@@ -817,10 +758,7 @@ function Home() {
               <TextInput value={text2} onTextChange={handleTextChange2} />
             </div>
             <div className="center-items">
-              <button
-                className="send-button"
-                onClick={() => handleSendData([], text2)}
-              >
+              <button className="send-button" onClick={() => handleSendData([], text2)}>
                 Get results
               </button>
             </div>

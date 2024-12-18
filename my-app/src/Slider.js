@@ -39,15 +39,7 @@ const Slider = ({ value = 0.5, onValueChange }) => {
           "--slider-value": `${sliderValue * 100}%`, // Selected track percentage width
         }}
       />
-      <input
-        type="number"
-        min="0"
-        max="1"
-        step="0.01"
-        value={sliderValue}
-        onChange={handleInputChange}
-        className="slider-input"
-      />
+      <input type="number" min="0" max="1" step="0.01" value={sliderValue} onChange={handleInputChange} className="slider-input" />
     </div>
   );
 };
