@@ -75,15 +75,15 @@ const visualizerOptions = [
 const molProbityOptions = [
   {
     value: "ALL",
-    label: "Disabled (accept all models)",
+    label: "No filtering - accept all models regardless of quality",
   },
   {
     value: "GOOD_AND_CAUTION",
-    label: "Basic (reject models in warning category)",
+    label: "Medium - accept models with good or acceptable quality",
   },
   {
     value: "GOOD_ONLY",
-    label: "Full (only accept models in good category)",
+    label: "Strict - only accept high-quality models",
   },
 ];
 
