@@ -95,7 +95,7 @@ function Home() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState(null);
-  const [removalReasondisp, setRemovalReasondisp] = useState(null);
+  const [removalReasons, setRemovalReasons] = useState(null);
   const [serverError, setServerError] = useState(null);
   const [taskIdComplete, setTaskIdComplete] = useState(null);
   const [fileList, setFileList] = useState([]);
@@ -162,7 +162,7 @@ function Home() {
         setIsLoading(true);
         setResponse(null);
         setServerError(null);
-        setRemovalReasondisp(null);
+        setRemovalReasons(null);
 
         // Prepare the files data
         const files = await Promise.all(
@@ -220,16 +220,6 @@ function Home() {
     }
   };
 
-  const formatRemovalReasons = (removalReasons) => {
-    const formattedReasons = Object.entries(removalReasons)
-      .map(([fileName, reasons]) => {
-        const reasonsList = reasons.map((reason) => `- ${reason}`).join("\n");
-        return `${fileName}\n${reasonsList}`;
-      })
-      .join("\n\n");
-    return formattedReasons;
-  };
-
   const pollTaskStatus = async (taskId, pollInterval, setResponse) => {
     while (true) {
       const statusResponse = await fetch(`${serverAddress}/${taskId}/status`, {
@@ -242,12 +232,11 @@ function Home() {
 
       const statusData = await statusResponse.json();
       const { status, message, removalReasons } = statusData;
+      setRemovalReasons(removalReasons);
 
       if (status === "FAILED") {
         console.error("FAILED:", message);
         console.error("FAILED REASONS:", removalReasons);
-        const reasons = formatRemovalReasons(removalReasons);
-        setRemovalReasondisp(reasons);
         setResponse({
           error: message || "Task failed with no additional message.",
         });
@@ -257,8 +246,6 @@ function Home() {
       }
 
       if (status === "COMPLETED") {
-        const reasons = formatRemovalReasons(removalReasons);
-        setRemovalReasondisp(reasons);
         await fetchTaskResult(taskId, setResponse);
         return;
       }
@@ -320,6 +307,31 @@ function Home() {
       console.error("Error loading example files:", error);
     }
   };
+
+  const handleRemovalReasons = () => {
+    let columns = [
+      {
+        title: "Filename",
+        dataIndex: "filename",
+        key: "filename",
+      },
+      {
+        title: "Removal reason",
+        dataIndex: "reason",
+        key: "reason",
+      },
+    ];
+    let rows = [];
+    let i = 0;
+    Object.entries(removalReasons).map(([filename, reasons]) => {
+      reasons.map((reason) => {
+        rows.push({ key: i, filename: filename, reason: reason });
+        i++;
+      });
+    });
+    return [columns, rows];
+  }
+
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -332,10 +344,46 @@ function Home() {
     }
 
     if (serverError) {
+      if (removalReasons) {
+        const [columns, rows] = handleRemovalReasons();
+        return (
+          <Row justify={"center"} style={{ marginBottom: 24 }}>
+            <Col span={20}>
+              <Alert
+                type="error"
+                message="Error"
+                description={
+                  <div>
+                    <p>{serverError}</p>
+                    <Table dataSource={rows} columns={columns} />
+                  </div>
+                }
+              />
+              <Button
+                onClick={() => {
+                  setServerError(null);
+                  setIsLoading(false);
+                  setResponse(null);
+                  navigate(`/`, { replace: true }); //navigate to no taskid
+                }}>
+                Retry
+              </Button>
+            </Col>
+          </Row>
+        );
+      }
       return (
         <Row justify={"center"}>
           <Col span={20}>
-            {removalReasondisp != null ? <Alert type="error" message="Error" description={<div style={{ whiteSpace: "pre-wrap" }}>{serverError + ".\n\n" + removalReasondisp} </div>} /> : <Alert type="error" message="Error" description={serverError} />}
+            <Alert
+                type="error"
+                message="Error"
+                description={
+                  <div>
+                    <p>{serverError}</p>
+                  </div>
+                }
+            />
             <Button
               onClick={() => {
                 setServerError(null);
@@ -402,6 +450,12 @@ function Home() {
             <Card title={"Results for each file"} style={{ marginBottom: "24px" }}>
               <Tabs items={perFileDetails} tabPosition={"left"} />
             </Card>
+
+            {removalReasons && (
+              <Card title={"Removed files"} style={{ marginBottom: "24px" }}>
+                <Table dataSource={response.removedFiles} columns={["filename"]} />
+              </Card>
+            )}
           </Col>
         </Row>
       );
