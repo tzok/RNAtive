@@ -1,21 +1,6 @@
 import "./App.css";
 // Home.js
 import React, { useEffect, useState } from "react";
-
-const getTableColumns = (headers) => {
-  return headers.map((header, index) => ({
-    title: header,
-    dataIndex: index,
-    key: index,
-  }));
-};
-
-const getTableRows = (rows) => {
-  return rows.map((row, index) => ({
-    ...row,
-    key: index,
-  }));
-};
 import { useNavigate, useParams } from "react-router-dom";
 import "./Home.css";
 // import { REACT_APP_SERVER_ADDRESS } from "./config.js";
@@ -360,6 +345,21 @@ function Home() {
     }
   };
 
+  const getTableColumns = (headers) => {
+    return headers.map((header, index) => ({
+      title: header,
+      dataIndex: index,
+      key: index,
+    }));
+  };
+
+  const getTableRows = (rows) => {
+    return rows.map((row, index) => ({
+      ...row,
+      key: index,
+    }));
+  };
+
   const formatRemovalReasons = (removalReasons) => {
     const formattedReasons = Object.entries(removalReasons)
       .map(([fileName, reasons]) => {
@@ -638,10 +638,14 @@ function Home() {
 
     if (response) {
       const rankingColumns = getTableColumns(response.ranking.headers);
-      const rankingRows = getTableRows(response.ranking.rows);
       const canonicalColumns = getTableColumns(response.canonicalPairs.headers);
       const nonCanonicalColumns = getTableColumns(response.nonCanonicalPairs.headers);
       const stackingColumns = getTableColumns(response.stackings.headers);
+      const rankingRows = getTableRows(response.ranking.rows);
+      const canonicalRows = getTableRows(response.canonicalPairs.rows);
+      const nonCanonicalRows = getTableRows(response.nonCanonicalPairs.rows);
+      const stackingRows = getTableRows(response.stackings.rows);
+
       const consensusDetails = [
         {
           key: "1",
@@ -651,17 +655,17 @@ function Home() {
         {
           key: "2",
           label: "Canonical base pairs",
-          children: <Table dataSource={response.canonicalPairs.rows} columns={canonicalColumns} />,
+          children: <Table dataSource={canonicalRows} columns={canonicalColumns} />,
         },
         {
           key: "3",
           label: "Non-canonical base pairs",
-          children: <Table dataSource={response.nonCanonicalPairs.rows} columns={nonCanonicalColumns} />,
+          children: <Table dataSource={nonCanonicalRows} columns={nonCanonicalColumns} />,
         },
         {
           key: "4",
           label: "Stacking interactions",
-          children: <Table dataSource={response.stackings.rows} columns={stackingColumns} />,
+          children: <Table dataSource={stackingRows} columns={stackingColumns} />,
         },
       ];
       const perFileDetails = response.fileNames.map((filename, index) => ({

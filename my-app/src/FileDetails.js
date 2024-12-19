@@ -7,6 +7,21 @@ const FileDetails = ({ taskId, serverAddress, filename }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const getTableColumns = (headers) => {
+    return headers.map((header, index) => ({
+      title: header,
+      dataIndex: index,
+      key: index,
+    }));
+  };
+
+  const getTableRows = (rows) => {
+    return rows.map((row, index) => ({
+      ...row,
+      key: index,
+    }));
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -36,21 +51,13 @@ const FileDetails = ({ taskId, serverAddress, filename }) => {
     return <Alert type={"warning"} message={"No details available"} />;
   }
 
-  const canonicalColumns = data.canonicalPairs.headers.map((header, index) => ({
-    title: header,
-    dataIndex: index,
-    key: index,
-  }));
-  const nonCanonicalColumns = data.nonCanonicalPairs.headers.map((header, index) => ({
-    title: header,
-    dataIndex: index,
-    key: index,
-  }));
-  const stackingColumns = data.stackings.headers.map((header, index) => ({
-    title: header,
-    dataIndex: index,
-    key: index,
-  }));
+  const canonicalColumns = getTableColumns(data.canonicalPairs.headers);
+  const nonCanonicalColumns = getTableColumns(data.nonCanonicalPairs.headers);
+  const stackingColumns = getTableColumns(data.stackings.headers);
+  const canonicalRows = getTableRows(data.canonicalPairs.rows);
+  const nonCanonicalRows = getTableRows(data.nonCanonicalPairs.rows);
+  const stackingRows = getTableRows(data.stackings.rows);
+
   const details = [
     {
       key: "1",
@@ -60,17 +67,17 @@ const FileDetails = ({ taskId, serverAddress, filename }) => {
     {
       key: "2",
       label: "Canonical base pairs",
-      children: <Table dataSource={data.canonicalPairs.rows} columns={canonicalColumns} />,
+      children: <Table dataSource={canonicalRows} columns={canonicalColumns} />,
     },
     {
       key: "3",
       label: "Non-canonical base pairs",
-      children: <Table dataSource={data.nonCanonicalPairs.rows} columns={nonCanonicalColumns} />,
+      children: <Table dataSource={nonCanonicalRows} columns={nonCanonicalColumns} />,
     },
     {
       key: "4",
       label: "Stacking interactions",
-      children: <Table dataSource={data.stackings.rows} columns={stackingColumns} />,
+      children: <Table dataSource={stackingRows} columns={stackingColumns} />,
     },
   ];
 
