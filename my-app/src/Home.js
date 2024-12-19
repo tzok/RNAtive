@@ -648,22 +648,25 @@ function Home() {
 
       const consensusDetails = [
         {
-          key: "1",
+          key: "consensus-2d-structure",
           label: "Secondary structure",
-          children: [<SvgImg serverAddress={serverAddress} taskId={taskIdComplete} />, <pre>{response.dotBracket}</pre>],
+          children: [
+            <SvgImg key="svg" serverAddress={serverAddress} taskId={taskIdComplete} />,
+            <pre key="dotbracket">{response.dotBracket}</pre>
+          ],
         },
         {
-          key: "2",
+          key: "consensus-base-pairs",
           label: "Canonical base pairs",
           children: <Table dataSource={canonicalRows} columns={canonicalColumns} />,
         },
         {
-          key: "3",
+          key: "consensus-non-canonical-pairs",
           label: "Non-canonical base pairs",
           children: <Table dataSource={nonCanonicalRows} columns={nonCanonicalColumns} />,
         },
         {
-          key: "4",
+          key: "consensus-stacking-interactions",
           label: "Stacking interactions",
           children: <Table dataSource={stackingRows} columns={stackingColumns} />,
         },
