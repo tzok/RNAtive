@@ -479,6 +479,14 @@ function Home() {
     return (
       <Row justify={"center"}>
         <Col span={20}>
+          <div style={{ marginBottom: "24px", textAlign: "justify" }}>
+            <p>
+              RNAtive is a consensus-based RNA structure analysis system that combines multiple structural models to identify reliable base pairs and stacking interactions. 
+              Upload your RNA 3D structure models in PDB or mmCIF format, and RNAtive will analyze them using state-of-the-art base pair annotation tools. 
+              The system generates a consensus structure by comparing annotations across all models, providing a reliable representation of the RNA's secondary structure 
+              and tertiary interactions.
+            </p>
+          </div>
           <Form labelCol={{ span: 6 }} wrapperCol={{ span: 14 }}>
             <Form.Item label="Files">
               <Upload
