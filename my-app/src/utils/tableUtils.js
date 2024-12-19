@@ -1,14 +1,9 @@
-const decimalToFraction = (decimal, denominator = 100) => {
+const decimalToFraction = (decimal, denominator) => {
   const numerator = Math.round(decimal * denominator);
   return `${numerator}/${denominator}`;
 };
 
-export const getTableColumns = (headers, rows) => {
-  // Calculate number of files from rows that have "Is reference?" column
-  const fileCount = headers.includes("Is reference?") 
-    ? rows.length 
-    : 100; // fallback to 100 if not in consensus view
-
+export const getTableColumns = (headers, rows, fileCount = 100) => {
   return headers
     .map((header, index) => {
       // Skip "Is reference?" column if all values are empty

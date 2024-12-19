@@ -36,9 +36,9 @@ const FileDetails = ({ taskId, serverAddress, filename }) => {
     return <Alert type={"warning"} message={"No details available"} />;
   }
 
-  const canonicalColumns = getTableColumns(data.canonicalPairs.headers, data.canonicalPairs.rows);
-  const nonCanonicalColumns = getTableColumns(data.nonCanonicalPairs.headers, data.nonCanonicalPairs.rows);
-  const stackingColumns = getTableColumns(data.stackings.headers, data.stackings.rows);
+  const canonicalColumns = getTableColumns(data.canonicalPairs.headers, data.canonicalPairs.rows, 1);
+  const nonCanonicalColumns = getTableColumns(data.nonCanonicalPairs.headers, data.nonCanonicalPairs.rows, 1);
+  const stackingColumns = getTableColumns(data.stackings.headers, data.stackings.rows, 1);
   const canonicalRows = getTableRows(data.canonicalPairs.rows);
   const nonCanonicalRows = getTableRows(data.nonCanonicalPairs.rows);
   const stackingRows = getTableRows(data.stackings.rows);

@@ -12,6 +12,10 @@ const { TextArea } = Input;
 
 const consensusOptions = [
   {
+    value: "ALL",
+    label: "All interactions",
+  },
+  {
     value: "CANONICAL",
     label: "Canonical base pairs",
   },
@@ -22,10 +26,6 @@ const consensusOptions = [
   {
     value: "STACKING",
     label: "Stacking interactions",
-  },
-  {
-    value: "ALL",
-    label: "All interactions",
   },
 ];
 const analyzerOptions = [
@@ -408,10 +408,11 @@ function Home() {
     }
 
     if (response) {
-      const rankingColumns = getTableColumns(response.ranking.headers, response.ranking.rows);
-      const canonicalColumns = getTableColumns(response.canonicalPairs.headers, response.canonicalPairs.rows);
-      const nonCanonicalColumns = getTableColumns(response.nonCanonicalPairs.headers, response.nonCanonicalPairs.rows);
-      const stackingColumns = getTableColumns(response.stackings.headers, response.stackings.rows);
+      const totalFiles = response.fileNames.length;
+      const rankingColumns = getTableColumns(response.ranking.headers, response.ranking.rows, totalFiles);
+      const canonicalColumns = getTableColumns(response.canonicalPairs.headers, response.canonicalPairs.rows, totalFiles);
+      const nonCanonicalColumns = getTableColumns(response.nonCanonicalPairs.headers, response.nonCanonicalPairs.rows, totalFiles);
+      const stackingColumns = getTableColumns(response.stackings.headers, response.stackings.rows, totalFiles);
       const rankingRows = getTableRows(response.ranking.rows);
       const canonicalRows = getTableRows(response.canonicalPairs.rows);
       const nonCanonicalRows = getTableRows(response.nonCanonicalPairs.rows);
