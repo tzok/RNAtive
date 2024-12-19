@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {Alert, Image, Spin} from "antd";
+import { Alert, Image, Spin } from "antd";
 
 const SvgImg = ({ serverAddress, taskId }) => {
   const [svgContent, setSvgContent] = useState(null);
