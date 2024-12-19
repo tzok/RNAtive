@@ -451,7 +451,7 @@ function Home() {
               <Tabs items={perFileDetails} tabPosition={"left"} />
             </Card>
 
-            {removalReasons && (() => {
+            {removalReasons && Object.keys(removalReasons).length > 0 && (() => {
               const [columns, rows] = handleRemovalReasons();
               return (
                 <Card title={"Removed files"} style={{ marginBottom: "24px" }}>
