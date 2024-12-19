@@ -20,13 +20,20 @@ const NavMenu = () => {
     navigate(key);
   };
 
+  const items = [
+    { key: "/", label: "Home" },
+    { key: "/about", label: "About" },
+    { key: "/help", label: "Help" },
+    { key: "/cite", label: "Cite" },
+  ];
+
   return (
-    <Menu onClick={handleMenuClick} selectedKeys={[location.pathname]} mode="horizontal">
-      <Menu.Item key="/">Home</Menu.Item>
-      <Menu.Item key="/about">About</Menu.Item>
-      <Menu.Item key="/help">Help</Menu.Item>
-      <Menu.Item key="/cite">Cite</Menu.Item>
-    </Menu>
+    <Menu
+      onClick={handleMenuClick}
+      selectedKeys={[location.pathname]}
+      mode="horizontal"
+      items={items}
+    />
   );
 };
 
