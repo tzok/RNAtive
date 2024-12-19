@@ -345,26 +345,37 @@ function Home() {
     }
   };
 
-  const getTableColumns = (headers) => {
-    return headers.map((header, index) => ({
-      title: header,
-      dataIndex: index,
-      key: index,
-      sorter: (a, b) => {
-        const valA = a[index];
-        const valB = b[index];
-        // Handle numeric values
-        if (!isNaN(valA) && !isNaN(valB)) {
-          return valA - valB;
-        }
-        // Handle string values
-        return String(valA).localeCompare(String(valB));
-      },
-      render: (text) => {
-        // Format numbers to 3 decimal places
-        return !isNaN(text) ? Number(text).toFixed(3) : text;
-      },
-    }));
+  const getTableColumns = (headers, rows) => {
+    return headers.map((header, index) => {
+      // Skip "Is reference?" column if all values are empty
+      if (header === "Is reference?" && rows.every(row => !row[index])) {
+        return null;
+      }
+
+      return {
+        title: header,
+        dataIndex: index,
+        key: index,
+        sorter: (a, b) => {
+          const valA = a[index];
+          const valB = b[index];
+          // Handle numeric values
+          if (!isNaN(valA) && !isNaN(valB)) {
+            return valA - valB;
+          }
+          // Handle string values
+          return String(valA).localeCompare(String(valB));
+        },
+        render: (text) => {
+          // Handle "Is reference?" column
+          if (header === "Is reference?" && text) {
+            return "✓";
+          }
+          // Format numbers to 3 decimal places
+          return !isNaN(text) ? Number(text).toFixed(3) : text;
+        },
+      };
+    }).filter(Boolean);
   };
 
   const getTableRows = (rows) => {
@@ -651,10 +662,10 @@ function Home() {
     }
 
     if (response) {
-      const rankingColumns = getTableColumns(response.ranking.headers);
-      const canonicalColumns = getTableColumns(response.canonicalPairs.headers);
-      const nonCanonicalColumns = getTableColumns(response.nonCanonicalPairs.headers);
-      const stackingColumns = getTableColumns(response.stackings.headers);
+      const rankingColumns = getTableColumns(response.ranking.headers, response.ranking.rows);
+      const canonicalColumns = getTableColumns(response.canonicalPairs.headers, response.canonicalPairs.rows);
+      const nonCanonicalColumns = getTableColumns(response.nonCanonicalPairs.headers, response.nonCanonicalPairs.rows);
+      const stackingColumns = getTableColumns(response.stackings.headers, response.stackings.rows);
       const rankingRows = getTableRows(response.ranking.rows);
       const canonicalRows = getTableRows(response.canonicalPairs.rows);
       const nonCanonicalRows = getTableRows(response.nonCanonicalPairs.rows);

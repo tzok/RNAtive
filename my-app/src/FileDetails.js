@@ -7,26 +7,37 @@ const FileDetails = ({ taskId, serverAddress, filename }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const getTableColumns = (headers) => {
-    return headers.map((header, index) => ({
-      title: header,
-      dataIndex: index,
-      key: index,
-      sorter: (a, b) => {
-        const valA = a[index];
-        const valB = b[index];
-        // Handle numeric values
-        if (!isNaN(valA) && !isNaN(valB)) {
-          return valA - valB;
-        }
-        // Handle string values
-        return String(valA).localeCompare(String(valB));
-      },
-      render: (text) => {
-        // Format numbers to 3 decimal places
-        return !isNaN(text) ? Number(text).toFixed(3) : text;
-      },
-    }));
+  const getTableColumns = (headers, rows) => {
+    return headers.map((header, index) => {
+      // Skip "Is reference?" column if all values are empty
+      if (header === "Is reference?" && rows.every(row => !row[index])) {
+        return null;
+      }
+
+      return {
+        title: header,
+        dataIndex: index,
+        key: index,
+        sorter: (a, b) => {
+          const valA = a[index];
+          const valB = b[index];
+          // Handle numeric values
+          if (!isNaN(valA) && !isNaN(valB)) {
+            return valA - valB;
+          }
+          // Handle string values
+          return String(valA).localeCompare(String(valB));
+        },
+        render: (text) => {
+          // Handle "Is reference?" column
+          if (header === "Is reference?" && text) {
+            return "✓";
+          }
+          // Format numbers to 3 decimal places
+          return !isNaN(text) ? Number(text).toFixed(3) : text;
+        },
+      };
+    }).filter(Boolean);
   };
 
   const getTableRows = (rows) => {
@@ -65,9 +76,9 @@ const FileDetails = ({ taskId, serverAddress, filename }) => {
     return <Alert type={"warning"} message={"No details available"} />;
   }
 
-  const canonicalColumns = getTableColumns(data.canonicalPairs.headers);
-  const nonCanonicalColumns = getTableColumns(data.nonCanonicalPairs.headers);
-  const stackingColumns = getTableColumns(data.stackings.headers);
+  const canonicalColumns = getTableColumns(data.canonicalPairs.headers, data.canonicalPairs.rows);
+  const nonCanonicalColumns = getTableColumns(data.nonCanonicalPairs.headers, data.nonCanonicalPairs.rows);
+  const stackingColumns = getTableColumns(data.stackings.headers, data.stackings.rows);
   const canonicalRows = getTableRows(data.canonicalPairs.rows);
   const nonCanonicalRows = getTableRows(data.nonCanonicalPairs.rows);
   const stackingRows = getTableRows(data.stackings.rows);
