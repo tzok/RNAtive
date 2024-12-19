@@ -41,11 +41,14 @@ const Help = () => {
             style={{
               marginRight: "20px",
             }}>
-            <Anchor>
-              {headings.map((heading) => (
-                <Anchor.Link key={heading.id} href={`#${heading.id}`} title={heading.text} style={{ paddingLeft: `${(heading.level - 1) * 15}px` }} />
-              ))}
-            </Anchor>
+            <Anchor
+              items={headings.map((heading) => ({
+                key: heading.id,
+                href: `#${heading.id}`,
+                title: heading.text,
+                style: { paddingLeft: `${(heading.level - 1) * 15}px` }
+              }))}
+            />
           </div>
 
           <Typography>
