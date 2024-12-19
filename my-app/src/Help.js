@@ -1,4 +1,3 @@
-import "./App.css";
 import { Anchor, Col, Row, Typography } from "antd";
 import { useEffect, useState } from "react";
 const { Title, Paragraph, Text, Link } = Typography;

@@ -1,5 +1,3 @@
-import "./App.css";
-// Home.js
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "./Home.css";
@@ -346,39 +344,41 @@ function Home() {
   };
 
   const getTableColumns = (headers, rows) => {
-    return headers.map((header, index) => {
-      // Skip "Is reference?" column if all values are empty
-      if (header === "Is reference?" && rows.every(row => !row[index])) {
-        return null;
-      }
+    return headers
+      .map((header, index) => {
+        // Skip "Is reference?" column if all values are empty
+        if (header === "Is reference?" && rows.every((row) => !row[index])) {
+          return null;
+        }
 
-      return {
-        title: header,
-        dataIndex: index,
-        key: index,
-        sorter: (a, b) => {
-          const valA = a[index];
-          const valB = b[index];
-          // Handle numeric values
-          if (!isNaN(valA) && !isNaN(valB)) {
-            return valA - valB;
-          }
-          // Handle string values
-          return String(valA).localeCompare(String(valB));
-        },
-        render: (text) => {
-          // Handle "Is reference?" column
-          if (header === "Is reference?" && text) {
-            return "✓";
-          }
-          // Keep Rank as integer, format other numbers to 3 decimal places
-          if (!isNaN(text)) {
-            return header === "Rank" ? Number(text) : Number(text).toFixed(3);
-          }
-          return text;
-        },
-      };
-    }).filter(Boolean);
+        return {
+          title: header,
+          dataIndex: index,
+          key: index,
+          sorter: (a, b) => {
+            const valA = a[index];
+            const valB = b[index];
+            // Handle numeric values
+            if (!isNaN(valA) && !isNaN(valB)) {
+              return valA - valB;
+            }
+            // Handle string values
+            return String(valA).localeCompare(String(valB));
+          },
+          render: (text) => {
+            // Handle "Is reference?" column
+            if (header === "Is reference?" && text) {
+              return "✓";
+            }
+            // Keep Rank as integer, format other numbers to 3 decimal places
+            if (!isNaN(text)) {
+              return header === "Rank" ? Number(text) : Number(text).toFixed(3);
+            }
+            return text;
+          },
+        };
+      })
+      .filter(Boolean);
   };
 
   const getTableRows = (rows) => {
@@ -705,15 +705,15 @@ function Home() {
       return (
         <Row justify={"center"}>
           <Col span={20}>
-            <Card title={"Ranking"} style={{ marginBottom: '24px' }}>
+            <Card title={"Ranking"} style={{ marginBottom: "24px" }}>
               <Table dataSource={rankingRows} columns={rankingColumns} />
             </Card>
 
-            <Card title={"Consensus details"} style={{ marginBottom: '24px' }}>
+            <Card title={"Consensus details"} style={{ marginBottom: "24px" }}>
               <Collapse items={consensusDetails} />
             </Card>
 
-            <Card title={"Results for each file"} style={{ marginBottom: '24px' }}>
+            <Card title={"Results for each file"} style={{ marginBottom: "24px" }}>
               <Tabs items={perFileDetails} tabPosition={"left"} />
             </Card>
           </Col>

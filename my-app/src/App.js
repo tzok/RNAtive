@@ -2,7 +2,6 @@ import LogoPP from "./pp-logo.png";
 import LogoIBCh from "./ibch-logo.png";
 import LogoRNApolis from "./rnapolis-logo.png";
 import LogoRNAtive from "./RNAtive3.svg";
-import "./App.css";
 import { BrowserRouter as Router, Route, Routes, useNavigate, useLocation } from "react-router-dom";
 import About from "./About";
 import Home from "./Home";
