@@ -4,7 +4,7 @@ services:
   frontend:
     build: my-app
 
-  app:
+  backend:
     build: .
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/rnative
@@ -37,7 +37,7 @@ services:
   adapters:
     image: rnapdbee-adapters-image
     environment:
-      - ADAPTERS_WORKERS=24
+      - ADAPTERS_WORKERS=6
       - ADAPTERS_THREADS=1
       - ADAPTERS_WORKER_TIMEOUT=1200
       - ADAPTERS_MAX_REQUESTS=10
