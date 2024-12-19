@@ -22,8 +22,6 @@ services:
 
   db:
     image: postgres:alpine
-    ports:
-      - "5432:5432"
     environment:
       - POSTGRES_DB=rnative
       - POSTGRES_USER=postgres
