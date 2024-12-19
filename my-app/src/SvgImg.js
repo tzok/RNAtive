@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./SvgImg.css";
+import { Image } from "antd";
 
 const SvgImg = ({ serverAddress, taskId }) => {
   const [svgContent, setSvgContent] = useState(null);
@@ -47,18 +48,19 @@ const SvgImg = ({ serverAddress, taskId }) => {
   const blobUrl = URL.createObjectURL(blob);
 
   return (
-    <div style={{ backgroundColor: "white", padding: "20px", borderRadius: "5px" }}>
-      <a href={blobUrl} download={`${taskId}.svg`} className="svg-download-link" title="Right-click to download">
-        <div
-          className="svg-container"
-          style={{
-            width: "15vw",
-            height: "auto",
-          }}
-          dangerouslySetInnerHTML={{ __html: svgContent }}
-        />
-      </a>
-    </div>
+    <Image src={blobUrl} width={200} />
+    // <div style={{ backgroundColor: "white", padding: "20px", borderRadius: "5px" }}>
+    //   <a href={blobUrl} download={`${taskId}.svg`} className="svg-download-link" title="Right-click to download">
+    //     <div
+    //       className="svg-container"
+    //       style={{
+    //         width: "15vw",
+    //         height: "auto",
+    //       }}
+    //       dangerouslySetInnerHTML={{ __html: svgContent }}
+    //     />
+    //   </a>
+    // </div>
   );
 };
 

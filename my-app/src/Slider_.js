@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./Slider.css";
 
-const Slider = ({ value = 0.5, onValueChange }) => {
+const Slider_ = ({ value = 0.5, onValueChange }) => {
   const [sliderValue, setSliderValue] = useState(value);
 
   // Update sliderValue when prop 'value' changes
@@ -44,4 +44,4 @@ const Slider = ({ value = 0.5, onValueChange }) => {
   );
 };
 
-export default Slider;
+export default Slider_;
