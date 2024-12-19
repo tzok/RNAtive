@@ -650,10 +650,7 @@ function Home() {
         {
           key: "consensus-2d-structure",
           label: "Secondary structure",
-          children: [
-            <SvgImg key="svg" serverAddress={serverAddress} taskId={taskIdComplete} />,
-            <pre key="dotbracket">{response.dotBracket}</pre>
-          ],
+          children: [<SvgImg key="svg" serverAddress={serverAddress} taskId={taskIdComplete} />, <pre key="dotbracket">{response.dotBracket}</pre>],
         },
         {
           key: "consensus-base-pairs",

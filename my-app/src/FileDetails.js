@@ -60,22 +60,22 @@ const FileDetails = ({ taskId, serverAddress, filename }) => {
 
   const details = [
     {
-      key: "1",
+      key: filename + "-2d-structure",
       label: "Secondary structure",
       children: <pre>{data.dotBracket}</pre>,
     },
     {
-      key: "2",
+      key: filename + "-base-pairs",
       label: "Canonical base pairs",
       children: <Table dataSource={canonicalRows} columns={canonicalColumns} />,
     },
     {
-      key: "3",
+      key: filename + "-non-canonical-pairs",
       label: "Non-canonical base pairs",
       children: <Table dataSource={nonCanonicalRows} columns={nonCanonicalColumns} />,
     },
     {
-      key: "4",
+      key: filename + "-stacking-interactions",
       label: "Stacking interactions",
       children: <Table dataSource={stackingRows} columns={stackingColumns} />,
     },
