@@ -1,6 +1,21 @@
 import "./App.css";
 // Home.js
 import React, { useEffect, useState } from "react";
+
+const getTableColumns = (headers) => {
+  return headers.map((header, index) => ({
+    title: header,
+    dataIndex: index,
+    key: index,
+  }));
+};
+
+const getTableRows = (rows) => {
+  return rows.map((row, index) => ({
+    ...row,
+    key: index,
+  }));
+};
 import { useNavigate, useParams } from "react-router-dom";
 import "./Home.css";
 // import { REACT_APP_SERVER_ADDRESS } from "./config.js";
@@ -622,30 +637,11 @@ function Home() {
     }
 
     if (response) {
-      const rankingColumns = response.ranking.headers.map((header, index) => ({
-        title: header,
-        dataIndex: index,
-        key: index,
-      }));
-      const rankingRows = response.ranking.rows.map((row, index) => ({
-        ...row,
-        key: index,
-      }));
-      const canonicalColumns = response.canonicalPairs.headers.map((header, index) => ({
-        title: header,
-        dataIndex: index,
-        key: index,
-      }));
-      const nonCanonicalColumns = response.nonCanonicalPairs.headers.map((header, index) => ({
-        title: header,
-        dataIndex: index,
-        key: index,
-      }));
-      const stackingColumns = response.stackings.headers.map((header, index) => ({
-        title: header,
-        dataIndex: index,
-        key: index,
-      }));
+      const rankingColumns = getTableColumns(response.ranking.headers);
+      const rankingRows = getTableRows(response.ranking.rows);
+      const canonicalColumns = getTableColumns(response.canonicalPairs.headers);
+      const nonCanonicalColumns = getTableColumns(response.nonCanonicalPairs.headers);
+      const stackingColumns = getTableColumns(response.stackings.headers);
       const consensusDetails = [
         {
           key: "1",
