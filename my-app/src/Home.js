@@ -451,11 +451,14 @@ function Home() {
               <Tabs items={perFileDetails} tabPosition={"left"} />
             </Card>
 
-            {removalReasons && (
-              <Card title={"Removed files"} style={{ marginBottom: "24px" }}>
-                <Table dataSource={response.removedFiles} columns={["filename"]} />
-              </Card>
-            )}
+            {removalReasons && (() => {
+              const [columns, rows] = handleRemovalReasons();
+              return (
+                <Card title={"Removed files"} style={{ marginBottom: "24px" }}>
+                  <Table dataSource={rows} columns={columns} />
+                </Card>
+              );
+            })()}
           </Col>
         </Row>
       );
