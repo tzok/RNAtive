@@ -334,9 +334,18 @@ function Home() {
 
   const renderContent = () => {
     if (isLoading) {
+      if (id) {
+        return ( 
+            <Row justify={"center"}>
+              <Spin tip={"Waiting for completion of task: " + id} size="large">
+                <div style={{ width: "100vw", padding: 24 }} />
+              </Spin>
+            </Row>
+        );
+      }
       return (
         <Row justify={"center"}>
-          <Spin tip={"Waiting for completion of task: " + id} size="large">
+          <Spin tip={"Sending data to the server"} size="large">
             <div style={{ width: "100vw", padding: 24 }} />
           </Spin>
         </Row>
