@@ -3,6 +3,8 @@ version: '3.8'
 services:
   frontend:
     build: my-app
+    environment:
+      - REACT_APP_SERVER_ADDRESS=http://localhost/api/compute
 
   backend:
     build: .
