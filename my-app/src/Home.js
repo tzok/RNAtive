@@ -360,6 +360,10 @@ function Home() {
         // Handle string values
         return String(valA).localeCompare(String(valB));
       },
+      render: (text) => {
+        // Format numbers to 3 decimal places
+        return !isNaN(text) ? Number(text).toFixed(3) : text;
+      },
     }));
   };
 
