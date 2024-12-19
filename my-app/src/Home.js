@@ -1,25 +1,15 @@
-import logo from "./logo.svg";
 import "./App.css";
 // Home.js
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useDropzone } from "react-dropzone";
 import "./Home.css";
-import SelectableList from "./SelectableList";
-import Slider_ from "./Slider_";
-import Checkbox from "./Checkbox";
-import TextInput from "./TextInput2";
-import TextInputWide from "./TextInputWide";
-import Dropdown from "./Dropdown";
 // import { REACT_APP_SERVER_ADDRESS } from "./config.js";
-
 import "./SendingTest.css";
 import SvgImg from "./SvgImg";
-import ResultTable from "./ResultTable";
 import FileDetails from "./FileDetails";
 import * as configs from "./config";
-import { Alert, Button, Card, Col, Collapse, Flex, Form, Input, InputNumber, Row, Select, Slider, Spin, Switch, Table, Tabs, Tooltip, Upload } from "antd";
-import { PlusOutlined, UploadOutlined } from "@ant-design/icons";
+import { Alert, Button, Card, Col, Collapse, Form, Input, InputNumber, Row, Select, Slider, Spin, Switch, Table, Tabs, Tooltip, Upload } from "antd";
+import { UploadOutlined } from "@ant-design/icons";
 
 const { TextArea } = Input;
 
@@ -334,13 +324,10 @@ function Home() {
         taskId = newTaskId;
 
         navigate(`/${newTaskId}`, { replace: true }); //navigate to new taskid
-        console.log("Task submitted. Task ID:", taskId);
       } else {
-        console.log(`Using provided Task ID: ${taskId}`);
         //someone might copy the entire line and in such case it is mitigated
         if (taskId.includes("Your unique code: ")) {
           taskId = taskId.replace("Your unique code: ", "");
-          console.log(`Updated taskId: "${taskId.trim()}"`); // Output the updated string
         }
       }
 
@@ -359,16 +346,12 @@ function Home() {
   };
 
   const formatRemovalReasons = (removalReasons) => {
-    console.log("Input to formatRemovalReasons:", removalReasons); // Log input
-
     const formattedReasons = Object.entries(removalReasons)
       .map(([fileName, reasons]) => {
         const reasonsList = reasons.map((reason) => `- ${reason}`).join("\n");
         return `${fileName}\n${reasonsList}`;
       })
       .join("\n\n");
-
-    console.log("Output of formatRemovalReasons:", formattedReasons); // Log output
     return formattedReasons;
   };
 
@@ -383,8 +366,6 @@ function Home() {
       }
 
       const statusData = await statusResponse.json();
-      console.log("Task status:", statusData);
-
       const { status, message, removalReasons } = statusData;
 
       if (status === "FAILED") {
@@ -392,12 +373,10 @@ function Home() {
         console.error("FAILED RESASONS:", removalReasons);
         console.error("Task failed:", message);
         const reasons = formatRemovalReasons(removalReasons);
-        console.log("Formatted reasons before setting state:", reasons);
         setRemovalReasondisp(reasons);
         setResponse({
           error: message || "Task failed with no additional message.",
         });
-        console.log(`FAILED: "${message}"`);
         setServerError(message);
         setIsLoading(false);
 
@@ -405,16 +384,13 @@ function Home() {
       }
 
       if (status === "COMPLETED") {
-        console.log("Task completed successfully!");
         const reasons = formatRemovalReasons(removalReasons);
-        console.log("Formatted reasons before setting state:", reasons);
         setRemovalReasondisp(reasons);
         await fetchTaskResult(taskId, setResponse);
         return;
       }
 
       // If still processing, wait and try again
-      console.log("Task still processing. Retrying...");
       await new Promise((resolve) => setTimeout(resolve, pollInterval));
     }
   };
@@ -430,7 +406,6 @@ function Home() {
       }
 
       const resultData = await resultResponse.json();
-      console.log("Task result:", resultData);
 
       // Set the response state to trigger UI update
       setResponse(resultData);
@@ -566,7 +541,6 @@ function Home() {
 
   useEffect(() => {
     if (id) {
-      console.log("Page loaded with ID:", id);
       handleSendData(id);
       // Perform actions with the ID if necessary (e.g., fetch data based on the ID)
     }
@@ -653,6 +627,10 @@ function Home() {
         dataIndex: index,
         key: index,
       }));
+      const rankingRows = response.ranking.rows.map((row, index) => ({
+        ...row,
+        key: index,
+      }));
       const canonicalColumns = response.canonicalPairs.headers.map((header, index) => ({
         title: header,
         dataIndex: index,
@@ -695,13 +673,12 @@ function Home() {
         label: filename,
         children: <FileDetails taskId={taskIdComplete} serverAddress={serverAddress} filename={filename} />,
       }));
-      console.log(perFileDetails);
 
       return (
         <Row justify={"center"}>
           <Col span={20}>
             <Card title={"Ranking"}>
-              <Table dataSource={response.ranking.rows} columns={rankingColumns} />
+              <Table dataSource={rankingRows} columns={rankingColumns} />
             </Card>
 
             <Card title={"Consensus details"}>
