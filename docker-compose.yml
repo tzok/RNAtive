@@ -3,7 +3,7 @@ services:
     build:
       context: my-app
       args:
-        - REACT_APP_SERVER_ADDRESS=http://localhost/api/compute
+        - REACT_APP_SERVER_ADDRESS=https://rnative.cs.put.poznan.pl/api/compute
 
   backend:
     build: .
