@@ -14,7 +14,6 @@ certbot/
 *.ipr
 
 # Build artifacts
-target/
 my-app/node_modules/
 my-app/build/
 my-app/coverage/
