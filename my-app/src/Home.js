@@ -538,7 +538,7 @@ function Home() {
               </Form.Item>
             )}
 
-            <Form.Item label="Dot-bracket">
+            <Form.Item label="Expected 2D structure">
               <TextArea rows={4} variant={"filled"} placeholder={"Optional"} value={dotBracket} onChange={handleDotBracket} />
             </Form.Item>
 
