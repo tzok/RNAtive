@@ -10,6 +10,83 @@ import * as configs from "./config";
 
 const { TextArea } = Input;
 
+const consensusOptions = [
+  {
+    value: "CANONICAL",
+    label: "Canonical base pairs",
+  },
+  {
+    value: "NON_CANONICAL",
+    label: "Non-canonical base pairs",
+  },
+  {
+    value: "STACKING",
+    label: "Stacking interactions",
+  },
+  {
+    value: "ALL",
+    label: "All interactions",
+  },
+];
+const analyzerOptions = [
+  {
+    value: "RNAPOLIS",
+    label: "RNApolis Annotator",
+  },
+  {
+    value: "BPNET",
+    label: "bpnet",
+  },
+  {
+    value: "FR3D",
+    label: "FR3D",
+  },
+  {
+    value: "MCANNOTATE",
+    label: "MC-Annotate",
+  },
+  {
+    value: "RNAVIEW",
+    label: "RNAView",
+  },
+  {
+    value: "BARNABA",
+    label: "barnaba",
+  },
+];
+const visualizerOptions = [
+  {
+    value: "VARNA",
+    label: "VARNA",
+  },
+  {
+    value: "RNAPUZZLER",
+    label: "RNApuzzler",
+  },
+  {
+    value: "PSEUDOVIEWER",
+    label: "PseudoViewer",
+  },
+  {
+    value: "RCHIE",
+    label: "R-Chie",
+  },
+];
+const molProbityOptions = [
+  {
+    value: "ALL",
+    label: "Disabled (accept all models)",
+  },
+  {
+    value: "GOOD_AND_CAUTION",
+    label: "Basic (reject models in warning category)",
+  },
+  {
+    value: "GOOD_ONLY",
+    label: "Full (only accept models in good category)",
+  },
+];
+
 function Home() {
   const serverAddress = configs.default.SERVER_ADDRESS;
 
@@ -29,83 +106,6 @@ function Home() {
   const [isFuzzy, setIsFuzzy] = useState(true);
   const [confidenceLevel, setConfidenceLevel] = useState(50);
   const [dotBracket, setDotBracket] = useState(null);
-
-  const consensusOptions = [
-    {
-      value: "CANONICAL",
-      label: "Canonical base pairs",
-    },
-    {
-      value: "NON_CANONICAL",
-      label: "Non-canonical base pairs",
-    },
-    {
-      value: "STACKING",
-      label: "Stacking interactions",
-    },
-    {
-      value: "ALL",
-      label: "All interactions",
-    },
-  ];
-  const analyzerOptions = [
-    {
-      value: "RNAPOLIS",
-      label: "RNApolis Annotator",
-    },
-    {
-      value: "BPNET",
-      label: "bpnet",
-    },
-    {
-      value: "FR3D",
-      label: "FR3D",
-    },
-    {
-      value: "MCANNOTATE",
-      label: "MC-Annotate",
-    },
-    {
-      value: "RNAVIEW",
-      label: "RNAView",
-    },
-    {
-      value: "BARNABA",
-      label: "barnaba",
-    },
-  ];
-  const visualizerOptions = [
-    {
-      value: "VARNA",
-      label: "VARNA",
-    },
-    {
-      value: "RNAPUZZLER",
-      label: "RNApuzzler",
-    },
-    {
-      value: "PSEUDOVIEWER",
-      label: "PseudoViewer",
-    },
-    {
-      value: "RCHIE",
-      label: "R-Chie",
-    },
-  ];
-  const molProbityOptions = [
-    {
-      value: "ALL",
-      label: "Disabled (accept all models)",
-    },
-    {
-      value: "GOOD_AND_CAUTION",
-      label: "Basic (reject models in warning category)",
-    },
-    {
-      value: "GOOD_ONLY",
-      label: "Full (only accept models in good category)",
-    },
-  ];
 
   const beforeUpload = (file) => {
     file.url = URL.createObjectURL(file);
