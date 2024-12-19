@@ -677,15 +677,15 @@ function Home() {
       return (
         <Row justify={"center"}>
           <Col span={20}>
-            <Card title={"Ranking"}>
+            <Card title={"Ranking"} style={{ marginBottom: '24px' }}>
               <Table dataSource={rankingRows} columns={rankingColumns} />
             </Card>
 
-            <Card title={"Consensus details"}>
+            <Card title={"Consensus details"} style={{ marginBottom: '24px' }}>
               <Collapse items={consensusDetails} />
             </Card>
 
-            <Card title={"Results for each file"}>
+            <Card title={"Results for each file"} style={{ marginBottom: '24px' }}>
               <Tabs items={perFileDetails} tabPosition={"left"} />
             </Card>
           </Col>
