@@ -371,8 +371,11 @@ function Home() {
           if (header === "Is reference?" && text) {
             return "✓";
           }
-          // Format numbers to 3 decimal places
-          return !isNaN(text) ? Number(text).toFixed(3) : text;
+          // Keep Rank as integer, format other numbers to 3 decimal places
+          if (!isNaN(text)) {
+            return header === "Rank" ? Number(text) : Number(text).toFixed(3);
+          }
+          return text;
         },
       };
     }).filter(Boolean);
