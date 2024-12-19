@@ -27,14 +27,7 @@ const NavMenu = () => {
     { key: "/cite", label: "Cite" },
   ];
 
-  return (
-    <Menu
-      onClick={handleMenuClick}
-      selectedKeys={[location.pathname]}
-      mode="horizontal"
-      items={items}
-    />
-  );
+  return <Menu onClick={handleMenuClick} selectedKeys={[location.pathname]} mode="horizontal" items={items} />;
 };
 
 function App() {
