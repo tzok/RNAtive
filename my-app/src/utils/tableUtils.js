@@ -1,3 +1,8 @@
+const decimalToFraction = (decimal, denominator = 100) => {
+  const numerator = Math.round(decimal * denominator);
+  return `${numerator}/${denominator}`;
+};
+
 export const getTableColumns = (headers, rows) => {
   return headers
     .map((header, index) => {
@@ -25,9 +30,15 @@ export const getTableColumns = (headers, rows) => {
           if (header === "Is reference?" && text) {
             return "✓";
           }
-          // Keep Rank as integer, format other numbers to 3 decimal places
+          // Handle different number formats
           if (!isNaN(text)) {
-            return header === "Rank" ? Number(text) : Number(text).toFixed(3);
+            if (header === "Rank") {
+              return Number(text);
+            }
+            if (header === "Confidence") {
+              return decimalToFraction(Number(text));
+            }
+            return Number(text).toFixed(3);
           }
           return text;
         },
