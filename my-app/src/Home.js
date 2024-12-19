@@ -9,32 +9,9 @@ import * as configs from "./config";
 
 const { TextArea } = Input;
 
-//rnapuzzles standarized submissions najlepiej brać stamtąd RP 18 <--- example czy cos
-//specjalny riquest na serwer że rób przykład
-
-//parametry do wysłania -- jakiś suwak na to
-//confidence level -- od 0 do 1, domyślnie 0.5 antdizajn ma c:
-
-//wybór z listy 6-7 anotatorów, jak w RNApdbee (identify basepairs using) C:
-
-//consensus mode: CANONICAL (domyślny), NON_CANONICAL , STACKING, ALL    c:
-
-// Jednak dodajmy do tego jeszcze jeden parametr - narzędzie do wizualizacji, jedno z:   C:
-// VARNA (domyślne),RNApuzzler,PseudoViewer,R-Chie
-
-//opcjonalny parametr dot bracket -- string
-
-//jakiś taki checkbox czy dokonać filtrowania mol probity, domyślnie tak. c:
-
-//tabelka z rank, nazwa + punkty
-//https://ant.design/components/table <-taka  ogółem wszystko stąd
-//tabelka confidance table cannonical
-//tabelki dla par kanonicznych niekanonicznch i stackingu --> dopiero jak się zapytam o model dany to dostane dane
-//może być svg wizualizacji struktury 2gorzędowej
-
-//sprawdzić czy github mi dodaje windowsowe entery!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 function Home() {
+  const serverAddress = configs.default.SERVER_ADDRESS;
+
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -42,15 +19,15 @@ function Home() {
   const [response, setResponse] = useState(null);
   const [removalReasondisp, setRemovalReasondisp] = useState(null);
   const [serverError, setServerError] = useState(null);
-  // Example uploaded files state and other required states
   const [taskIdComplete, setTaskIdComplete] = useState(null);
-
-  const serverAddress = configs.default.SERVER_ADDRESS; // REACT_APP_SERVER_ADDRESS; // process.env.REACT_APP_SERVER_ADDRESS; //"http://localhost:8080/api/compute"; // Replace with actual server address
-  // const analyzer = "MCANNOTATE"; // Replace with actual analyzer value
-  // const visualizationTool = "VARNA"; // Replace with actual tool value
-  // const consensusMode = "CANONICAL";
-  // const confidenceLevel = "0.5";
-  // const molProbityFilter = "GOOD_AND_CAUTION";
+  const [fileList, setFileList] = useState([]);
+  const [consensusMode, setConsensusMode] = useState(consensusOptions[0].value);
+  const [analyzer, setAnalyzer] = useState(analyzerOptions[0].value);
+  const [visualizer, setVisualizer] = useState(visualizerOptions[0].value);
+  const [molProbityFilter, setMolProbityFilter] = useState(molProbityOptions[0].value);
+  const [isFuzzy, setIsFuzzy] = useState(true);
+  const [confidenceLevel, setConfidenceLevel] = useState(50);
+  const [dotBracket, setDotBracket] = useState(null);
 
   const consensusOptions = [
     {
@@ -129,15 +106,6 @@ function Home() {
     },
   ];
 
-  const [fileList, setFileList] = useState([]);
-  const [consensusMode, setConsensusMode] = useState(consensusOptions[0].value);
-  const [analyzer, setAnalyzer] = useState(analyzerOptions[0].value);
-  const [visualizer, setVisualizer] = useState(visualizerOptions[0].value);
-  const [molProbityFilter, setMolProbityFilter] = useState(molProbityOptions[0].value);
-  const [isFuzzy, setIsFuzzy] = useState(true);
-  const [confidenceLevel, setConfidenceLevel] = useState(50);
-  const [dotBracket, setDotBracket] = useState(null);
-
   const beforeUpload = (file) => {
     file.url = URL.createObjectURL(file);
     file.obj = new File([file], file.name, { type: file.type });
@@ -179,7 +147,6 @@ function Home() {
   const handleSendData = async (taskIdArg = "") => {
     const POLL_INTERVAL = 3000; // 3 seconds
     let taskId = taskIdArg || null;
-    // console.log("SERVER:", serverAddress);
 
     try {
       // Step 1: Create and send the payload if taskId is not provided
@@ -188,16 +155,6 @@ function Home() {
         setResponse(null);
         setServerError(null);
         setRemovalReasondisp(null);
-
-        // Log file details
-        // fileList.forEach(async (fileObj, index) => {
-        //   console.log(`File ${index + 1}:`);
-        //   console.log("ID:", fileObj.id);
-        //   console.log("Name:", fileObj.file.name);
-        //   console.log("Size:", fileObj.file.size, "bytes");
-        //   console.log("Type:", fileObj.file.type);
-        //   console.log("Text: ", await fileObj.file.text());
-        // });
 
         // Prepare the files data
         const files = await Promise.all(
@@ -222,82 +179,7 @@ function Home() {
         if (dotBracket) {
           payload.dotBracket = dotBracket;
         }
-        // console.log("PAYLOAD:", payload);
 
-        //   payload = {
-        //     "files": [
-        //         {
-        //             "name": f.name,
-        //             "content": f.read_text(),
-        //         }
-        //         for f in files
-        //     ],
-        //     "analyzer": args.analyzer,
-        //     "visualizationTool": args.visualization,
-        //     "consensusMode": args.consensus_mode,
-        //     "confidenceLevel": args.confidence,
-        //     "molProbityFilter": args.molprobity_filter,
-        // }
-
-        // if dot_bracket:
-        //     payload["dotBracket"] = dot_bracket
-
-        // [MCANNOTATE, BARNABA, RNAVIEW, FR3D, BPNET, RNAPOLIS]
-        // switch (payload.analyzer) {
-        //   case "MC-Annotate":
-        //     payload.analyzer = "MCANNOTATE";
-        //     break;
-        //   case "BARNABA":
-        //     payload.analyzer = "BARNABA";
-        //     break;
-        //   case "RNAview":
-        //     payload.analyzer = "RNAVIEW";
-        //     break;
-        //   case "FR3D":
-        //     payload.analyzer = "FR3D";
-        //     break;
-        //   case "BPnet":
-        //     payload.analyzer = "BPNET";
-        //     break;
-        //   case "RNApolis":
-        //     payload.analyzer = "RNAPOLIS";
-        //     break;
-        // }
-
-        // [ALL, STACKING, CANONICAL, NON_CANONICAL]]
-        //"Canonical", "Non-canonical", "Stacking", "All"
-        // switch (payload.consensusMode) {
-        //   case "MC-All":
-        //     payload.consensusMode = "ALL";
-        //     break;
-        //   case "Stacking":
-        //     payload.consensusMode = "STACKING";
-        //     break;
-        //   case "Canonical":
-        //     payload.consensusMode = "CANONICAL";
-        //     break;
-        //   case "Non-canonical":
-        //     payload.consensusMode = "NON_CANONICAL";
-        //     break;
-        // }
-        //[PSEUDOVIEWER, VARNA, RCHIE, RNAPUZZLER]]
-        //"VARNA", "RNApuzzler", "PseudoViewer", "R-Chie"]
-        // switch (payload.visualizationTool) {
-        //   case "VARNA":
-        //     payload.visualizationTool = "VARNA";
-        //     break;
-        //   case "RNApuzzler":
-        //     payload.visualizationTool = "RNAPUZZLER";
-        //     break;
-        //   case "PseudoViewer":
-        //     payload.visualizationTool = "PSEUDOVIEWER";
-        //     break;
-        //   case "R-Chie":
-        //     payload.visualizationTool = "RCHIE";
-        //     break;
-        // }
-        // console.log("TEST PAYLOAD:", payload.molProbityFilter);
-        // Send the payload
         const response = await fetch(serverAddress, {
           method: "POST",
           headers: {
@@ -312,17 +194,12 @@ function Home() {
 
         const { taskId: newTaskId } = await response.json();
         taskId = newTaskId;
-
         navigate(`/${newTaskId}`, { replace: true }); //navigate to new taskid
-      } else {
-        //someone might copy the entire line and in such case it is mitigated
-        if (taskId.includes("Your unique code: ")) {
-          taskId = taskId.replace("Your unique code: ", "");
-        }
       }
 
       // Step 2: Poll for task status
       const status = await pollTaskStatus(taskId, POLL_INTERVAL, setResponse);
+
       // Step 3: Handle the result based on task status
       if (status === "COMPLETED") {
         await fetchTaskResult(taskId);
