@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import "./Home.css";
-// import { REACT_APP_SERVER_ADDRESS } from "./config.js";
-import "./SendingTest.css";
+import { Alert, Button, Card, Col, Collapse, Form, Input, InputNumber, Row, Select, Slider, Spin, Switch, Table, Tabs, Tooltip, Upload } from "antd";
+import { UploadOutlined } from "@ant-design/icons";
+
 import SvgImg from "./SvgImg";
 import FileDetails from "./FileDetails";
 import * as configs from "./config";
-import { Alert, Button, Card, Col, Collapse, Form, Input, InputNumber, Row, Select, Slider, Spin, Switch, Table, Tabs, Tooltip, Upload } from "antd";
-import { UploadOutlined } from "@ant-design/icons";
 
 const { TextArea } = Input;
 
@@ -37,15 +35,9 @@ const { TextArea } = Input;
 //sprawdzić czy github mi dodaje windowsowe entery!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 function Home() {
-  //getting the id from params
   const { id } = useParams();
   const navigate = useNavigate();
 
-  //sending
-  // const [text2, setText2] = useState("");
-  // const handleTextChange2 = (newText) => {
-  //   setText2(newText); // Update the text state
-  // };
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState(null);
   const [removalReasondisp, setRemovalReasondisp] = useState(null);

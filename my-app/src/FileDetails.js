@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import "./FileDetails.css";
 import { Alert, Collapse, Spin, Table } from "antd";
 
 const FileDetails = ({ taskId, serverAddress, filename }) => {

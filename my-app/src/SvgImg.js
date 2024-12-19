@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "./SvgImg.css";
-import { Image } from "antd";
+import {Alert, Image, Spin} from "antd";
 
 const SvgImg = ({ serverAddress, taskId }) => {
   const [svgContent, setSvgContent] = useState(null);
@@ -32,36 +31,17 @@ const SvgImg = ({ serverAddress, taskId }) => {
   }, [serverAddress, taskId]);
 
   if (loading) {
-    return (
-      <div className="loading-indicator">
-        <div className="spinner"></div> {/* Add a spinner style in your CSS */}
-        <p>Loading SVG...</p>
-      </div>
-    );
+    return <Spin />;
+  }
+  if (error) {
+    return <Alert type={"error"} message={error.message} />;
   }
 
-  if (error) {
-    return <p className="error">Error: {error}</p>;
-  }
   // Create a blob for the SVG content to use for downloading
   const blob = new Blob([svgContent], { type: "image/svg+xml" });
   const blobUrl = URL.createObjectURL(blob);
 
-  return (
-    <Image src={blobUrl} width={200} />
-    // <div style={{ backgroundColor: "white", padding: "20px", borderRadius: "5px" }}>
-    //   <a href={blobUrl} download={`${taskId}.svg`} className="svg-download-link" title="Right-click to download">
-    //     <div
-    //       className="svg-container"
-    //       style={{
-    //         width: "15vw",
-    //         height: "auto",
-    //       }}
-    //       dangerouslySetInnerHTML={{ __html: svgContent }}
-    //     />
-    //   </a>
-    // </div>
-  );
+  return <Image src={blobUrl} width={200} />;
 };
 
 export default SvgImg;

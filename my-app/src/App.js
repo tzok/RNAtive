@@ -1,13 +1,14 @@
-import LogoPP from "./pp-logo.png";
-import LogoIBCh from "./ibch-logo.png";
-import LogoRNApolis from "./rnapolis-logo.png";
-import LogoRNAtive from "./RNAtive3.svg";
 import { BrowserRouter as Router, Route, Routes, useNavigate, useLocation } from "react-router-dom";
+import { Layout, Menu } from "antd";
+
 import About from "./About";
 import Home from "./Home";
 import Help from "./Help";
 import Cite from "./Cite";
-import { Layout, Menu } from "antd";
+import LogoPP from "./pp-logo.png";
+import LogoIBCh from "./ibch-logo.png";
+import LogoRNApolis from "./rnapolis-logo.png";
+import LogoRNAtive from "./RNAtive.svg";
 
 const { Header, Footer, Sider, Content } = Layout;
 
@@ -71,7 +72,6 @@ function App() {
             <Route path="/About" element={<About />} />
             <Route path="/Help" element={<Help />} />
             <Route path="/Cite" element={<Cite />} />
-            {/* Add more routes as needed */}
           </Routes>
         </Content>
         <Footer
@@ -109,9 +109,3 @@ function App() {
 }
 
 export default App;
-
-/*
-<Route path="/" element={<Home />} />
-  <Route path="/Home/" element={<Home />} />
-  <Route path="/Home/:id" element={<Home />} />
-*/
