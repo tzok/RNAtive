@@ -10,7 +10,7 @@ from typing import List, Optional
 import requests
 from tabulate import tabulate
 
-API_BASE = "http://localhost:8080/api/compute"
+API_BASE = "http://localhost/api/compute"
 
 
 def submit_job(files: List[Path], args, dot_bracket: Optional[str] = None) -> str:

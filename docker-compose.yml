@@ -5,7 +5,7 @@ services:
       args:
         - REACT_APP_SERVER_ADDRESS=http://localhost/api/compute
 
-  app:
+  backend:
     build: .
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/rnative
@@ -58,7 +58,7 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - frontend
-      - app
+      - backend
       - adapters
 
 volumes:
