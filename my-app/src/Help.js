@@ -46,7 +46,7 @@ const Help = () => {
                 key: heading.id,
                 href: `#${heading.id}`,
                 title: heading.text,
-                style: { paddingLeft: `${(heading.level - 1) * 15}px` }
+                style: { paddingLeft: `${(heading.level - 1) * 15}px` },
               }))}
             />
           </div>
