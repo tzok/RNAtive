@@ -12,6 +12,16 @@ const FileDetails = ({ taskId, serverAddress, filename }) => {
       title: header,
       dataIndex: index,
       key: index,
+      sorter: (a, b) => {
+        const valA = a[index];
+        const valB = b[index];
+        // Handle numeric values
+        if (!isNaN(valA) && !isNaN(valB)) {
+          return valA - valB;
+        }
+        // Handle string values
+        return String(valA).localeCompare(String(valB));
+      },
     }));
   };
 
