@@ -17,7 +17,12 @@ const NavMenu = () => {
   const location = useLocation();
 
   const handleMenuClick = ({ key }) => {
-    navigate(key);
+    if (key === "/") {
+      // Force a reload when navigating to home to reset the state
+      window.location.href = "/";
+    } else {
+      navigate(key);
+    }
   };
 
   const items = [
