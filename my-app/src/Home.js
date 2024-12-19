@@ -330,7 +330,7 @@ function Home() {
       });
     });
     return [columns, rows];
-  }
+  };
 
   const renderContent = () => {
     if (isLoading) {
@@ -344,7 +344,7 @@ function Home() {
     }
 
     if (serverError) {
-      if (removalReasons) {
+      if (removalReasons && Object.keys(removalReasons).length > 0) {
         const [columns, rows] = handleRemovalReasons();
         return (
           <Row justify={"center"} style={{ marginBottom: 24 }}>
@@ -376,13 +376,13 @@ function Home() {
         <Row justify={"center"}>
           <Col span={20}>
             <Alert
-                type="error"
-                message="Error"
-                description={
-                  <div>
-                    <p>{serverError}</p>
-                  </div>
-                }
+              type="error"
+              message="Error"
+              description={
+                <div>
+                  <p>{serverError}</p>
+                </div>
+              }
             />
             <Button
               onClick={() => {
@@ -451,14 +451,16 @@ function Home() {
               <Tabs items={perFileDetails} tabPosition={"left"} />
             </Card>
 
-            {removalReasons && Object.keys(removalReasons).length > 0 && (() => {
-              const [columns, rows] = handleRemovalReasons();
-              return (
-                <Card title={"Removed files"} style={{ marginBottom: "24px" }}>
-                  <Table dataSource={rows} columns={columns} />
-                </Card>
-              );
-            })()}
+            {removalReasons &&
+              Object.keys(removalReasons).length > 0 &&
+              (() => {
+                const [columns, rows] = handleRemovalReasons();
+                return (
+                  <Card title={"Removed files"} style={{ marginBottom: "24px" }}>
+                    <Table dataSource={rows} columns={columns} />
+                  </Card>
+                );
+              })()}
           </Col>
         </Row>
       );
