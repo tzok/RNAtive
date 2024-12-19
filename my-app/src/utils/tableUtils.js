@@ -1,6 +1,6 @@
 const decimalToFraction = (decimal, denominator) => {
   const numerator = Math.round(decimal * denominator);
-  return `${numerator}/${denominator}`;
+  return `${numerator} / ${denominator}`;
 };
 
 export const getTableColumns = (headers, rows, fileCount = 100) => {

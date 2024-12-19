@@ -443,7 +443,7 @@ function Home() {
       const perFileDetails = response.fileNames.map((filename, index) => ({
         key: index,
         label: filename,
-        children: <FileDetails taskId={taskIdComplete} serverAddress={serverAddress} filename={filename} />,
+        children: <FileDetails taskId={taskIdComplete} serverAddress={serverAddress} filename={filename} fileCount={totalFiles} />,
       }));
 
       return (

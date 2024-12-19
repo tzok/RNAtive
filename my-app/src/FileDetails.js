@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Alert, Collapse, Spin, Table } from "antd";
 import { getTableColumns, getTableRows } from "./utils/tableUtils";
 
-const FileDetails = ({ taskId, serverAddress, filename }) => {
+const FileDetails = ({ taskId, serverAddress, filename, fileCount }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -36,9 +36,9 @@ const FileDetails = ({ taskId, serverAddress, filename }) => {
     return <Alert type={"warning"} message={"No details available"} />;
   }
 
-  const canonicalColumns = getTableColumns(data.canonicalPairs.headers, data.canonicalPairs.rows, 1);
-  const nonCanonicalColumns = getTableColumns(data.nonCanonicalPairs.headers, data.nonCanonicalPairs.rows, 1);
-  const stackingColumns = getTableColumns(data.stackings.headers, data.stackings.rows, 1);
+  const canonicalColumns = getTableColumns(data.canonicalPairs.headers, data.canonicalPairs.rows, fileCount);
+  const nonCanonicalColumns = getTableColumns(data.nonCanonicalPairs.headers, data.nonCanonicalPairs.rows, fileCount);
+  const stackingColumns = getTableColumns(data.stackings.headers, data.stackings.rows, fileCount);
   const canonicalRows = getTableRows(data.canonicalPairs.rows);
   const nonCanonicalRows = getTableRows(data.nonCanonicalPairs.rows);
   const stackingRows = getTableRows(data.stackings.rows);

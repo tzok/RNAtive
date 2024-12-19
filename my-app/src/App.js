@@ -10,7 +10,7 @@ import LogoIBCh from "./ibch-logo.png";
 import LogoRNApolis from "./rnapolis-logo.png";
 import LogoRNAtive from "./RNAtive.svg";
 
-const { Header, Footer, Sider, Content } = Layout;
+const { Header, Footer, Content } = Layout;
 
 const NavMenu = () => {
   const navigate = useNavigate();
