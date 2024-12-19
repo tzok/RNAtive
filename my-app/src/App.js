@@ -54,6 +54,10 @@ function App() {
             style={{
               height: "64px",
               padding: "10px",
+              cursor: "pointer",
+            }}
+            onClick={() => {
+              window.location.href = "/";
             }}
           />
           <NavMenu />
