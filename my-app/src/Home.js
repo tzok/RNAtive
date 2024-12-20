@@ -278,7 +278,7 @@ function Home() {
     }
   };
 
-  const loadExampleFiles = async () => {
+  const loadRNAPuzzlesExample = async () => {
     try {
       // List of example files
       const exampleFiles = ["1_bujnicki_1_rpr.pdb", "1_bujnicki_2_rpr.pdb", "1_bujnicki_3_rpr.pdb", "1_bujnicki_4_rpr.pdb", "1_bujnicki_5_rpr.pdb", "1_chen_1_rpr.pdb", "1_das_1_rpr.pdb", "1_das_2_rpr.pdb", "1_das_3_rpr.pdb", "1_das_4_rpr.pdb", "1_das_5_rpr.pdb", "1_dokholyan_1_rpr.pdb", "1_major_1_rpr.pdb"];
@@ -303,6 +303,43 @@ function Home() {
       }));
 
       setFileList(newFiles); // Replace current files with examples
+      setDotBracket(">strand_A\n" +
+          "CCGCCGCGCCAUGCCUGUGGCGG\n" +
+          "((((((((.((((...(((((((\n" +
+          ">strand_B\n" +
+          "CCGCCGCGCCAUGCCUGUGGCGG\n" +
+          ")))))))..)))).).)))))))")
+    } catch (error) {
+      console.error("Error loading example files:", error);
+    }
+  };
+
+  const loadDecoyExamples = async () => {
+    try {
+      // List of example files
+      const exampleFiles = ["1a9nR_M1.pdb", "1a9nR_M2.pdb", "1a9nR_M3.pdb", "1a9nR_M4.pdb", "1a9nR_M5.pdb", "1a9nR_M6.pdb", "1a9nR_M7.pdb", "1a9nR_M8.pdb", "1a9nR_M9.pdb"];
+
+      // Fetch each file from the public folder
+      const files = await Promise.all(
+        exampleFiles.map(async (fileName) => {
+          const response = await fetch(`/examples/${fileName}`);
+          const blob = await response.blob();
+          return new File([blob], fileName, { type: blob.type });
+        }),
+      );
+
+      // Convert fetched files into compatible format
+      const newFiles = files.map((file, index) => ({
+        uid: Date.now() + index,
+        name: file.name,
+        status: "done",
+        url: URL.createObjectURL(file),
+        originFileObj: file,
+        obj: file,
+      }));
+
+      setFileList(newFiles); // Replace current files with examples
+      setDotBracket(">strand_R\n" + "CCUGGUAUUGCAGUACCUCCAGGU\n" + "(((((.............))))).");
     } catch (error) {
       console.error("Error loading example files:", error);
     }
@@ -487,6 +524,29 @@ function Home() {
             <Form.Item
               label={
                 <span>
+                  Load example{" "}
+                  <Tooltip title="Load one of the predefined datasets.">
+                    <QuestionCircleOutlined />
+                  </Tooltip>
+                </span>
+              }>
+              <Row gutter={8}>
+                <Col>
+                  <Button onClick={loadRNAPuzzlesExample}>
+                    <Tooltip title={"Models submitted to the first challenge in RNA-Puzzles contest."}>RNA-Puzzles 1</Tooltip>
+                  </Button>
+                </Col>
+                <Col>
+                  <Button onClick={loadDecoyExamples}>
+                    <Tooltip title={"Nine decoys of the U2 small nuclear RNA (PDB id: 1A9N)"}>Decoys</Tooltip>
+                  </Button>
+                </Col>
+              </Row>
+            </Form.Item>
+
+            <Form.Item
+              label={
+                <span>
                   Files{" "}
                   <Tooltip title="Upload one or more structural files in PDB or PDBx/mmCIF format for analysis.">
                     <QuestionCircleOutlined />
@@ -529,7 +589,7 @@ function Home() {
                   </Tooltip>
                 </span>
               }>
-              <TextArea rows={4} variant={"filled"} placeholder={"Optional"} value={dotBracket} onChange={handleDotBracket} />
+              <TextArea rows={6} variant={"filled"} placeholder={"Optional"} value={dotBracket} onChange={handleDotBracket} style={{ fontFamily: "monospace" }} />
             </Form.Item>
 
             <Form.Item
@@ -590,36 +650,29 @@ function Home() {
             )}
 
             <Form.Item
-                label={
-                  <span>
+              label={
+                <span>
                   Visualizer{" "}
-                    <Tooltip title="Pick the visualization tool for consensus structures. Currently, VARNA is the sole option supporting non-canonical base pair visualization, employing distinct symbols for each Leontis-Westhof classification.">
+                  <Tooltip title="Pick the visualization tool for consensus structures. Currently, VARNA is the sole option supporting non-canonical base pair visualization, employing distinct symbols for each Leontis-Westhof classification.">
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
-                }>
+              }>
               <Select options={visualizerOptions} defaultValue={visualizerOptions[0]} onChange={setVisualizer} />
             </Form.Item>
 
             <Form.Item wrapperCol={{ offset: 6 }}>
-              <Row gutter={8}>
-                <Col>
-                  {fileList.length < 2 ? (
-                    <Tooltip title="Upload at least 2 files">
-                      <Button type="primary" disabled={true}>
-                        Submit
-                      </Button>
-                    </Tooltip>
-                  ) : (
-                    <Button type="primary" onClick={() => handleSendData()}>
-                      Submit
-                    </Button>
-                  )}
-                </Col>
-                <Col>
-                  <Button onClick={loadExampleFiles}>Load example</Button>
-                </Col>
-              </Row>
+              {fileList.length < 2 ? (
+                <Tooltip title="Upload at least 2 files">
+                  <Button type="primary" disabled={true}>
+                    Submit
+                  </Button>
+                </Tooltip>
+              ) : (
+                <Button type="primary" onClick={() => handleSendData()}>
+                  Submit
+                </Button>
+              )}
             </Form.Item>
           </Form>
         </Col>
