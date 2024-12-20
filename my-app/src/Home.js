@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Alert, Button, Card, Col, Collapse, Form, Input, InputNumber, Row, Select, Slider, Spin, Switch, Table, Tabs, Tooltip, Upload } from "antd";
 import { getTableColumns, getTableRows } from "./utils/tableUtils";
-import { UploadOutlined } from "@ant-design/icons";
+import { QuestionCircleOutlined, UploadOutlined } from "@ant-design/icons";
 
 import SvgImg from "./SvgImg";
 import FileDetails from "./FileDetails";
@@ -336,11 +336,11 @@ function Home() {
     if (isLoading) {
       if (id) {
         return (
-            <Row justify={"center"}>
-              <Spin tip={"Waiting for completion of task: " + id} size="large">
-                <div style={{ width: "100vw", padding: 24 }} />
-              </Spin>
-            </Row>
+          <Row justify={"center"}>
+            <Spin tip={"Waiting for completion of task: " + id} size="large">
+              <div style={{ width: "100vw", padding: 24 }} />
+            </Spin>
+          </Row>
         );
       }
       return (
@@ -481,15 +481,18 @@ function Home() {
       <Row justify={"center"}>
         <Col span={20}>
           <div style={{ marginBottom: "24px", textAlign: "justify" }}>
-            <p>
-              RNAtive is a consensus-based RNA structure analysis system that combines multiple structural models to identify reliable base pairs and stacking interactions. 
-              Upload your RNA 3D structure models in PDB or mmCIF format, and RNAtive will analyze them using state-of-the-art base pair annotation tools. 
-              The system generates a consensus structure by comparing annotations across all models, providing a reliable representation of the RNA's secondary structure 
-              and tertiary interactions.
-            </p>
+            <p>RNAtive is a consensus-based RNA structure analysis system that combines multiple structural models to identify reliable base pairs and stacking interactions. Upload your RNA 3D structure models in PDB or mmCIF format, and RNAtive will analyze them using state-of-the-art base pair annotation tools. The system generates a consensus structure by comparing annotations across all models, providing a reliable representation of the RNA's secondary structure and tertiary interactions.</p>
           </div>
           <Form labelCol={{ span: 6 }} wrapperCol={{ span: 14 }}>
-            <Form.Item label="Files">
+            <Form.Item
+              label={
+                <span>
+                  Files{" "}
+                  <Tooltip title="Upload one or more structural files in PDB or PDBx/mmCIF format for analysis.">
+                    <QuestionCircleOutlined />
+                  </Tooltip>
+                </span>
+              }>
               <Upload
                 accept={".pdb,.cif"}
                 multiple={true}
@@ -505,28 +508,76 @@ function Home() {
               </Upload>
             </Form.Item>
 
-            <Form.Item label="Consensus mode">
-              <Select options={consensusOptions} defaultValue={consensusOptions[0]} onChange={setConsensusMode} />
-            </Form.Item>
-
-            <Form.Item label="Base pair analyzer">
-              <Select options={analyzerOptions} defaultValue={analyzerOptions[0]} onChange={setAnalyzer} />
-            </Form.Item>
-
-            <Form.Item label="Visualizer">
-              <Select options={visualizerOptions} defaultValue={visualizerOptions[0]} onChange={setVisualizer} />
-            </Form.Item>
-
-            <Form.Item label="MolProbity filter">
+            <Form.Item
+              label={
+                <span>
+                  Molprobity filter{" "}
+                  <Tooltip title="When enabled, individual models undergo MolProbity evaluation, receiving ratings of 'good', 'caution', or 'warning' across four key metrics: clashscore, backbone conformation, bonds, and angles. Based on the selected filter, models failing to meet quality standards will be excluded from subsequent evaluation.">
+                    <QuestionCircleOutlined />
+                  </Tooltip>
+                </span>
+              }>
               <Select options={molProbityOptions} defaultValue={molProbityOptions[0]} onChange={setMolProbityFilter} />
             </Form.Item>
 
-            <Form.Item label="Fuzzy mode">
+            <Form.Item
+              label={
+                <span>
+                  Expected 2D structure{" "}
+                  <Tooltip title="If desired, input the expected 2D structure using dot-bracket notation. These specified base pairs will be considered essential, and their absence in models will result in lower rankings.">
+                    <QuestionCircleOutlined />
+                  </Tooltip>
+                </span>
+              }>
+              <TextArea rows={4} variant={"filled"} placeholder={"Optional"} value={dotBracket} onChange={handleDotBracket} />
+            </Form.Item>
+
+            <Form.Item
+              label={
+                <span>
+                  Base pair analyzer{" "}
+                  <Tooltip title="Select one of the integrated tools for extracting nucleotide interactions.">
+                    <QuestionCircleOutlined />
+                  </Tooltip>
+                </span>
+              }>
+              <Select options={analyzerOptions} defaultValue={analyzerOptions[0]} onChange={setAnalyzer} />
+            </Form.Item>
+
+            <Form.Item
+              label={
+                <span>
+                  Consensus mode{" "}
+                  <Tooltip title="Specify which categories of nucleotide interactions should be included when building the consensus secondary structure and comparing models.">
+                    <QuestionCircleOutlined />
+                  </Tooltip>
+                </span>
+              }>
+              <Select options={consensusOptions} defaultValue={consensusOptions[0]} onChange={setConsensusMode} />
+            </Form.Item>
+
+            <Form.Item
+              label={
+                <span>
+                  Fuzzy mode{" "}
+                  <Tooltip title="In fuzzy mode, every nucleotide interaction within the specified consensus mode contributes to model ranking calculations based on how frequently it appears across models. When fuzzy mode is disabled, interaction frequency acts as a filtering mechanism, with INF computations only considering interactions that surpass minimum confidence thresholds.">
+                    <QuestionCircleOutlined />
+                  </Tooltip>
+                </span>
+              }>
               <Switch checked={isFuzzy} onChange={setIsFuzzy} />
             </Form.Item>
 
             {!isFuzzy && (
-              <Form.Item label="Confidence level">
+              <Form.Item
+                label={
+                  <span>
+                    Confidence level{" "}
+                    <Tooltip title="The minimum percentage threshold determining whether a nucleotide interaction becomes part of the consensus secondary structure. For instance, setting a 50 threshold requires an interaction to appear in at least half of the analyzed models to be included in the consensus structure.">
+                      <QuestionCircleOutlined />
+                    </Tooltip>
+                  </span>
+                }>
                 <Row gutter={8} style={{ display: "flex" }}>
                   <Col flex={"auto"}>
                     <Slider min={1} max={100} onChange={setConfidenceLevel} value={typeof confidenceLevel === "number" ? confidenceLevel : 50} />
@@ -538,8 +589,16 @@ function Home() {
               </Form.Item>
             )}
 
-            <Form.Item label="Expected 2D structure">
-              <TextArea rows={4} variant={"filled"} placeholder={"Optional"} value={dotBracket} onChange={handleDotBracket} />
+            <Form.Item
+                label={
+                  <span>
+                  Visualizer{" "}
+                    <Tooltip title="Pick the visualization tool for consensus structures. Currently, VARNA is the sole option supporting non-canonical base pair visualization, employing distinct symbols for each Leontis-Westhof classification.">
+                    <QuestionCircleOutlined />
+                  </Tooltip>
+                </span>
+                }>
+              <Select options={visualizerOptions} defaultValue={visualizerOptions[0]} onChange={setVisualizer} />
             </Form.Item>
 
             <Form.Item wrapperCol={{ offset: 6 }}>

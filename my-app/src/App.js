@@ -102,9 +102,7 @@ function App() {
             </div>
           </div>
           <div style={{ marginTop: "16px" }}>
-            <p style={{ margin: "0" }}>
-              RNAtive is freely accessible to all users, including commercial users, under the MIT License.
-            </p>
+            <p style={{ margin: "0" }}>RNAtive is freely accessible to all users, including commercial users, under the MIT License.</p>
             <p style={{ margin: "8px 0" }}>RNAtive {new Date().getFullYear()} | RNApolis</p>
           </div>
         </Footer>
