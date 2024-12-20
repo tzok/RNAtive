@@ -13,8 +13,7 @@ public class ConversionClient {
   private final String serviceUrl;
 
   public ConversionClient(
-      RestTemplate restTemplate,
-      @Value("${analysis.service.url}") String serviceUrl) {
+      RestTemplate restTemplate, @Value("${analysis.service.url}") String serviceUrl) {
     this.restTemplate = restTemplate;
     this.serviceUrl = serviceUrl + "/conversion-api/v1/bpseq2dbn";
   }

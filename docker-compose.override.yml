@@ -3,12 +3,10 @@ services:
     build:
       args:
         - REACT_APP_SERVER_ADDRESS=http://localhost/api/compute
-    ports:
-      - "3000:3000"
 
   backend:
     environment:
-      - ANALYSIS_SERVICE_URL=http://adapters:5000
+      - ANALYSIS_SERVICE_URL=http://adapters
 
   nginx:
     ports:
