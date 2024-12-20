@@ -1,0 +1,27 @@
+services:
+  frontend:
+    build:
+      args:
+        - REACT_APP_SERVER_ADDRESS=http://localhost/api/compute
+    ports:
+      - "3000:3000"
+
+  backend:
+    environment:
+      - ANALYSIS_SERVICE_URL=http://localhost/adapters
+
+  nginx:
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.local.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+      - adapters
+    command: nginx -g "daemon off;"
+
+  # Remove HTTPS-related services that aren't needed locally
+  certbot:
+    profiles:
+      - production
