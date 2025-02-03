@@ -1,11 +1,12 @@
 import { Anchor, Col, Row, Typography } from "antd";
-import { useEffect, useState } from "react";
-
-const { Title, Paragraph, Text, Link } = Typography;
+import { useEffect, useState,useRef } from "react";
+import flowDiff from "./assets/rnative-flow-diff.png";
+const { Title, Paragraph, Text, Link, } = Typography;
 
 const Help = () => {
   const [headings, setHeadings] = useState([]);
-
+  const [imgWidth, setImgWidth] = useState(0);
+  const containerRef = useRef(null);
   useEffect(() => {
     // Get all Title elements
     const elements = document.querySelectorAll("h1, h2, h3, h4, h5");
@@ -15,6 +16,17 @@ const Help = () => {
       level: parseInt(element.tagName.charAt(1)),
     }));
     setHeadings(items);
+    const updateWidth = () => {
+      if (containerRef.current) {
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const availableWidth = window.innerWidth - containerRect.right - 10; // 10px margin
+        setImgWidth(Math.max(0, availableWidth)); // Ensure non-negative width
+      }
+    };
+
+    updateWidth();
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
   }, []);
 
   const generateId = (text) => {
@@ -53,7 +65,23 @@ const Help = () => {
 
           <Typography>
             <CustomTitle level={2}>What is RNAtive</CustomTitle>
-            <Paragraph>RNAtive is a system that allows its users to rank a set of different models of the same RNA structure to determine which ones are the most realistic. RNAtive will return both the evaluation of individual pdb files provided, and its proposition of the most realistic actual looks of the molecule.</Paragraph>
+            {/* <Paragraph>RNAtive is a system that allows its users to rank a set of different models of the same RNA structure to determine which ones are the most realistic. RNAtive will return both the evaluation of individual pdb files provided, and its proposition of the most realistic actual looks of the molecule.</Paragraph> */}
+            <Paragraph>The discovery of RNA 3D structures contributes to the explanation of their biological functions, which is crucial in designing new drugs and therapeutic solutions. Unfortunately, 3D structures of the most biologically important RNAs are currently unknown. In recent years, many in silico methods devoted to RNA 3D structure prediction have been developed. Their accuracy usually depends on reliable scoring of 3D models/motifs in various stages of prediction, e.g., to assembly or to select the promising RNA 3D folds. Nowadays, wet-lab researchers are unable to reliably select the native-like RNA 3D structure among promising RNA 3D predictions. Even experts are not usually able to rank their 3D models ensuring high correlation with the ranking computed within the context of the reference RNA 3D structure.</Paragraph>
+            <Paragraph>Therefore, there is a great need for a fully-automated method able to reliably rank RNA 3D predictions in terms of their practical usefulness through identification and comparison of conservative RNA 3D motifs covering various types of base pairing.              </Paragraph>
+            <Paragraph>In the protein field, a consensus-based quality assessment methods are often characterized by good performance as stated in CASP results. They are able to rank 3D predictions of a given protein assuming that conservative 3D motifs shared among the majority of analyzed 3D structures could be native-like.              </Paragraph>
+            <Paragraph>In contrast to that, there is no web-server tool providing a consensus-based ranking of RNA 3D models for a given RNA. RNAtive is designed to fill this gap. Our approach, first, identifies interaction networks for all considered RNA 3D models uploaded in PDB or PDBx/mmCIF format. Next, a consensus-driven RNA secondary structure that includes base pairs whose confidence score exceeds a threshold defined by the user, is constructed. Optionally you can upload reference RNA secondary structure (e.g., provided by Rfam) which base pairs will be treated as fixed in the resultant consensus. The base pair confidence score represents a percentage of RNA 3D predictions in which the particular base pair was observed. Finally, it constructs the Interaction Network Fidelity-based ranking of all considered RNA 3D models within the context of the consensus-driven RNA secondary structure. Moreover, the consensus and base-pair confidence values are presented. The former one in a textual and graphical way.              </Paragraph>
+            <Paragraph>The general idea of RNAtive is presented on the following diagram:</Paragraph>
+            
+            <img 
+        src={flowDiff} 
+        alt="Description" 
+        style={{ 
+          width: imgWidth > 0 ? `${imgWidth}px` : "auto", 
+          maxWidth: "100%", // Prevents overflow
+          height: "auto",
+          display: "inline-block",
+        }} 
+      />
             <CustomTitle level={2}>How to use RNAtive</CustomTitle>
             <CustomTitle level={3}>Example mode</CustomTitle>
             <Paragraph>To test out the system without using any pdb files of your own, you can click the "Load Example" button on the top of the form at the home page. This will automatically load example pdb files to be send to the server. To send it for evaluation, press the "Send Data" button at the bottom of the form. The "Preview Files" button will download those example pdb files to your computer, so you can evaluate their formatting or do other</Paragraph>
