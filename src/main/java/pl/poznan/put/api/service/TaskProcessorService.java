@@ -72,6 +72,25 @@ public class TaskProcessorService {
     this.drawerVarnaTz = drawerVarnaTz;
   }
 
+  private String getModelSequenceRepresentation(PdbModel model) {
+    // Group residues by chain identifier
+    var chainGroups = model.residues().stream()
+        .collect(Collectors.groupingBy(
+            PdbResidue::chainIdentifier,
+            Collectors.collectingAndThen(
+                Collectors.toList(),
+                residues -> residues.stream()
+                    .sorted(Comparator.comparing(PdbResidue::residueNumber))
+                    .map(PdbResidue::residueName)
+                    .collect(Collectors.joining()))));
+
+    // Create chain:sequence representation sorted by chain identifier
+    return chainGroups.entrySet().stream()
+        .sorted(Map.Entry.comparing(Map.Entry::getKey))
+        .map(entry -> entry.getKey() + ": " + entry.getValue())
+        .collect(Collectors.joining(", "));
+  }
+
   private static List<Pair<AnalyzedBasePair, Double>> sortFuzzySet(
       Map<AnalyzedBasePair, Double> fuzzySet) {
     // Sort the fuzzy canonical pairs by probability in descending order
