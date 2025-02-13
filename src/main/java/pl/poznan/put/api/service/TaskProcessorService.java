@@ -491,10 +491,7 @@ public class TaskProcessorService {
           analyzedModels.stream()
               .collect(
                   Collectors.groupingBy(
-                      model ->
-                          model.structure3D().chains().stream()
-                              .map(chain -> chain.identifier() + ": " + chain.sequence())
-                              .collect(Collectors.joining(", ")),
+                      model -> getModelSequenceRepresentation(model.structure3D()),
                       Collectors.mapping(AnalyzedModel::name, Collectors.toList())));
 
       if (modelsBySequence.size() > 1) {
