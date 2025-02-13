@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import org.apache.commons.cli.*;
 import pl.poznan.put.api.dto.*;
 import pl.poznan.put.api.model.TaskStatus;
 import pl.poznan.put.api.model.VisualizationTool;
@@ -35,154 +36,151 @@ public class CliRunner implements CommandLineRunner {
 
   private final ComputeService computeService;
 
-  private MolProbityFilter molProbityFilter = MolProbityFilter.GOOD_ONLY; // default value
-  private Analyzer analyzer = Analyzer.BPNET; // default value
-  private ConsensusMode consensusMode = ConsensusMode.CANONICAL; // default value
-  private Double confidenceLevel = null; // default value
-  private String dotBracket = null; // default value
-  private String csvOutput = null; // default value
+  private final Options options;
 
   @Autowired
   public CliRunner(ComputeService computeService) {
     this.computeService = computeService;
+    this.options = new Options();
+    
+    options.addOption(Option.builder("h")
+        .longOpt("help")
+        .desc("Show this help message")
+        .build());
+        
+    options.addOption(Option.builder("m")
+        .longOpt("mol-probity")
+        .hasArg()
+        .argName("filter")
+        .desc("Set MolProbity filter level (GOOD_ONLY, GOOD_AND_CAUTION, ALL)")
+        .build());
+        
+    options.addOption(Option.builder("a")
+        .longOpt("analyzer")
+        .hasArg()
+        .argName("analyzer")
+        .desc("Set the analyzer (BARNABA, BPNET, FR3D, MCANNOTATE, RNAPOLIS, RNAVIEW)")
+        .build());
+        
+    options.addOption(Option.builder("c")
+        .longOpt("consensus")
+        .hasArg()
+        .argName("mode")
+        .desc("Set consensus mode (CANONICAL, NON_CANONICAL, STACKING, ALL)")
+        .build());
+        
+    options.addOption(Option.builder("l")
+        .longOpt("confidence")
+        .hasArg()
+        .argName("level")
+        .desc("Set confidence level (0.0-1.0)")
+        .type(Double.class)
+        .build());
+        
+    options.addOption(Option.builder("d")
+        .longOpt("dot-bracket")
+        .hasArg()
+        .argName("structure")
+        .desc("Set expected 2D structure in dot-bracket notation")
+        .build());
+        
+    options.addOption(Option.builder("o")
+        .longOpt("csv-output")
+        .hasArg()
+        .argName("file")
+        .desc("Save ranking table to CSV file")
+        .build());
   }
 
   @Override
   public void run(String... args) throws Exception {
     if (args.length == 0) {
-      System.out.println("No arguments provided. Use --help for usage information.");
-      return;
-    }
-
-    List<String> filePaths = new ArrayList<>();
-
-    for (int i = 0; i < args.length; i++) {
-      switch (args[i]) {
-        case "--help":
-          printHelp();
-          return;
-        case "--mol-probity":
-          if (i + 1 < args.length) {
-            try {
-              molProbityFilter = MolProbityFilter.valueOf(args[i + 1].toUpperCase());
-              i++; // skip the next argument since we consumed it
-            } catch (IllegalArgumentException e) {
-              System.err.println(
-                  "Invalid MolProbity filter value. Valid values are: "
-                      + String.join(", ", getMolProbityValues()));
-              return;
-            }
-          } else {
-            System.err.println("--mol-probity requires a value");
-            return;
-          }
-          break;
-        case "--analyzer":
-          if (i + 1 < args.length) {
-            try {
-              analyzer = Analyzer.valueOf(args[i + 1].toUpperCase());
-              i++; // skip the next argument since we consumed it
-            } catch (IllegalArgumentException e) {
-              System.err.println(
-                  "Invalid analyzer value. Valid values are: "
-                      + String.join(", ", getAnalyzerValues()));
-              return;
-            }
-          } else {
-            System.err.println("--analyzer requires a value");
-            return;
-          }
-          break;
-        case "--consensus":
-          if (i + 1 < args.length) {
-            try {
-              consensusMode = ConsensusMode.valueOf(args[i + 1].toUpperCase());
-              i++; // skip the next argument since we consumed it
-            } catch (IllegalArgumentException e) {
-              System.err.println(
-                  "Invalid consensus mode value. Valid values are: "
-                      + String.join(", ", getConsensusModeValues()));
-              return;
-            }
-          } else {
-            System.err.println("--consensus requires a value");
-            return;
-          }
-          break;
-        case "--confidence":
-          if (i + 1 < args.length) {
-            try {
-              double value = Double.parseDouble(args[i + 1]);
-              if (value < 0.0 || value > 1.0) {
-                System.err.println("Confidence level must be between 0.0 and 1.0");
-                return;
-              }
-              confidenceLevel = value;
-              i++; // skip the next argument since we consumed it
-            } catch (NumberFormatException e) {
-              System.err.println("Invalid confidence level. Must be a number between 0.0 and 1.0");
-              return;
-            }
-          } else {
-            System.err.println("--confidence requires a value");
-            return;
-          }
-          break;
-        case "--dot-bracket":
-          if (i + 1 < args.length) {
-            dotBracket = args[i + 1];
-            i++; // skip the next argument since we consumed it
-          } else {
-            System.err.println("--dot-bracket requires a value");
-            return;
-          }
-          break;
-        case "--csv-output":
-          if (i + 1 < args.length) {
-            csvOutput = args[i + 1];
-            i++; // skip the next argument since we consumed it
-          } else {
-            System.err.println("--csv-output requires a value");
-            return;
-          }
-          break;
-        default:
-          System.err.println("Unknown option: " + args[i]);
-          printHelp();
-          return;
-      }
-    }
-
-    // Collect remaining arguments as file paths
-    for (; i < args.length; i++) {
-      if (args[i].startsWith("--")) {
-        System.err.println("Unexpected option after files: " + args[i]);
-        printHelp();
-        return;
-      }
-      filePaths.add(args[i]);
-    }
-
-    if (filePaths.isEmpty()) {
-      System.err.println("No input files provided");
       printHelp();
       return;
     }
 
-    // Create file data objects from paths
-    List<FileData> files = new ArrayList<>();
-    for (String path : filePaths) {
-      try {
-        String content = Files.readString(Path.of(path));
-        String filename = Path.of(path).getFileName().toString();
-        files.add(new FileData(filename, content));
-      } catch (IOException e) {
-        System.err.println("Error reading file " + path + ": " + e.getMessage());
+    CommandLineParser parser = new DefaultParser();
+    try {
+      CommandLine cmd = parser.parse(options, args);
+
+      if (cmd.hasOption("help")) {
+        printHelp();
         return;
       }
-    }
 
-    try {
+      // Get remaining arguments as file paths
+      List<String> filePaths = cmd.getArgList();
+      if (filePaths.isEmpty()) {
+        System.err.println("No input files provided");
+        printHelp();
+        return;
+      }
+
+      // Create file data objects from paths
+      List<FileData> files = new ArrayList<>();
+      for (String path : filePaths) {
+        try {
+          String content = Files.readString(Path.of(path));
+          String filename = Path.of(path).getFileName().toString();
+          files.add(new FileData(filename, content));
+        } catch (IOException e) {
+          System.err.println("Error reading file " + path + ": " + e.getMessage());
+          return;
+        }
+      }
+
+      // Parse options with validation
+      MolProbityFilter molProbityFilter = MolProbityFilter.ALL;
+      if (cmd.hasOption("mol-probity")) {
+        try {
+          molProbityFilter = MolProbityFilter.valueOf(cmd.getOptionValue("mol-probity").toUpperCase());
+        } catch (IllegalArgumentException e) {
+          System.err.println("Invalid MolProbity filter value");
+          printHelp();
+          return;
+        }
+      }
+
+      Analyzer analyzer = Analyzer.BPNET;
+      if (cmd.hasOption("analyzer")) {
+        try {
+          analyzer = Analyzer.valueOf(cmd.getOptionValue("analyzer").toUpperCase());
+        } catch (IllegalArgumentException e) {
+          System.err.println("Invalid analyzer value");
+          printHelp();
+          return;
+        }
+      }
+
+      ConsensusMode consensusMode = ConsensusMode.ALL;
+      if (cmd.hasOption("consensus")) {
+        try {
+          consensusMode = ConsensusMode.valueOf(cmd.getOptionValue("consensus").toUpperCase());
+        } catch (IllegalArgumentException e) {
+          System.err.println("Invalid consensus mode value");
+          printHelp();
+          return;
+        }
+      }
+
+      Double confidenceLevel = null;
+      if (cmd.hasOption("confidence")) {
+        try {
+          double value = Double.parseDouble(cmd.getOptionValue("confidence"));
+          if (value < 0.0 || value > 1.0) {
+            System.err.println("Confidence level must be between 0.0 and 1.0");
+            return;
+          }
+          confidenceLevel = value;
+        } catch (NumberFormatException e) {
+          System.err.println("Invalid confidence level. Must be a number between 0.0 and 1.0");
+          return;
+        }
+      }
+
+      String dotBracket = cmd.getOptionValue("dot-bracket");
+      String csvOutput = cmd.getOptionValue("csv-output");
+
       // Create compute request
       ComputeRequest request = new ComputeRequest(
           files,
@@ -218,11 +216,11 @@ public class CliRunner implements CommandLineRunner {
           System.out.println("\nResults:");
           System.out.println("Dot-bracket structure: " + tables.dotBracket());
           System.out.println("\nRanking table:");
-          printTable(tables.rankingTable());
+          printTable(tables.ranking());
           
           // Write CSV if output path was specified
           if (csvOutput != null) {
-            writeTableToCsv(tables.rankingTable(), csvOutput);
+            writeTableToCsv(tables.ranking(), csvOutput);
             System.out.println("\nRanking table saved to: " + csvOutput);
           }
           break;
@@ -248,43 +246,15 @@ public class CliRunner implements CommandLineRunner {
   }
 
   private void printHelp() {
-    System.out.println("Usage: java -jar application.jar [options] <file1> <file2> ...");
-    System.out.println("Options:");
-    System.out.println("  --help                    Show this help message");
-    System.out.println("  --mol-probity <filter>    Set MolProbity filter level");
-    System.out.println(
-        "                            Valid values: " + String.join(", ", getMolProbityValues()));
-    System.out.println("  --analyzer <analyzer>      Set the analyzer to use");
-    System.out.println(
-        "                            Valid values: " + String.join(", ", getAnalyzerValues()));
-    System.out.println("  --consensus <mode>         Set the consensus mode");
-    System.out.println(
-        "                            Valid values: " + String.join(", ", getConsensusModeValues()));
-    System.out.println("  --confidence <level>       Set the confidence level (0.0-1.0)");
-    System.out.println("                            Optional, default: not set");
-    System.out.println(
-        "  --dot-bracket <structure>  Set the expected 2D structure in dot-bracket notation");
-    System.out.println("                            Optional, default: not set");
-    System.out.println("");
-    System.out.println("  --csv-output <file>       Save ranking table to CSV file");
-    System.out.println("                            Optional, default: not set");
-    System.out.println("");
-    System.out.println("Arguments:");
-    System.out.println("  <file1> <file2> ...       One or more PDB files to analyze");
+    HelpFormatter formatter = new HelpFormatter();
+    formatter.setWidth(100);
+    formatter.printHelp(
+        "java -jar application.jar [options] <file1> <file2> ...",
+        "\nAnalyze RNA structure files and generate consensus information.\n\n",
+        options,
+        "\nArguments:\n  <file1> <file2> ...  One or more PDB files to analyze\n");
   }
 
-  private String[] getMolProbityValues() {
-    return new String[] {"GOOD_ONLY", "GOOD_AND_CAUTION", "ALL"};
-  }
-
-  private String[] getAnalyzerValues() {
-    return new String[] {"BARNABA", "BPNET", "FR3D", "MCANNOTATE", "RNAPOLIS", "RNAVIEW"};
-  }
-
-  private String[] getConsensusModeValues() {
-    return new String[] {"CANONICAL", "NON_CANONICAL", "STACKING", "ALL"};
-  }
-}
   private void printTable(TableData table) {
     // Print headers
     System.out.println(String.join("\t", table.headers()));
@@ -322,3 +292,4 @@ public class CliRunner implements CommandLineRunner {
     }
     return field;
   }
+}
