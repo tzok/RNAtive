@@ -32,6 +32,7 @@ public class CliRunner implements CommandLineRunner {
     private Analyzer analyzer = Analyzer.BPNET; // default value
     private ConsensusMode consensusMode = ConsensusMode.CANONICAL; // default value
     private Double confidenceLevel = null; // default value
+    private String dotBracket = null; // default value
 
     @Autowired
     public CliRunner(
@@ -127,6 +128,15 @@ public class CliRunner implements CommandLineRunner {
                         return;
                     }
                     break;
+                case "--dot-bracket":
+                    if (i + 1 < args.length) {
+                        dotBracket = args[i + 1];
+                        i++; // skip the next argument since we consumed it
+                    } else {
+                        System.err.println("--dot-bracket requires a value");
+                        return;
+                    }
+                    break;
                 default:
                     System.err.println("Unknown option: " + args[i]);
                     printHelp();
@@ -139,6 +149,7 @@ public class CliRunner implements CommandLineRunner {
         System.out.println("Using analyzer: " + analyzer);
         System.out.println("Using consensus mode: " + consensusMode);
         System.out.println("Confidence level: " + (confidenceLevel != null ? confidenceLevel : "not set"));
+        System.out.println("Dot-bracket structure: " + (dotBracket != null ? dotBracket : "not set"));
     }
 
     private void printHelp() {
@@ -152,6 +163,8 @@ public class CliRunner implements CommandLineRunner {
         System.out.println("  --consensus <mode>         Set the consensus mode");
         System.out.println("                            Valid values: " + String.join(", ", getConsensusModeValues()));
         System.out.println("  --confidence <level>       Set the confidence level (0.0-1.0)");
+        System.out.println("                            Optional, default: not set");
+        System.out.println("  --dot-bracket <structure>  Set the expected 2D structure in dot-bracket notation");
         System.out.println("                            Optional, default: not set");
     }
 
