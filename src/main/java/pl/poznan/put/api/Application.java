@@ -12,9 +12,7 @@ public class Application {
   public static void main(String[] args) {
     if (args.length > 0) {
       // Run in CLI mode if arguments are provided
-      new SpringApplicationBuilder(Application.class)
-          .web(WebApplicationType.NONE)
-          .run(args);
+      new SpringApplicationBuilder(Application.class).web(WebApplicationType.NONE).run(args);
     } else {
       // Run in web mode if no arguments
       SpringApplication.run(Application.class, args);
