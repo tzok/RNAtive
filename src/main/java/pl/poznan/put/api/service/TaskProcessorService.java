@@ -468,20 +468,24 @@ public class TaskProcessorService {
     // Check if all models have the same sequence
     if (analyzedModels.stream().allMatch(Objects::nonNull)) {
       // Group models by their sequence
-      var modelsBySequence = analyzedModels.stream()
-          .collect(Collectors.groupingBy(
-              model -> model.structure3D().chains().stream()
-                  .map(chain -> chain.identifier() + ": " + chain.sequence())
-                  .collect(Collectors.joining(", ")),
-              Collectors.mapping(AnalyzedModel::name, Collectors.toList())));
+      var modelsBySequence =
+          analyzedModels.stream()
+              .collect(
+                  Collectors.groupingBy(
+                      model ->
+                          model.structure3D().chains().stream()
+                              .map(chain -> chain.identifier() + ": " + chain.sequence())
+                              .collect(Collectors.joining(", ")),
+                      Collectors.mapping(AnalyzedModel::name, Collectors.toList())));
 
       if (modelsBySequence.size() > 1) {
         logger.error("Models have different nucleotide composition");
         var message = new StringBuilder("Models have different sequences:\n");
-        modelsBySequence.forEach((sequence, models) -> {
-          message.append("\nSequence: ").append(sequence);
-          message.append("\nModels: ").append(String.join(", ", models));
-        });
+        modelsBySequence.forEach(
+            (sequence, models) -> {
+              message.append("\nSequence: ").append(sequence);
+              message.append("\nModels: ").append(String.join(", ", models));
+            });
         throw new RuntimeException(message.toString());
       }
     }
