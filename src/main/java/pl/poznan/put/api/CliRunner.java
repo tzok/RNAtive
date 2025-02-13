@@ -31,6 +31,8 @@ public class CliRunner implements CommandLineRunner {
 
   private final Options options;
 
+  private final ConfigurableApplicationContext applicationContext;
+
   @Autowired
   public CliRunner(ComputeService computeService, ConfigurableApplicationContext applicationContext) {
     this.computeService = computeService;
