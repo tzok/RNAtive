@@ -36,6 +36,33 @@ Key configurations include:
 For development, the application connects to a PostgreSQL database and analysis service containers
 defined in the Docker Compose configuration.
 
+## Running in CLI Mode
+
+The application can be run in CLI mode for command-line processing. To use the CLI:
+
+1. Start the required services:
+```bash
+docker-compose up --build
+```
+
+2. Access the backend container:
+```bash
+docker exec -it rnative-backend-1 bash
+```
+
+3. Run the application in CLI mode:
+```bash
+APP_MODE=cli java -jar app.jar [options]
+```
+
+Available options:
+- `--help`: Show help message
+- `--mol-probity <filter>`: Set MolProbity filter (GOOD_ONLY, GOOD_AND_CAUTION, ALL)
+- `--analyzer <analyzer>`: Set analyzer (BARNABA, BPNET, FR3D, MCANNOTATE, RNAPOLIS, RNAVIEW)
+- `--consensus <mode>`: Set consensus mode (CANONICAL, NON_CANONICAL, STACKING, ALL)
+- `--confidence <level>`: Set confidence level (0.0-1.0)
+- `--dot-bracket <structure>`: Set expected 2D structure
+
 ## Testing API
 
 The repository includes a Python script `scripts/test-api.py` for testing the API endpoints. The script supports three main commands:
