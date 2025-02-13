@@ -427,14 +427,14 @@ public class TaskProcessorService {
   }
 
   private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request, Task task) {
-    var analyzedModels = new ArrayList<AnalyzedModel>();
+    List<AnalyzedModel> analyzedModels;
 
     try (var rnalyzerClient = new RnalyzerClient()) {
       if (request.molProbityFilter() != MolProbityFilter.ALL) {
         rnalyzerClient.initializeSession();
       }
 
-      analyzedModels.addAll(
+      analyzedModels =
           request.files().parallelStream()
               .map(
                   file -> {
@@ -443,7 +443,8 @@ public class TaskProcessorService {
 
                       // Apply MolProbity filtering early if enabled
                       if (request.molProbityFilter() != MolProbityFilter.ALL) {
-                        var response = rnalyzerClient.analyzePdbContent(structure3D.toPdb(), file.name());
+                        var response =
+                            rnalyzerClient.analyzePdbContent(structure3D.toPdb(), file.name());
                         if (!isModelValid(
                             file.name(), response.structure(), request.molProbityFilter(), task)) {
                           return null; // Skip analysis for filtered models
@@ -451,7 +452,8 @@ public class TaskProcessorService {
                       }
 
                       // Only analyze models that passed MolProbity filtering
-                      var jsonResult = analysisClient.analyze(file.name(), file.content(), request.analyzer());
+                      var jsonResult =
+                          analysisClient.analyze(file.name(), file.content(), request.analyzer());
                       var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
                       return new AnalyzedModel(file.name(), structure3D, structure2D);
                     } catch (JsonProcessingException e) {
@@ -460,7 +462,7 @@ public class TaskProcessorService {
                     }
                   })
               .filter(Objects::nonNull)
-              .collect(Collectors.toList()));
+              .toList();
     }
 
     // Check if all models have the same sequence
