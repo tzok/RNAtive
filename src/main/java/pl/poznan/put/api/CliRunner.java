@@ -3,12 +3,14 @@ package pl.poznan.put.api;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import pl.poznan.put.Analyzer;
+import pl.poznan.put.ConsensusMode;
 import pl.poznan.put.api.model.MolProbityFilter;
 
 @Component
 public class CliRunner implements CommandLineRunner {
     private MolProbityFilter molProbityFilter = MolProbityFilter.GOOD_ONLY; // default value
     private Analyzer analyzer = Analyzer.BPNET; // default value
+    private ConsensusMode consensusMode = ConsensusMode.CANONICAL; // default value
 
     @Override
     public void run(String... args) throws Exception {
@@ -52,6 +54,21 @@ public class CliRunner implements CommandLineRunner {
                         return;
                     }
                     break;
+                case "--consensus":
+                    if (i + 1 < args.length) {
+                        try {
+                            consensusMode = ConsensusMode.valueOf(args[i + 1].toUpperCase());
+                            i++; // skip the next argument since we consumed it
+                        } catch (IllegalArgumentException e) {
+                            System.err.println("Invalid consensus mode value. Valid values are: " +
+                                String.join(", ", getConsensusModeValues()));
+                            return;
+                        }
+                    } else {
+                        System.err.println("--consensus requires a value");
+                        return;
+                    }
+                    break;
                 default:
                     System.err.println("Unknown option: " + args[i]);
                     printHelp();
@@ -62,6 +79,7 @@ public class CliRunner implements CommandLineRunner {
         // Process with selected options
         System.out.println("Processing with MolProbity filter: " + molProbityFilter);
         System.out.println("Using analyzer: " + analyzer);
+        System.out.println("Using consensus mode: " + consensusMode);
     }
 
     private void printHelp() {
@@ -72,6 +90,8 @@ public class CliRunner implements CommandLineRunner {
         System.out.println("                            Valid values: " + String.join(", ", getMolProbityValues()));
         System.out.println("  --analyzer <analyzer>      Set the analyzer to use");
         System.out.println("                            Valid values: " + String.join(", ", getAnalyzerValues()));
+        System.out.println("  --consensus <mode>         Set the consensus mode");
+        System.out.println("                            Valid values: " + String.join(", ", getConsensusModeValues()));
     }
 
     private String[] getMolProbityValues() {
@@ -80,5 +100,9 @@ public class CliRunner implements CommandLineRunner {
 
     private String[] getAnalyzerValues() {
         return new String[]{"BARNABA", "BPNET", "FR3D", "MCANNOTATE", "RNAPOLIS", "RNAVIEW"};
+    }
+
+    private String[] getConsensusModeValues() {
+        return new String[]{"CANONICAL", "NON_CANONICAL", "STACKING", "ALL"};
     }
 }
