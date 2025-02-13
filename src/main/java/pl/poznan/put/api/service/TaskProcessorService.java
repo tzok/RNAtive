@@ -76,19 +76,23 @@ public class TaskProcessorService {
 
   private String getModelSequenceRepresentation(PdbModel model) {
     // Group residues by chain identifier
-    var chainGroups = model.residues().stream()
-        .collect(Collectors.groupingBy(
-            PdbResidue::chainIdentifier,
-            Collectors.collectingAndThen(
-                Collectors.toList(),
-                residues -> residues.stream()
-                    .sorted(Comparator.comparing(PdbResidue::residueNumber))
-                    .map(PdbResidue::residueName)
-                    .collect(Collectors.joining()))));
+    var chainGroups =
+        model.residues().stream()
+            .collect(
+                Collectors.groupingBy(
+                    PdbResidue::chainIdentifier,
+                    Collectors.collectingAndThen(
+                        Collectors.toList(),
+                        residues ->
+                            residues.stream()
+                                .sorted()
+                                .map(PdbResidue::oneLetterName)
+                                .map(String::valueOf)
+                                .collect(Collectors.joining()))));
 
     // Create chain:sequence representation sorted by chain identifier
     return chainGroups.entrySet().stream()
-        .sorted(Map.Entry.comparing(Map.Entry::getKey))
+        .sorted(Map.Entry.comparingByKey())
         .map(entry -> entry.getKey() + ": " + entry.getValue())
         .collect(Collectors.joining(", "));
   }
