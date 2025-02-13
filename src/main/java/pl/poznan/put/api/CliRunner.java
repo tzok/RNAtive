@@ -1,33 +1,25 @@
 package pl.poznan.put.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
-import org.apache.commons.cli.*;
-import pl.poznan.put.api.dto.*;
-import pl.poznan.put.api.model.TaskStatus;
-import pl.poznan.put.api.model.VisualizationTool;
-import pl.poznan.put.api.service.ComputeService;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.commons.cli.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
 import pl.poznan.put.Analyzer;
 import pl.poznan.put.ConsensusMode;
+import pl.poznan.put.api.dto.*;
 import pl.poznan.put.api.model.MolProbityFilter;
-import pl.poznan.put.api.repository.TaskRepository;
-import pl.poznan.put.api.service.AnalysisClient;
-import pl.poznan.put.api.service.ConversionClient;
-import pl.poznan.put.api.service.VisualizationClient;
-import pl.poznan.put.api.service.VisualizationService;
-import pl.poznan.put.api.util.DrawerVarnaTz;
+import pl.poznan.put.api.model.TaskStatus;
+import pl.poznan.put.api.model.VisualizationTool;
+import pl.poznan.put.api.service.ComputeService;
 
 @Component
 @ConditionalOnProperty(name = "APP_MODE", havingValue = "cli", matchIfMissing = false)
@@ -42,54 +34,57 @@ public class CliRunner implements CommandLineRunner {
   public CliRunner(ComputeService computeService) {
     this.computeService = computeService;
     this.options = new Options();
-    
-    options.addOption(Option.builder("h")
-        .longOpt("help")
-        .desc("Show this help message")
-        .build());
-        
-    options.addOption(Option.builder("m")
-        .longOpt("mol-probity")
-        .hasArg()
-        .argName("filter")
-        .desc("Set MolProbity filter level (GOOD_ONLY, GOOD_AND_CAUTION, ALL)")
-        .build());
-        
-    options.addOption(Option.builder("a")
-        .longOpt("analyzer")
-        .hasArg()
-        .argName("analyzer")
-        .desc("Set the analyzer (BARNABA, BPNET, FR3D, MCANNOTATE, RNAPOLIS, RNAVIEW)")
-        .build());
-        
-    options.addOption(Option.builder("c")
-        .longOpt("consensus")
-        .hasArg()
-        .argName("mode")
-        .desc("Set consensus mode (CANONICAL, NON_CANONICAL, STACKING, ALL)")
-        .build());
-        
-    options.addOption(Option.builder("l")
-        .longOpt("confidence")
-        .hasArg()
-        .argName("level")
-        .desc("Set confidence level (0.0-1.0)")
-        .type(Double.class)
-        .build());
-        
-    options.addOption(Option.builder("d")
-        .longOpt("dot-bracket")
-        .hasArg()
-        .argName("structure")
-        .desc("Set expected 2D structure in dot-bracket notation")
-        .build());
-        
-    options.addOption(Option.builder("o")
-        .longOpt("csv-output")
-        .hasArg()
-        .argName("file")
-        .desc("Save ranking table to CSV file")
-        .build());
+
+    options.addOption(Option.builder("h").longOpt("help").desc("Show this help message").build());
+
+    options.addOption(
+        Option.builder("m")
+            .longOpt("mol-probity")
+            .hasArg()
+            .argName("filter")
+            .desc("Set MolProbity filter level (GOOD_ONLY, GOOD_AND_CAUTION, ALL)")
+            .build());
+
+    options.addOption(
+        Option.builder("a")
+            .longOpt("analyzer")
+            .hasArg()
+            .argName("analyzer")
+            .desc("Set the analyzer (BARNABA, BPNET, FR3D, MCANNOTATE, RNAPOLIS, RNAVIEW)")
+            .build());
+
+    options.addOption(
+        Option.builder("c")
+            .longOpt("consensus")
+            .hasArg()
+            .argName("mode")
+            .desc("Set consensus mode (CANONICAL, NON_CANONICAL, STACKING, ALL)")
+            .build());
+
+    options.addOption(
+        Option.builder("l")
+            .longOpt("confidence")
+            .hasArg()
+            .argName("level")
+            .desc("Set confidence level (0.0-1.0)")
+            .type(Double.class)
+            .build());
+
+    options.addOption(
+        Option.builder("d")
+            .longOpt("dot-bracket")
+            .hasArg()
+            .argName("structure")
+            .desc("Set expected 2D structure in dot-bracket notation")
+            .build());
+
+    options.addOption(
+        Option.builder("o")
+            .longOpt("csv-output")
+            .hasArg()
+            .argName("file")
+            .desc("Save ranking table to CSV file")
+            .build());
   }
 
   @Override
@@ -133,7 +128,8 @@ public class CliRunner implements CommandLineRunner {
       MolProbityFilter molProbityFilter = MolProbityFilter.ALL;
       if (cmd.hasOption("mol-probity")) {
         try {
-          molProbityFilter = MolProbityFilter.valueOf(cmd.getOptionValue("mol-probity").toUpperCase());
+          molProbityFilter =
+              MolProbityFilter.valueOf(cmd.getOptionValue("mol-probity").toUpperCase());
         } catch (IllegalArgumentException e) {
           System.err.println("Invalid MolProbity filter value");
           printHelp();
@@ -182,23 +178,29 @@ public class CliRunner implements CommandLineRunner {
       String csvOutput = cmd.getOptionValue("csv-output");
 
       // Create compute request
-      ComputeRequest request = new ComputeRequest(
-          files,
-          confidenceLevel,
-          analyzer,
-          consensusMode,
-          dotBracket,
-          molProbityFilter,
-          VisualizationTool.VARNA // Default visualization tool for CLI
-      );
+      ComputeRequest request =
+          new ComputeRequest(
+              files,
+              confidenceLevel,
+              analyzer,
+              consensusMode,
+              dotBracket,
+              molProbityFilter,
+              VisualizationTool.VARNA // Default visualization tool for CLI
+              );
 
       System.out.println("Processing with options:");
       System.out.println("- MolProbity filter: " + request.molProbityFilter());
       System.out.println("- Analyzer: " + request.analyzer());
       System.out.println("- Consensus mode: " + request.consensusMode());
-      System.out.println("- Confidence level: " + (request.confidenceLevel() != null ? request.confidenceLevel() : "not set"));
-      System.out.println("- Dot-bracket structure: " + (request.dotBracket() != null ? request.dotBracket() : "not set"));
-      System.out.println("- Input files: " + files.stream().map(FileData::name).collect(Collectors.joining(", ")));
+      System.out.println(
+          "- Confidence level: "
+              + (request.confidenceLevel() != null ? request.confidenceLevel() : "not set"));
+      System.out.println(
+          "- Dot-bracket structure: "
+              + (request.dotBracket() != null ? request.dotBracket() : "not set"));
+      System.out.println(
+          "- Input files: " + files.stream().map(FileData::name).collect(Collectors.joining(", ")));
 
       // Submit computation
       ComputeResponse response = computeService.submitComputation(request);
@@ -209,7 +211,7 @@ public class CliRunner implements CommandLineRunner {
       while (true) {
         TaskStatusResponse status = computeService.getTaskStatus(taskId);
         System.out.println("Task status: " + status.status());
-        
+
         if (status.status() == TaskStatus.COMPLETED) {
           // Get the results
           TablesResponse tables = computeService.getTables(taskId);
@@ -217,7 +219,7 @@ public class CliRunner implements CommandLineRunner {
           System.out.println("Dot-bracket structure: " + tables.dotBracket());
           System.out.println("\nRanking table:");
           printTable(tables.ranking());
-          
+
           // Write CSV if output path was specified
           if (csvOutput != null) {
             writeTableToCsv(tables.ranking(), csvOutput);
@@ -228,14 +230,17 @@ public class CliRunner implements CommandLineRunner {
           System.err.println("Task failed: " + status.message());
           if (!status.removalReasons().isEmpty()) {
             System.err.println("\nModel removal reasons:");
-            status.removalReasons().forEach((model, reasons) -> {
-              System.err.println(model + ":");
-              reasons.forEach(reason -> System.err.println("  - " + reason));
-            });
+            status
+                .removalReasons()
+                .forEach(
+                    (model, reasons) -> {
+                      System.err.println(model + ":");
+                      reasons.forEach(reason -> System.err.println("  - " + reason));
+                    });
           }
           break;
         }
-        
+
         // Wait before next poll
         Thread.sleep(1000);
       }
@@ -258,31 +263,30 @@ public class CliRunner implements CommandLineRunner {
   private void printTable(TableData table) {
     // Print headers
     System.out.println(String.join("\t", table.headers()));
-    
+
     // Print rows
     for (List<Object> row : table.rows()) {
-      System.out.println(row.stream()
-          .map(Object::toString)
-          .collect(Collectors.joining("\t")));
+      System.out.println(row.stream().map(Object::toString).collect(Collectors.joining("\t")));
     }
   }
 
   private void writeTableToCsv(TableData table, String filePath) throws IOException {
     var csvContent = new StringBuilder();
-    
+
     // Write headers
     csvContent.append(String.join(",", table.headers())).append("\n");
-    
+
     // Write rows
     for (List<Object> row : table.rows()) {
-      csvContent.append(
-          row.stream()
-              .map(Object::toString)
-              .map(this::escapeCsvField)
-              .collect(Collectors.joining(","))
-      ).append("\n");
+      csvContent
+          .append(
+              row.stream()
+                  .map(Object::toString)
+                  .map(this::escapeCsvField)
+                  .collect(Collectors.joining(",")))
+          .append("\n");
     }
-    
+
     Files.writeString(Path.of(filePath), csvContent.toString());
   }
 
