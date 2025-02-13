@@ -40,6 +40,7 @@ public class CliRunner implements CommandLineRunner {
   private ConsensusMode consensusMode = ConsensusMode.CANONICAL; // default value
   private Double confidenceLevel = null; // default value
   private String dotBracket = null; // default value
+  private String csvOutput = null; // default value
 
   @Autowired
   public CliRunner(ComputeService computeService) {
@@ -136,6 +137,15 @@ public class CliRunner implements CommandLineRunner {
             return;
           }
           break;
+        case "--csv-output":
+          if (i + 1 < args.length) {
+            csvOutput = args[i + 1];
+            i++; // skip the next argument since we consumed it
+          } else {
+            System.err.println("--csv-output requires a value");
+            return;
+          }
+          break;
         default:
           System.err.println("Unknown option: " + args[i]);
           printHelp();
@@ -209,6 +219,12 @@ public class CliRunner implements CommandLineRunner {
           System.out.println("Dot-bracket structure: " + tables.dotBracket());
           System.out.println("\nRanking table:");
           printTable(tables.rankingTable());
+          
+          // Write CSV if output path was specified
+          if (csvOutput != null) {
+            writeTableToCsv(tables.rankingTable(), csvOutput);
+            System.out.println("\nRanking table saved to: " + csvOutput);
+          }
           break;
         } else if (status.status() == TaskStatus.FAILED) {
           System.err.println("Task failed: " + status.message());
@@ -250,6 +266,9 @@ public class CliRunner implements CommandLineRunner {
         "  --dot-bracket <structure>  Set the expected 2D structure in dot-bracket notation");
     System.out.println("                            Optional, default: not set");
     System.out.println("");
+    System.out.println("  --csv-output <file>       Save ranking table to CSV file");
+    System.out.println("                            Optional, default: not set");
+    System.out.println("");
     System.out.println("Arguments:");
     System.out.println("  <file1> <file2> ...       One or more PDB files to analyze");
   }
@@ -276,4 +295,30 @@ public class CliRunner implements CommandLineRunner {
           .map(Object::toString)
           .collect(Collectors.joining("\t")));
     }
+  }
+
+  private void writeTableToCsv(TableData table, String filePath) throws IOException {
+    var csvContent = new StringBuilder();
+    
+    // Write headers
+    csvContent.append(String.join(",", table.headers())).append("\n");
+    
+    // Write rows
+    for (List<Object> row : table.rows()) {
+      csvContent.append(
+          row.stream()
+              .map(Object::toString)
+              .map(this::escapeCsvField)
+              .collect(Collectors.joining(","))
+      ).append("\n");
+    }
+    
+    Files.writeString(Path.of(filePath), csvContent.toString());
+  }
+
+  private String escapeCsvField(String field) {
+    if (field.contains(",") || field.contains("\"") || field.contains("\n")) {
+      return "\"" + field.replace("\"", "\"\"") + "\"";
+    }
+    return field;
   }
