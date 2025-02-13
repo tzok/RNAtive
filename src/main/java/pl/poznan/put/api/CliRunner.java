@@ -7,9 +7,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-import pl.poznan.put.api.dto.ComputeRequest;
-import pl.poznan.put.api.dto.FileData;
+import pl.poznan.put.api.dto.*;
+import pl.poznan.put.api.model.TaskStatus;
 import pl.poznan.put.api.model.VisualizationTool;
+import pl.poznan.put.api.service.ComputeService;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -32,13 +33,7 @@ import pl.poznan.put.api.util.DrawerVarnaTz;
 public class CliRunner implements CommandLineRunner {
   private static final Logger logger = LoggerFactory.getLogger(CliRunner.class);
 
-  private final TaskRepository taskRepository;
-  private final ObjectMapper objectMapper;
-  private final AnalysisClient analysisClient;
-  private final VisualizationClient visualizationClient;
-  private final DrawerVarnaTz drawerVarnaTz;
-  private final VisualizationService visualizationService;
-  private final ConversionClient conversionClient;
+  private final ComputeService computeService;
 
   private MolProbityFilter molProbityFilter = MolProbityFilter.GOOD_ONLY; // default value
   private Analyzer analyzer = Analyzer.BPNET; // default value
@@ -47,21 +42,8 @@ public class CliRunner implements CommandLineRunner {
   private String dotBracket = null; // default value
 
   @Autowired
-  public CliRunner(
-      TaskRepository taskRepository,
-      ObjectMapper objectMapper,
-      AnalysisClient analysisClient,
-      VisualizationClient visualizationClient,
-      VisualizationService visualizationService,
-      ConversionClient conversionClient,
-      DrawerVarnaTz drawerVarnaTz) {
-    this.taskRepository = taskRepository;
-    this.objectMapper = objectMapper;
-    this.analysisClient = analysisClient;
-    this.visualizationClient = visualizationClient;
-    this.visualizationService = visualizationService;
-    this.conversionClient = conversionClient;
-    this.drawerVarnaTz = drawerVarnaTz;
+  public CliRunner(ComputeService computeService) {
+    this.computeService = computeService;
   }
 
   @Override
@@ -190,24 +172,63 @@ public class CliRunner implements CommandLineRunner {
       }
     }
 
-    // Create and process compute request
-    ComputeRequest request = new ComputeRequest(
-        files,
-        confidenceLevel,
-        analyzer,
-        consensusMode,
-        dotBracket,
-        molProbityFilter,
-        VisualizationTool.VARNA // Default visualization tool for CLI
-    );
+    try {
+      // Create compute request
+      ComputeRequest request = new ComputeRequest(
+          files,
+          confidenceLevel,
+          analyzer,
+          consensusMode,
+          dotBracket,
+          molProbityFilter,
+          VisualizationTool.VARNA // Default visualization tool for CLI
+      );
 
-    System.out.println("Processing with options:");
-    System.out.println("- MolProbity filter: " + request.molProbityFilter());
-    System.out.println("- Analyzer: " + request.analyzer());
-    System.out.println("- Consensus mode: " + request.consensusMode());
-    System.out.println("- Confidence level: " + (request.confidenceLevel() != null ? request.confidenceLevel() : "not set"));
-    System.out.println("- Dot-bracket structure: " + (request.dotBracket() != null ? request.dotBracket() : "not set"));
-    System.out.println("- Input files: " + files.stream().map(FileData::name).collect(Collectors.joining(", ")));
+      System.out.println("Processing with options:");
+      System.out.println("- MolProbity filter: " + request.molProbityFilter());
+      System.out.println("- Analyzer: " + request.analyzer());
+      System.out.println("- Consensus mode: " + request.consensusMode());
+      System.out.println("- Confidence level: " + (request.confidenceLevel() != null ? request.confidenceLevel() : "not set"));
+      System.out.println("- Dot-bracket structure: " + (request.dotBracket() != null ? request.dotBracket() : "not set"));
+      System.out.println("- Input files: " + files.stream().map(FileData::name).collect(Collectors.joining(", ")));
+
+      // Submit computation
+      ComputeResponse response = computeService.submitComputation(request);
+      String taskId = response.taskId();
+      System.out.println("Task submitted with ID: " + taskId);
+
+      // Poll for results
+      while (true) {
+        TaskStatusResponse status = computeService.getTaskStatus(taskId);
+        System.out.println("Task status: " + status.status());
+        
+        if (status.status() == TaskStatus.COMPLETED) {
+          // Get the results
+          TablesResponse tables = computeService.getTables(taskId);
+          System.out.println("\nResults:");
+          System.out.println("Dot-bracket structure: " + tables.dotBracket());
+          System.out.println("\nRanking table:");
+          printTable(tables.rankingTable());
+          break;
+        } else if (status.status() == TaskStatus.FAILED) {
+          System.err.println("Task failed: " + status.message());
+          if (!status.removalReasons().isEmpty()) {
+            System.err.println("\nModel removal reasons:");
+            status.removalReasons().forEach((model, reasons) -> {
+              System.err.println(model + ":");
+              reasons.forEach(reason -> System.err.println("  - " + reason));
+            });
+          }
+          break;
+        }
+        
+        // Wait before next poll
+        Thread.sleep(1000);
+      }
+    } catch (Exception e) {
+      System.err.println("Error: " + e.getMessage());
+      System.exit(1);
+    }
   }
 
   private void printHelp() {
@@ -245,3 +266,14 @@ public class CliRunner implements CommandLineRunner {
     return new String[] {"CANONICAL", "NON_CANONICAL", "STACKING", "ALL"};
   }
 }
+  private void printTable(TableData table) {
+    // Print headers
+    System.out.println(String.join("\t", table.headers()));
+    
+    // Print rows
+    for (List<Object> row : table.rows()) {
+      System.out.println(row.stream()
+          .map(Object::toString)
+          .collect(Collectors.joining("\t")));
+    }
+  }
