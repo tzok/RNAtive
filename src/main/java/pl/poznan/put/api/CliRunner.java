@@ -7,6 +7,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import pl.poznan.put.api.dto.ComputeRequest;
+import pl.poznan.put.api.dto.FileData;
+import pl.poznan.put.api.model.VisualizationTool;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 import pl.poznan.put.Analyzer;
 import pl.poznan.put.ConsensusMode;
 import pl.poznan.put.api.model.MolProbityFilter;
@@ -60,6 +70,8 @@ public class CliRunner implements CommandLineRunner {
       System.out.println("No arguments provided. Use --help for usage information.");
       return;
     }
+
+    List<String> filePaths = new ArrayList<>();
 
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
@@ -149,17 +161,57 @@ public class CliRunner implements CommandLineRunner {
       }
     }
 
-    // Process with selected options
-    System.out.println("Processing with MolProbity filter: " + molProbityFilter);
-    System.out.println("Using analyzer: " + analyzer);
-    System.out.println("Using consensus mode: " + consensusMode);
-    System.out.println(
-        "Confidence level: " + (confidenceLevel != null ? confidenceLevel : "not set"));
-    System.out.println("Dot-bracket structure: " + (dotBracket != null ? dotBracket : "not set"));
+    // Collect remaining arguments as file paths
+    for (; i < args.length; i++) {
+      if (args[i].startsWith("--")) {
+        System.err.println("Unexpected option after files: " + args[i]);
+        printHelp();
+        return;
+      }
+      filePaths.add(args[i]);
+    }
+
+    if (filePaths.isEmpty()) {
+      System.err.println("No input files provided");
+      printHelp();
+      return;
+    }
+
+    // Create file data objects from paths
+    List<FileData> files = new ArrayList<>();
+    for (String path : filePaths) {
+      try {
+        String content = Files.readString(Path.of(path));
+        String filename = Path.of(path).getFileName().toString();
+        files.add(new FileData(filename, content));
+      } catch (IOException e) {
+        System.err.println("Error reading file " + path + ": " + e.getMessage());
+        return;
+      }
+    }
+
+    // Create and process compute request
+    ComputeRequest request = new ComputeRequest(
+        files,
+        confidenceLevel,
+        analyzer,
+        consensusMode,
+        dotBracket,
+        molProbityFilter,
+        VisualizationTool.VARNA // Default visualization tool for CLI
+    );
+
+    System.out.println("Processing with options:");
+    System.out.println("- MolProbity filter: " + request.molProbityFilter());
+    System.out.println("- Analyzer: " + request.analyzer());
+    System.out.println("- Consensus mode: " + request.consensusMode());
+    System.out.println("- Confidence level: " + (request.confidenceLevel() != null ? request.confidenceLevel() : "not set"));
+    System.out.println("- Dot-bracket structure: " + (request.dotBracket() != null ? request.dotBracket() : "not set"));
+    System.out.println("- Input files: " + files.stream().map(FileData::name).collect(Collectors.joining(", ")));
   }
 
   private void printHelp() {
-    System.out.println("Usage: java -jar application.jar [options]");
+    System.out.println("Usage: java -jar application.jar [options] <file1> <file2> ...");
     System.out.println("Options:");
     System.out.println("  --help                    Show this help message");
     System.out.println("  --mol-probity <filter>    Set MolProbity filter level");
@@ -176,6 +228,9 @@ public class CliRunner implements CommandLineRunner {
     System.out.println(
         "  --dot-bracket <structure>  Set the expected 2D structure in dot-bracket notation");
     System.out.println("                            Optional, default: not set");
+    System.out.println("");
+    System.out.println("Arguments:");
+    System.out.println("  <file1> <file2> ...       One or more PDB files to analyze");
   }
 
   private String[] getMolProbityValues() {
