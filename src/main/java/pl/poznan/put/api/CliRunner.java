@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.stereotype.Component;
 import pl.poznan.put.Analyzer;
 import pl.poznan.put.ConsensusMode;
@@ -31,8 +32,9 @@ public class CliRunner implements CommandLineRunner {
   private final Options options;
 
   @Autowired
-  public CliRunner(ComputeService computeService) {
+  public CliRunner(ComputeService computeService, ConfigurableApplicationContext applicationContext) {
     this.computeService = computeService;
+    this.applicationContext = applicationContext;
     this.options = new Options();
 
     options.addOption(Option.builder("h").longOpt("help").desc("Show this help message").build());
@@ -225,6 +227,7 @@ public class CliRunner implements CommandLineRunner {
             writeTableToCsv(tables.ranking(), csvOutput);
             System.out.println("\nRanking table saved to: " + csvOutput);
           }
+          applicationContext.close();
           break;
         } else if (status.status() == TaskStatus.FAILED) {
           System.err.println("Task failed: " + status.message());
@@ -246,6 +249,7 @@ public class CliRunner implements CommandLineRunner {
       }
     } catch (Exception e) {
       System.err.println("Error: " + e.getMessage());
+      applicationContext.close();
       System.exit(1);
     }
   }
