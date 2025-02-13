@@ -31,6 +31,7 @@ public class CliRunner implements CommandLineRunner {
     private MolProbityFilter molProbityFilter = MolProbityFilter.GOOD_ONLY; // default value
     private Analyzer analyzer = Analyzer.BPNET; // default value
     private ConsensusMode consensusMode = ConsensusMode.CANONICAL; // default value
+    private Double confidenceLevel = null; // default value
 
     @Autowired
     public CliRunner(
@@ -107,6 +108,25 @@ public class CliRunner implements CommandLineRunner {
                         return;
                     }
                     break;
+                case "--confidence":
+                    if (i + 1 < args.length) {
+                        try {
+                            double value = Double.parseDouble(args[i + 1]);
+                            if (value < 0.0 || value > 1.0) {
+                                System.err.println("Confidence level must be between 0.0 and 1.0");
+                                return;
+                            }
+                            confidenceLevel = value;
+                            i++; // skip the next argument since we consumed it
+                        } catch (NumberFormatException e) {
+                            System.err.println("Invalid confidence level. Must be a number between 0.0 and 1.0");
+                            return;
+                        }
+                    } else {
+                        System.err.println("--confidence requires a value");
+                        return;
+                    }
+                    break;
                 default:
                     System.err.println("Unknown option: " + args[i]);
                     printHelp();
@@ -118,6 +138,7 @@ public class CliRunner implements CommandLineRunner {
         System.out.println("Processing with MolProbity filter: " + molProbityFilter);
         System.out.println("Using analyzer: " + analyzer);
         System.out.println("Using consensus mode: " + consensusMode);
+        System.out.println("Confidence level: " + (confidenceLevel != null ? confidenceLevel : "not set"));
     }
 
     private void printHelp() {
@@ -130,6 +151,8 @@ public class CliRunner implements CommandLineRunner {
         System.out.println("                            Valid values: " + String.join(", ", getAnalyzerValues()));
         System.out.println("  --consensus <mode>         Set the consensus mode");
         System.out.println("                            Valid values: " + String.join(", ", getConsensusModeValues()));
+        System.out.println("  --confidence <level>       Set the confidence level (0.0-1.0)");
+        System.out.println("                            Optional, default: not set");
     }
 
     private String[] getMolProbityValues() {
