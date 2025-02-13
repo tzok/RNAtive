@@ -7,6 +7,8 @@ services:
   backend:
     environment:
       - ANALYSIS_SERVICE_URL=http://adapters
+    volumes:
+      - /mnt:/mnt
 
   nginx:
     ports:
