@@ -10,12 +10,14 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @EnableAsync
 public class Application {
   public static void main(String[] args) {
-    if (args.length > 0) {
-      // Run in CLI mode if arguments are provided
-      new SpringApplicationBuilder(Application.class).web(WebApplicationType.NONE).run(args);
-    } else {
-      // Run in web mode if no arguments
-      SpringApplication.run(Application.class, args);
+    SpringApplicationBuilder builder = new SpringApplicationBuilder(Application.class);
+    
+    String appMode = System.getenv("APP_MODE");
+    if ("cli".equalsIgnoreCase(appMode)) {
+      // Run in CLI mode
+      builder.web(WebApplicationType.NONE);
     }
+    
+    builder.run(args);
   }
 }
