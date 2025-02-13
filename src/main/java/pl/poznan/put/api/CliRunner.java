@@ -1,16 +1,54 @@
 package pl.poznan.put.api;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import pl.poznan.put.Analyzer;
 import pl.poznan.put.ConsensusMode;
 import pl.poznan.put.api.model.MolProbityFilter;
+import pl.poznan.put.api.repository.TaskRepository;
+import pl.poznan.put.api.service.AnalysisClient;
+import pl.poznan.put.api.service.ConversionClient;
+import pl.poznan.put.api.service.VisualizationClient;
+import pl.poznan.put.api.service.VisualizationService;
+import pl.poznan.put.api.util.DrawerVarnaTz;
 
 @Component
 public class CliRunner implements CommandLineRunner {
+    private static final Logger logger = LoggerFactory.getLogger(CliRunner.class);
+    
+    private final TaskRepository taskRepository;
+    private final ObjectMapper objectMapper;
+    private final AnalysisClient analysisClient;
+    private final VisualizationClient visualizationClient;
+    private final DrawerVarnaTz drawerVarnaTz;
+    private final VisualizationService visualizationService;
+    private final ConversionClient conversionClient;
+
     private MolProbityFilter molProbityFilter = MolProbityFilter.GOOD_ONLY; // default value
     private Analyzer analyzer = Analyzer.BPNET; // default value
     private ConsensusMode consensusMode = ConsensusMode.CANONICAL; // default value
+
+    @Autowired
+    public CliRunner(
+            TaskRepository taskRepository,
+            ObjectMapper objectMapper,
+            AnalysisClient analysisClient,
+            VisualizationClient visualizationClient,
+            VisualizationService visualizationService,
+            ConversionClient conversionClient,
+            DrawerVarnaTz drawerVarnaTz) {
+        this.taskRepository = taskRepository;
+        this.objectMapper = objectMapper;
+        this.analysisClient = analysisClient;
+        this.visualizationClient = visualizationClient;
+        this.visualizationService = visualizationService;
+        this.conversionClient = conversionClient;
+        this.drawerVarnaTz = drawerVarnaTz;
+    }
 
     @Override
     public void run(String... args) throws Exception {
