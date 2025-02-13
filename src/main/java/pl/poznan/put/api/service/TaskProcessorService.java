@@ -88,6 +88,7 @@ public class TaskProcessorService {
                                 .sorted()
                                 .map(PdbResidue::oneLetterName)
                                 .map(String::valueOf)
+                                .map(String::toUpperCase)
                                 .collect(Collectors.joining()))));
 
     // Create chain:sequence representation sorted by chain identifier
