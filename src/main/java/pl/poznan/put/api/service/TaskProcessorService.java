@@ -434,27 +434,33 @@ public class TaskProcessorService {
         rnalyzerClient.initializeSession();
       }
 
-      for (var file : request.files()) {
-        try {
-          var structure3D = new PdbParser().parse(file.content()).get(0);
+      analyzedModels.addAll(
+          request.files().parallelStream()
+              .map(
+                  file -> {
+                    try {
+                      var structure3D = new PdbParser().parse(file.content()).get(0);
 
-          // Apply MolProbity filtering early if enabled
-          if (request.molProbityFilter() != MolProbityFilter.ALL) {
-            var response = rnalyzerClient.analyzePdbContent(structure3D.toPdb(), file.name());
-            if (!isModelValid(
-                file.name(), response.structure(), request.molProbityFilter(), task)) {
-              continue; // Skip analysis for filtered models
-            }
-          }
+                      // Apply MolProbity filtering early if enabled
+                      if (request.molProbityFilter() != MolProbityFilter.ALL) {
+                        var response = rnalyzerClient.analyzePdbContent(structure3D.toPdb(), file.name());
+                        if (!isModelValid(
+                            file.name(), response.structure(), request.molProbityFilter(), task)) {
+                          return null; // Skip analysis for filtered models
+                        }
+                      }
 
-          // Only analyze models that passed MolProbity filtering
-          var jsonResult = analysisClient.analyze(file.name(), file.content(), request.analyzer());
-          var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
-          analyzedModels.add(new AnalyzedModel(file.name(), structure3D, structure2D));
-        } catch (JsonProcessingException e) {
-          logger.error("Failed to parse analysis result for file: {}", file.name(), e);
-        }
-      }
+                      // Only analyze models that passed MolProbity filtering
+                      var jsonResult = analysisClient.analyze(file.name(), file.content(), request.analyzer());
+                      var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
+                      return new AnalyzedModel(file.name(), structure3D, structure2D);
+                    } catch (JsonProcessingException e) {
+                      logger.error("Failed to parse analysis result for file: {}", file.name(), e);
+                      return null;
+                    }
+                  })
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList()));
     }
 
     // Check if all models have the same sequence
