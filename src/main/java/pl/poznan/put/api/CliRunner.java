@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import pl.poznan.put.Analyzer;
 import pl.poznan.put.ConsensusMode;
@@ -17,6 +18,7 @@ import pl.poznan.put.api.service.VisualizationService;
 import pl.poznan.put.api.util.DrawerVarnaTz;
 
 @Component
+@ConditionalOnProperty(name = "APP_MODE", havingValue = "cli", matchIfMissing = false)
 public class CliRunner implements CommandLineRunner {
   private static final Logger logger = LoggerFactory.getLogger(CliRunner.class);
 
