@@ -785,24 +785,9 @@ public class TaskProcessorService {
           .collect(Collectors.joining(", "));
       logger.info("Model {}: {}", model.name, mappingDescription);
 
-      // For each model, create and apply its chain mapping
-      for (var modelEntry : chainsByModel.entrySet()) {
-        var modelName = modelEntry.getKey();
-        var chainsInModel = modelEntry.getValue();
-
-        var model =
-            models.stream()
-                .filter(m -> m.name.equals(modelName))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Model not found: " + modelName));
-
-        var chainMapping =
-            chainsInModel.stream()
-                .collect(Collectors.toMap(oldChain -> oldChain, oldChain -> newChainName));
-
-        ParsedModel modelWithRenamedChains = renameChain(model, chainMapping);
-        result.add(modelWithRenamedChains);
-      }
+      // Apply the chain mapping to create new model
+      ParsedModel modelWithRenamedChains = renameChain(model, modelChainMapping);
+      result.add(modelWithRenamedChains);
     }
 
     return result;
