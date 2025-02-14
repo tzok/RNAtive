@@ -710,27 +710,44 @@ public class TaskProcessorService {
       availableChainNames.add(String.valueOf(c));
     }
 
-    // Create mapping of sequence to new chain name
-    var sequenceToNewChain = new HashMap<String, String>();
+    // Apply chain renaming
     var chainNameIndex = 0;
-    
-    // Assign new chain names to sequences
     for (var entry : sequenceToModelChains.entrySet()) {
       var sequence = entry.getKey();
       var modelChains = entry.getValue();
       var newChainName = availableChainNames.get(chainNameIndex++);
-      sequenceToNewChain.put(sequence, newChainName);
       
+      // Log the planned changes
       var mappingDescription = modelChains.stream()
           .map(pair -> String.format("%s:chain %s -> %s", 
                pair.getLeft(), pair.getRight(), newChainName))
           .collect(Collectors.joining(", "));
-      
       logger.info("Sequence {}: {}", sequence, mappingDescription);
+      
+      // Apply the renaming for each model's chain
+      for (var modelChain : modelChains) {
+        var model = models.stream()
+            .filter(m -> m.name().equals(modelChain.getLeft()))
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("Model not found: " + modelChain.getLeft()));
+        renameChain(model, modelChain.getRight(), newChainName);
+      }
     }
-    
-    // TODO: Apply the chain renaming using sequenceToNewChain mapping
-    logger.info("Chain name mapping created, renaming implementation pending");
+  }
+
+  /**
+   * Renames a chain in the given model.
+   * @param model The model containing the chain to be renamed
+   * @param oldChainName The current name of the chain
+   * @param newChainName The new name to assign to the chain
+   */
+  private void renameChain(AnalyzedModel model, String oldChainName, String newChainName) {
+    // TODO: Implement chain renaming logic
+    // 1. Update chain identifiers in PdbModel (structure3D)
+    // 2. Update chain identifiers in BaseInteractions (structure2D)
+    // 3. Ensure all related data structures are updated consistently
+    logger.info("Chain renaming from {} to {} not yet implemented for model {}", 
+                oldChainName, newChainName, model.name());
   }
 
   private List<RankedModel> generateRankedModels(
