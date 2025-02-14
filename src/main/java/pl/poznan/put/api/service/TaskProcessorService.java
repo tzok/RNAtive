@@ -734,14 +734,14 @@ public class TaskProcessorService {
       // For each model, create and apply its chain mapping
       for (var modelEntry : chainsByModel.entrySet()) {
         var modelName = modelEntry.getKey();
-        var modelChains = modelEntry.getValue();
+        var chainsInModel = modelEntry.getValue();
         
         var model = models.stream()
             .filter(m -> m.name.equals(modelName))
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("Model not found: " + modelName));
             
-        var chainMapping = modelChains.stream()
+        var chainMapping = chainsInModel.stream()
             .collect(Collectors.toMap(
                 oldChain -> oldChain,
                 oldChain -> newChainName));
