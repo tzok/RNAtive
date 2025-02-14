@@ -244,6 +244,7 @@ public class CliRunner implements CommandLineRunner {
                       reasons.forEach(reason -> System.err.println("  - " + reason));
                     });
           }
+          applicationContext.close();
           break;
         }
 
