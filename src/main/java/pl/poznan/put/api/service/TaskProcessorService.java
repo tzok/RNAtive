@@ -88,12 +88,12 @@ public class TaskProcessorService {
     }
   }
 
-  private ModelSequences collectModelSequences(List<AnalyzedModel> models) {
+  private ModelSequences collectModelSequences(List<ParsedModel> models) {
     var modelToChainSequences = new HashMap<String, Map<String, String>>();
     var uniqueSequences = new HashSet<String>();
 
     for (var model : models) {
-      var chainSequences = model.structure3D().residues().stream()
+      var chainSequences = model.structure3D.residues().stream()
           .collect(
               Collectors.groupingBy(
                   PdbResidue::chainIdentifier,
@@ -107,7 +107,7 @@ public class TaskProcessorService {
                               .map(String::toUpperCase)
                               .collect(Collectors.joining()))));
       
-      modelToChainSequences.put(model.name(), chainSequences);
+      modelToChainSequences.put(model.name, chainSequences);
       uniqueSequences.addAll(chainSequences.values());
     }
 
@@ -517,14 +517,14 @@ public class TaskProcessorService {
         .toList();
 
     // Check if all models have the same sequence
-    if (analyzedModels.stream().allMatch(Objects::nonNull)) {
-      var modelSequences = collectModelSequences(analyzedModels);
-      var firstModelSequences = modelSequences.getSequencesForModel(analyzedModels.get(0).name(), true);
+    if (validModels.stream().allMatch(Objects::nonNull)) {
+      var modelSequences = collectModelSequences(validModels);
+      var firstModelSequences = modelSequences.getSequencesForModel(validModels.get(0).name, true);
       
       // Check if all models have the same sequences (ignoring chain names)
-      var mismatchedModels = analyzedModels.stream()
-          .filter(model -> !modelSequences.getSequencesForModel(model.name(), true).equals(firstModelSequences))
-          .map(AnalyzedModel::name)
+      var mismatchedModels = validModels.stream()
+          .filter(model -> !modelSequences.getSequencesForModel(model.name, true).equals(firstModelSequences))
+          .map(model -> model.name)
           .collect(Collectors.toList());
 
       if (!mismatchedModels.isEmpty()) {
@@ -536,8 +536,23 @@ public class TaskProcessorService {
       }
 
       // If sequences match, unify chain names across all models
-      unifyChainNames(analyzedModels, modelSequences);
-      }
+      unifyChainNames(validModels, modelSequences);
+    }
+
+    // Second pass: Analyze valid models
+    var analyzedModels = validModels.parallelStream()
+        .map(model -> {
+          try {
+            var jsonResult = analysisClient.analyze(model.name, model.content, request.analyzer());
+            var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
+            return new AnalyzedModel(model.name, model.structure3D, structure2D);
+          } catch (JsonProcessingException e) {
+            logger.error("Failed to parse analysis result for file: {}", model.name, e);
+            return null;
+          }
+        })
+        .filter(Objects::nonNull)
+        .toList();
 
     return analyzedModels;
   }
@@ -673,7 +688,7 @@ public class TaskProcessorService {
    * Unifies chain names across all models based on sequence matching.
    * This ensures that chains with the same sequence have the same identifier across all models.
    */
-  private void unifyChainNames(List<AnalyzedModel> models, ModelSequences modelSequences) {
+  private void unifyChainNames(List<ParsedModel> models, ModelSequences modelSequences) {
     logger.info("Starting chain name unification");
     
     // Create a mapping: sequence -> list of (modelName, chainName) pairs
@@ -681,7 +696,7 @@ public class TaskProcessorService {
     
     // Populate the mapping
     for (var model : models) {
-      var chainSequences = modelSequences.getSequencesForModel(model.name());
+      var chainSequences = modelSequences.getSequencesForModel(model.name);
       for (var entry : chainSequences.entrySet()) {
         var chainName = entry.getKey();
         var sequence = entry.getValue();
@@ -727,7 +742,7 @@ public class TaskProcessorService {
       // Apply the renaming for each model's chain
       for (var modelChain : modelChains) {
         var model = models.stream()
-            .filter(m -> m.name().equals(modelChain.getLeft()))
+            .filter(m -> m.name.equals(modelChain.getLeft()))
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("Model not found: " + modelChain.getLeft()));
         renameChain(model, modelChain.getRight(), newChainName);
@@ -741,13 +756,12 @@ public class TaskProcessorService {
    * @param oldChainName The current name of the chain
    * @param newChainName The new name to assign to the chain
    */
-  private void renameChain(AnalyzedModel model, String oldChainName, String newChainName) {
+  private void renameChain(ParsedModel model, String oldChainName, String newChainName) {
     // TODO: Implement chain renaming logic
-    // 1. Update chain identifiers in PdbModel (structure3D)
-    // 2. Update chain identifiers in BaseInteractions (structure2D)
-    // 3. Ensure all related data structures are updated consistently
+    // 1. Update chain identifiers in PdbModel
+    // 2. Ensure all related data structures are updated consistently
     logger.info("Chain renaming from {} to {} not yet implemented for model {}", 
-                oldChainName, newChainName, model.name());
+                oldChainName, newChainName, model.name);
   }
 
   private List<RankedModel> generateRankedModels(
