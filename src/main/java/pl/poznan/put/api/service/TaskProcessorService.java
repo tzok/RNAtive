@@ -78,8 +78,7 @@ public class TaskProcessorService {
   }
 
   private record ModelSequences(
-      Map<String, Map<String, String>> modelToChainSequences,
-      Set<String> uniqueSequences) {
+      Map<String, Map<String, String>> modelToChainSequences, Set<String> uniqueSequences) {
 
     public Map<String, String> getSequencesForModel(String modelName) {
       return modelToChainSequences.get(modelName);
@@ -96,20 +95,21 @@ public class TaskProcessorService {
     var uniqueSequences = new HashSet<String>();
 
     for (var model : models) {
-      var chainSequences = model.structure3D.residues().stream()
-          .collect(
-              Collectors.groupingBy(
-                  PdbResidue::chainIdentifier,
-                  Collectors.collectingAndThen(
-                      Collectors.toList(),
-                      residues ->
-                          residues.stream()
-                              .sorted()
-                              .map(PdbResidue::oneLetterName)
-                              .map(String::valueOf)
-                              .map(String::toUpperCase)
-                              .collect(Collectors.joining()))));
-      
+      var chainSequences =
+          model.structure3D.residues().stream()
+              .collect(
+                  Collectors.groupingBy(
+                      PdbResidue::chainIdentifier,
+                      Collectors.collectingAndThen(
+                          Collectors.toList(),
+                          residues ->
+                              residues.stream()
+                                  .sorted()
+                                  .map(PdbResidue::oneLetterName)
+                                  .map(String::valueOf)
+                                  .map(String::toUpperCase)
+                                  .collect(Collectors.joining()))));
+
       modelToChainSequences.put(model.name, chainSequences);
       uniqueSequences.addAll(chainSequences.values());
     }
@@ -481,39 +481,48 @@ public class TaskProcessorService {
         rnalyzerClient.initializeSession();
       }
 
-      validModels = request.files().parallelStream()
-          .map(file -> {
-            try {
-              var structure3D = new PdbParser().parse(file.content()).get(0);
-              
-              // Apply MolProbity filtering if enabled
-              if (request.molProbityFilter() != MolProbityFilter.ALL) {
-                var response = rnalyzerClient.analyzePdbContent(structure3D.toPdb(), file.name());
-                if (!isModelValid(file.name(), response.structure(), request.molProbityFilter(), task)) {
-                  return null;
-                }
-              }
-              
-              return new ParsedModel(file.name(), file.content(), structure3D);
-            } catch (Exception e) {
-              logger.error("Failed to parse or validate file: {}", file.name(), e);
-              return null;
-            }
-          })
-          .filter(Objects::nonNull)
-          .toList();
+      validModels =
+          request.files().parallelStream()
+              .map(
+                  file -> {
+                    try {
+                      var structure3D = new PdbParser().parse(file.content()).get(0);
+
+                      // Apply MolProbity filtering if enabled
+                      if (request.molProbityFilter() != MolProbityFilter.ALL) {
+                        var response =
+                            rnalyzerClient.analyzePdbContent(structure3D.toPdb(), file.name());
+                        if (!isModelValid(
+                            file.name(), response.structure(), request.molProbityFilter(), task)) {
+                          return null;
+                        }
+                      }
+
+                      return new ParsedModel(file.name(), file.content(), structure3D);
+                    } catch (Exception e) {
+                      logger.error("Failed to parse or validate file: {}", file.name(), e);
+                      return null;
+                    }
+                  })
+              .filter(Objects::nonNull)
+              .toList();
     }
 
     // Check if all models have the same sequence
     if (validModels.stream().allMatch(Objects::nonNull)) {
       var modelSequences = collectModelSequences(validModels);
       var firstModelSequences = modelSequences.getSequencesForModel(validModels.get(0).name, true);
-      
+
       // Check if all models have the same sequences (ignoring chain names)
-      var mismatchedModels = validModels.stream()
-          .filter(model -> !modelSequences.getSequencesForModel(model.name, true).equals(firstModelSequences))
-          .map(model -> model.name)
-          .collect(Collectors.toList());
+      var mismatchedModels =
+          validModels.stream()
+              .filter(
+                  model ->
+                      !modelSequences
+                          .getSequencesForModel(model.name, true)
+                          .equals(firstModelSequences))
+              .map(model -> model.name)
+              .collect(Collectors.toList());
 
       if (!mismatchedModels.isEmpty()) {
         logger.error("Models have different nucleotide composition");
@@ -524,23 +533,26 @@ public class TaskProcessorService {
       }
 
       // If sequences match, unify chain names across all models
-      unifyChainNames(validModels, modelSequences);
+      validModels = unifyChainNames(validModels, modelSequences);
     }
 
     // Second pass: Analyze valid models
-    var analyzedModels = validModels.parallelStream()
-        .map(model -> {
-          try {
-            var jsonResult = analysisClient.analyze(model.name, model.content, request.analyzer());
-            var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
-            return new AnalyzedModel(model.name, model.structure3D, structure2D);
-          } catch (JsonProcessingException e) {
-            logger.error("Failed to parse analysis result for file: {}", model.name, e);
-            return null;
-          }
-        })
-        .filter(Objects::nonNull)
-        .toList();
+    var analyzedModels =
+        validModels.parallelStream()
+            .map(
+                model -> {
+                  try {
+                    var jsonResult =
+                        analysisClient.analyze(model.name, model.content, request.analyzer());
+                    var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
+                    return new AnalyzedModel(model.name, model.structure3D, structure2D);
+                  } catch (JsonProcessingException e) {
+                    logger.error("Failed to parse analysis result for file: {}", model.name, e);
+                    return null;
+                  }
+                })
+            .filter(Objects::nonNull)
+            .toList();
 
     return analyzedModels;
   }
@@ -673,15 +685,17 @@ public class TaskProcessorService {
   }
 
   /**
-   * Unifies chain names across all models based on sequence matching.
-   * This ensures that chains with the same sequence have the same identifier across all models.
+   * Unifies chain names across all models based on sequence matching. This ensures that chains with
+   * the same sequence have the same identifier across all models.
    */
-  private void unifyChainNames(List<ParsedModel> models, ModelSequences modelSequences) {
+  private List<ParsedModel> unifyChainNames(
+      List<ParsedModel> models, ModelSequences modelSequences) {
     logger.info("Starting chain name unification");
-    
+
     // Create a mapping: sequence -> list of (modelName, chainName) pairs
-    MultiValuedMap<String, Pair<String, String>> sequenceToModelChains = new ArrayListValuedHashMap<>();
-    
+    MultiValuedMap<String, Pair<String, String>> sequenceToModelChains =
+        new ArrayListValuedHashMap<>();
+
     // Populate the mapping
     for (var model : models) {
       var chainSequences = modelSequences.getSequencesForModel(model.name);
@@ -691,7 +705,7 @@ public class TaskProcessorService {
         sequenceToModelChains.put(sequence, Pair.of(model.name, chainName));
       }
     }
-    
+
     // Create a list of available chain names in the specified order
     var availableChainNames = new ArrayList<String>();
     // Uppercase ASCII letters (A-Z)
@@ -713,46 +727,55 @@ public class TaskProcessorService {
 
     // Apply chain renaming
     var chainNameIndex = 0;
+    var result = new ArrayList<ParsedModel>();
     for (var entry : sequenceToModelChains.entries()) {
       var sequence = entry.getKey();
       var modelChains = sequenceToModelChains.get(sequence);
       var newChainName = availableChainNames.get(chainNameIndex++);
-      
+
       // Log the planned changes
-      var mappingDescription = modelChains.stream()
-          .map(pair -> String.format("%s:chain %s -> %s", 
-               pair.getLeft(), pair.getRight(), newChainName))
-          .collect(Collectors.joining(", "));
+      var mappingDescription =
+          modelChains.stream()
+              .map(
+                  pair ->
+                      String.format(
+                          "%s:chain %s -> %s", pair.getLeft(), pair.getRight(), newChainName))
+              .collect(Collectors.joining(", "));
       logger.info("Sequence {}: {}", sequence, mappingDescription);
-      
+
       // Group chains by model
-      var chainsByModel = modelChains.stream()
-          .collect(Collectors.groupingBy(
-              Pair::getLeft,
-              Collectors.mapping(Pair::getRight, Collectors.toList())));
-      
+      var chainsByModel =
+          modelChains.stream()
+              .collect(
+                  Collectors.groupingBy(
+                      Pair::getLeft, Collectors.mapping(Pair::getRight, Collectors.toList())));
+
       // For each model, create and apply its chain mapping
       for (var modelEntry : chainsByModel.entrySet()) {
         var modelName = modelEntry.getKey();
         var chainsInModel = modelEntry.getValue();
-        
-        var model = models.stream()
-            .filter(m -> m.name.equals(modelName))
-            .findFirst()
-            .orElseThrow(() -> new IllegalStateException("Model not found: " + modelName));
-            
-        var chainMapping = chainsInModel.stream()
-            .collect(Collectors.toMap(
-                oldChain -> oldChain,
-                oldChain -> newChainName));
-            
-        renameChain(model, chainMapping);
+
+        var model =
+            models.stream()
+                .filter(m -> m.name.equals(modelName))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Model not found: " + modelName));
+
+        var chainMapping =
+            chainsInModel.stream()
+                .collect(Collectors.toMap(oldChain -> oldChain, oldChain -> newChainName));
+
+        ParsedModel modelWithRenamedChains = renameChain(model, chainMapping);
+        result.add(modelWithRenamedChains);
       }
     }
+
+    return result;
   }
 
   /**
    * Renames chains in the given model according to the provided mapping.
+   *
    * @param model The model containing the chains to be renamed
    * @param chainMapping Map of current chain names to their new names
    */
@@ -762,15 +785,17 @@ public class TaskProcessorService {
       return model;
     }
 
-    List<PdbAtomLine> atoms = model.structure3D.atoms().stream()
-        .map(atom -> {
-          var newChain = chainMapping.get(atom.chainIdentifier());
-          return newChain != null ? 
-              ImmutablePdbAtomLine.copyOf(atom).withChainIdentifier(newChain) : 
-              atom;
-        })
-        .collect(Collectors.toList());
-    
+    List<PdbAtomLine> atoms =
+        model.structure3D.atoms().stream()
+            .map(
+                atom -> {
+                  var newChain = chainMapping.get(atom.chainIdentifier());
+                  return newChain != null
+                      ? ImmutablePdbAtomLine.copyOf(atom).withChainIdentifier(newChain)
+                      : atom;
+                })
+            .collect(Collectors.toList());
+
     return new ParsedModel(model.name, model.content, DefaultPdbModel.of(atoms));
   }
 
