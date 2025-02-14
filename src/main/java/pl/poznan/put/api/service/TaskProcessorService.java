@@ -796,7 +796,8 @@ public class TaskProcessorService {
                 })
             .collect(Collectors.toList());
 
-    return new ParsedModel(model.name, model.content, DefaultPdbModel.of(atoms));
+    PdbModel structure3D = DefaultPdbModel.of(atoms);
+    return new ParsedModel(model.name, structure3D.toPdb(), structure3D);
   }
 
   private List<RankedModel> generateRankedModels(
