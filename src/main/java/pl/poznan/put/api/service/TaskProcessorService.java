@@ -74,28 +74,24 @@ public class TaskProcessorService {
     this.drawerVarnaTz = drawerVarnaTz;
   }
 
-  private String getModelSequenceRepresentation(PdbModel model) {
-    // Group residues by chain identifier
-    var chainGroups =
-        model.residues().stream()
-            .collect(
-                Collectors.groupingBy(
-                    PdbResidue::chainIdentifier,
-                    Collectors.collectingAndThen(
-                        Collectors.toList(),
-                        residues ->
-                            residues.stream()
-                                .sorted()
-                                .map(PdbResidue::oneLetterName)
-                                .map(String::valueOf)
-                                .map(String::toUpperCase)
-                                .collect(Collectors.joining()))));
-
-    // Create chain:sequence representation sorted by chain identifier
-    return chainGroups.entrySet().stream()
-        .sorted(Map.Entry.comparingByKey())
-        .map(entry -> entry.getKey() + ": " + entry.getValue())
-        .collect(Collectors.joining(", "));
+  private Set<String> getModelSequenceRepresentation(PdbModel model) {
+    // Group residues by chain identifier and get just sequences
+    return model.residues().stream()
+        .collect(
+            Collectors.groupingBy(
+                PdbResidue::chainIdentifier,
+                Collectors.collectingAndThen(
+                    Collectors.toList(),
+                    residues ->
+                        residues.stream()
+                            .sorted()
+                            .map(PdbResidue::oneLetterName)
+                            .map(String::valueOf)
+                            .map(String::toUpperCase)
+                            .collect(Collectors.joining()))))
+        .values()
+        .stream()
+        .collect(Collectors.toSet());
   }
 
   private static List<Pair<AnalyzedBasePair, Double>> sortFuzzySet(
@@ -502,22 +498,20 @@ public class TaskProcessorService {
 
     // Check if all models have the same sequence
     if (analyzedModels.stream().allMatch(Objects::nonNull)) {
-      // Group models by their sequence
-      var modelsBySequence =
-          analyzedModels.stream()
-              .collect(
-                  Collectors.groupingBy(
-                      model -> getModelSequenceRepresentation(model.structure3D()),
-                      Collectors.mapping(AnalyzedModel::name, Collectors.toList())));
+      // Get sequences for first model
+      var firstModelSequences = getModelSequenceRepresentation(analyzedModels.get(0).structure3D());
+      
+      // Check if all models have the same set of sequences
+      var mismatchedModels = analyzedModels.stream()
+          .filter(model -> !getModelSequenceRepresentation(model.structure3D()).equals(firstModelSequences))
+          .map(AnalyzedModel::name)
+          .collect(Collectors.toList());
 
-      if (modelsBySequence.size() > 1) {
+      if (!mismatchedModels.isEmpty()) {
         logger.error("Models have different nucleotide composition");
-        var message = new StringBuilder("Models have different sequences:\n");
-        modelsBySequence.forEach(
-            (sequence, models) -> {
-              message.append("\nSequence: ").append(sequence);
-              message.append("\nModels: ").append(String.join(", ", models));
-            });
+        var message = new StringBuilder("Models have different sequences than the first model:\n");
+        message.append("First model sequences: ").append(firstModelSequences);
+        message.append("\nMismatched models: ").append(String.join(", ", mismatchedModels));
         throw new RuntimeException(message.toString());
       }
     }
