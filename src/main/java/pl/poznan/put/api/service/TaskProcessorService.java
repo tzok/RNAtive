@@ -453,43 +453,52 @@ public class TaskProcessorService {
   }
 
   private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request, Task task) {
-    List<AnalyzedModel> analyzedModels;
-
+    // First pass: Parse PDB files and apply MolProbity filtering
+    record ParsedModel(String name, String content, PdbModel structure3D) {}
+    
+    List<ParsedModel> validModels;
     try (var rnalyzerClient = new RnalyzerClient()) {
       if (request.molProbityFilter() != MolProbityFilter.ALL) {
         rnalyzerClient.initializeSession();
       }
 
-      analyzedModels =
-          request.files().parallelStream()
-              .map(
-                  file -> {
-                    try {
-                      var structure3D = new PdbParser().parse(file.content()).get(0);
-
-                      // Apply MolProbity filtering early if enabled
-                      if (request.molProbityFilter() != MolProbityFilter.ALL) {
-                        var response =
-                            rnalyzerClient.analyzePdbContent(structure3D.toPdb(), file.name());
-                        if (!isModelValid(
-                            file.name(), response.structure(), request.molProbityFilter(), task)) {
-                          return null; // Skip analysis for filtered models
-                        }
-                      }
-
-                      // Only analyze models that passed MolProbity filtering
-                      var jsonResult =
-                          analysisClient.analyze(file.name(), file.content(), request.analyzer());
-                      var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
-                      return new AnalyzedModel(file.name(), structure3D, structure2D);
-                    } catch (JsonProcessingException e) {
-                      logger.error("Failed to parse analysis result for file: {}", file.name(), e);
-                      return null;
-                    }
-                  })
-              .filter(Objects::nonNull)
-              .toList();
+      validModels = request.files().parallelStream()
+          .map(file -> {
+            try {
+              var structure3D = new PdbParser().parse(file.content()).get(0);
+              
+              // Apply MolProbity filtering if enabled
+              if (request.molProbityFilter() != MolProbityFilter.ALL) {
+                var response = rnalyzerClient.analyzePdbContent(structure3D.toPdb(), file.name());
+                if (!isModelValid(file.name(), response.structure(), request.molProbityFilter(), task)) {
+                  return null;
+                }
+              }
+              
+              return new ParsedModel(file.name(), file.content(), structure3D);
+            } catch (Exception e) {
+              logger.error("Failed to parse or validate file: {}", file.name(), e);
+              return null;
+            }
+          })
+          .filter(Objects::nonNull)
+          .toList();
     }
+
+    // Second pass: Analyze valid models
+    var analyzedModels = validModels.parallelStream()
+        .map(model -> {
+          try {
+            var jsonResult = analysisClient.analyze(model.name(), model.content(), request.analyzer());
+            var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
+            return new AnalyzedModel(model.name(), model.structure3D(), structure2D);
+          } catch (JsonProcessingException e) {
+            logger.error("Failed to parse analysis result for file: {}", model.name(), e);
+            return null;
+          }
+        })
+        .filter(Objects::nonNull)
+        .toList();
 
     // Check if all models have the same sequence
     if (analyzedModels.stream().allMatch(Objects::nonNull)) {
