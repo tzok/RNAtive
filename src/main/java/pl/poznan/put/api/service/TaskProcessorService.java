@@ -727,9 +727,14 @@ public class TaskProcessorService {
 
     // Apply chain renaming
     var chainNameIndex = 0;
-    var result = new ArrayList<ParsedModel>();
-    for (var entry : sequenceToModelChains.entries()) {
-      var sequence = entry.getKey();
+    var result = new ArrayList<ParsedModel>(models.size());
+    var processedSequences = new HashSet<String>();
+    
+    for (var sequence : sequenceToModelChains.keySet()) {
+      if (!processedSequences.add(sequence)) {
+        continue;  // Skip if we've already processed this sequence
+      }
+      
       var modelChains = sequenceToModelChains.get(sequence);
       var newChainName = availableChainNames.get(chainNameIndex++);
 
