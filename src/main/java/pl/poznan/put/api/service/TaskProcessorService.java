@@ -691,21 +691,46 @@ public class TaskProcessorService {
       }
     }
     
-    // Log the mappings
-    logger.info("Chain mappings based on sequence identity:");
+    // Create a list of available chain names in the specified order
+    var availableChainNames = new ArrayList<String>();
+    // Uppercase ASCII letters (A-Z)
+    for (char c = 'A'; c <= 'Z'; c++) {
+      availableChainNames.add(String.valueOf(c));
+    }
+    // Digits (0-9)
+    for (char c = '0'; c <= '9'; c++) {
+      availableChainNames.add(String.valueOf(c));
+    }
+    // Other printable ASCII characters
+    for (char c : "!#$%&'()*+,-./:;<=>?@[\\]^_`{|}~".toCharArray()) {
+      availableChainNames.add(String.valueOf(c));
+    }
+    // Lowercase ASCII letters (a-z)
+    for (char c = 'a'; c <= 'z'; c++) {
+      availableChainNames.add(String.valueOf(c));
+    }
+
+    // Create mapping of sequence to new chain name
+    var sequenceToNewChain = new HashMap<String, String>();
+    var chainNameIndex = 0;
+    
+    // Assign new chain names to sequences
     for (var entry : sequenceToModelChains.entrySet()) {
       var sequence = entry.getKey();
       var modelChains = entry.getValue();
+      var newChainName = availableChainNames.get(chainNameIndex++);
+      sequenceToNewChain.put(sequence, newChainName);
       
       var mappingDescription = modelChains.stream()
-          .map(pair -> String.format("%s:chain %s", pair.getLeft(), pair.getRight()))
+          .map(pair -> String.format("%s:chain %s -> %s", 
+               pair.getLeft(), pair.getRight(), newChainName))
           .collect(Collectors.joining(", "));
       
       logger.info("Sequence {}: {}", sequence, mappingDescription);
     }
     
-    // TODO: Implement the actual chain renaming
-    logger.info("Chain renaming not yet implemented");
+    // TODO: Apply the chain renaming using sequenceToNewChain mapping
+    logger.info("Chain name mapping created, renaming implementation pending");
   }
 
   private List<RankedModel> generateRankedModels(
