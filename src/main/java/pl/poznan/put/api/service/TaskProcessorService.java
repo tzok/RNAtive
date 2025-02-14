@@ -674,11 +674,38 @@ public class TaskProcessorService {
    * This ensures that chains with the same sequence have the same identifier across all models.
    */
   private void unifyChainNames(List<AnalyzedModel> models, ModelSequences modelSequences) {
-    // TODO: Implement chain name unification logic
-    // 1. Create a mapping of sequences to canonical chain names using modelSequences.uniqueSequences
-    // 2. For each model, create a mapping of current chain names to canonical ones using modelSequences.getSequencesForModel()
-    // 3. Apply the mapping to rename chains in each model
-    logger.info("Chain name unification not yet implemented");
+    logger.info("Starting chain name unification");
+    
+    // Create a mapping: sequence -> list of (modelName, chainName) pairs
+    var sequenceToModelChains = new HashMap<String, List<Pair<String, String>>>();
+    
+    // Populate the mapping
+    for (var model : models) {
+      var chainSequences = modelSequences.getSequencesForModel(model.name());
+      for (var entry : chainSequences.entrySet()) {
+        var chainName = entry.getKey();
+        var sequence = entry.getValue();
+        sequenceToModelChains
+            .computeIfAbsent(sequence, k -> new ArrayList<>())
+            .add(Pair.of(model.name(), chainName));
+      }
+    }
+    
+    // Log the mappings
+    logger.info("Chain mappings based on sequence identity:");
+    for (var entry : sequenceToModelChains.entrySet()) {
+      var sequence = entry.getKey();
+      var modelChains = entry.getValue();
+      
+      var mappingDescription = modelChains.stream()
+          .map(pair -> String.format("%s:chain %s", pair.getLeft(), pair.getRight()))
+          .collect(Collectors.joining(", "));
+      
+      logger.info("Sequence {}: {}", sequence, mappingDescription);
+    }
+    
+    // TODO: Implement the actual chain renaming
+    logger.info("Chain renaming not yet implemented");
   }
 
   private List<RankedModel> generateRankedModels(
