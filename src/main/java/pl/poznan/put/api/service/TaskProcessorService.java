@@ -74,21 +74,44 @@ public class TaskProcessorService {
     this.drawerVarnaTz = drawerVarnaTz;
   }
 
-  private Map<String, String> getModelSequenceRepresentation(PdbModel model) {
-    // Group residues by chain identifier and get chain:sequence mapping
-    return model.residues().stream()
-        .collect(
-            Collectors.groupingBy(
-                PdbResidue::chainIdentifier,
-                Collectors.collectingAndThen(
-                    Collectors.toList(),
-                    residues ->
-                        residues.stream()
-                            .sorted()
-                            .map(PdbResidue::oneLetterName)
-                            .map(String::valueOf)
-                            .map(String::toUpperCase)
-                            .collect(Collectors.joining()))));
+  private record ModelSequences(
+      Map<String, Map<String, String>> modelToChainSequences,
+      Set<String> uniqueSequences) {
+
+    public Map<String, String> getSequencesForModel(String modelName) {
+      return modelToChainSequences.get(modelName);
+    }
+
+    public Set<String> getSequencesForModel(String modelName, boolean sorted) {
+      var sequences = new HashSet<>(modelToChainSequences.get(modelName).values());
+      return sorted ? new TreeSet<>(sequences) : sequences;
+    }
+  }
+
+  private ModelSequences collectModelSequences(List<AnalyzedModel> models) {
+    var modelToChainSequences = new HashMap<String, Map<String, String>>();
+    var uniqueSequences = new HashSet<String>();
+
+    for (var model : models) {
+      var chainSequences = model.structure3D().residues().stream()
+          .collect(
+              Collectors.groupingBy(
+                  PdbResidue::chainIdentifier,
+                  Collectors.collectingAndThen(
+                      Collectors.toList(),
+                      residues ->
+                          residues.stream()
+                              .sorted()
+                              .map(PdbResidue::oneLetterName)
+                              .map(String::valueOf)
+                              .map(String::toUpperCase)
+                              .collect(Collectors.joining()))));
+      
+      modelToChainSequences.put(model.name(), chainSequences);
+      uniqueSequences.addAll(chainSequences.values());
+    }
+
+    return new ModelSequences(modelToChainSequences, uniqueSequences);
   }
 
   private static List<Pair<AnalyzedBasePair, Double>> sortFuzzySet(
@@ -495,32 +518,26 @@ public class TaskProcessorService {
 
     // Check if all models have the same sequence
     if (analyzedModels.stream().allMatch(Objects::nonNull)) {
-      // Get sequences for first model
-      var firstModelSequences = getModelSequenceRepresentation(analyzedModels.get(0).structure3D());
-      var firstModelSequenceSet = new HashSet<>(firstModelSequences.values());
+      var modelSequences = collectModelSequences(analyzedModels);
+      var firstModelSequences = modelSequences.getSequencesForModel(analyzedModels.get(0).name(), true);
       
       // Check if all models have the same sequences (ignoring chain names)
       var mismatchedModels = analyzedModels.stream()
-          .filter(model -> {
-            var modelSequences = getModelSequenceRepresentation(model.structure3D());
-            var modelSequenceSet = new HashSet<>(modelSequences.values());
-            return !modelSequenceSet.equals(firstModelSequenceSet);
-          })
+          .filter(model -> !modelSequences.getSequencesForModel(model.name(), true).equals(firstModelSequences))
           .map(AnalyzedModel::name)
           .collect(Collectors.toList());
 
       if (!mismatchedModels.isEmpty()) {
         logger.error("Models have different nucleotide composition");
         var message = new StringBuilder("Models have different sequences than the first model:\n");
-        message.append("First model sequences: ").append(firstModelSequenceSet);
+        message.append("First model sequences: ").append(firstModelSequences);
         message.append("\nMismatched models: ").append(String.join(", ", mismatchedModels));
         throw new RuntimeException(message.toString());
       }
 
       // If sequences match, unify chain names across all models
-      unifyChainNames(analyzedModels);
+      unifyChainNames(analyzedModels, modelSequences);
       }
-    }
 
     return analyzedModels;
   }
@@ -656,10 +673,10 @@ public class TaskProcessorService {
    * Unifies chain names across all models based on sequence matching.
    * This ensures that chains with the same sequence have the same identifier across all models.
    */
-  private void unifyChainNames(List<AnalyzedModel> models) {
+  private void unifyChainNames(List<AnalyzedModel> models, ModelSequences modelSequences) {
     // TODO: Implement chain name unification logic
-    // 1. Create a mapping of sequences to canonical chain names
-    // 2. For each model, create a mapping of current chain names to canonical ones
+    // 1. Create a mapping of sequences to canonical chain names using modelSequences.uniqueSequences
+    // 2. For each model, create a mapping of current chain names to canonical ones using modelSequences.getSequencesForModel()
     // 3. Apply the mapping to rename chains in each model
     logger.info("Chain name unification not yet implemented");
   }
