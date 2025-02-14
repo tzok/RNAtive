@@ -680,7 +680,7 @@ public class TaskProcessorService {
     logger.info("Starting chain name unification");
     
     // Create a mapping: sequence -> list of (modelName, chainName) pairs
-    var sequenceToModelChains = new HashMap<String, List<Pair<String, String>>>();
+    MultiValuedMap<String, Pair<String, String>> sequenceToModelChains = new ArrayListValuedHashMap<>();
     
     // Populate the mapping
     for (var model : models) {
@@ -688,9 +688,7 @@ public class TaskProcessorService {
       for (var entry : chainSequences.entrySet()) {
         var chainName = entry.getKey();
         var sequence = entry.getValue();
-        sequenceToModelChains
-            .computeIfAbsent(sequence, k -> new ArrayList<>())
-            .add(Pair.of(model.name(), chainName));
+        sequenceToModelChains.put(sequence, Pair.of(model.name, chainName));
       }
     }
     
