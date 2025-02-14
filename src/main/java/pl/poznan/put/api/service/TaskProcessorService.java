@@ -726,34 +726,64 @@ public class TaskProcessorService {
     }
 
     // Apply chain renaming
-    var chainNameIndex = 0;
     var result = new ArrayList<ParsedModel>(models.size());
-    var processedSequences = new HashSet<String>();
+    var processedModels = new HashSet<String>();
+    var sequenceToNewNames = new HashMap<String, List<String>>();
     
-    for (var sequence : sequenceToModelChains.keySet()) {
-      if (!processedSequences.add(sequence)) {
-        continue;  // Skip if we've already processed this sequence
+    // First, determine new chain names for each sequence occurrence
+    for (var model : models) {
+      if (processedModels.add(model.name)) {
+        var chainSequences = modelSequences.getSequencesForModel(model.name);
+        // Group chains by sequence preserving order of appearance
+        var sequenceToChains = new LinkedHashMap<String, List<String>>();
+        for (var entry : chainSequences.entrySet()) {
+          sequenceToChains.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()).add(entry.getKey());
+        }
+        
+        // Assign new names for each sequence occurrence
+        for (var entry : sequenceToChains.entrySet()) {
+          var sequence = entry.getKey();
+          var chainCount = entry.getValue().size();
+          if (!sequenceToNewNames.containsKey(sequence)) {
+            var newNames = new ArrayList<String>();
+            for (int i = 0; i < chainCount; i++) {
+              newNames.add(availableChainNames.get(sequenceToNewNames.values().stream()
+                  .mapToInt(List::size).sum() + i));
+            }
+            sequenceToNewNames.put(sequence, newNames);
+          }
+        }
+      }
+    }
+    
+    // Then apply the renaming to each model
+    for (var model : models) {
+      var chainSequences = modelSequences.getSequencesForModel(model.name);
+      var modelChainMapping = new HashMap<String, String>();
+      
+      // Group chains by sequence preserving order
+      var sequenceToChains = new LinkedHashMap<String, List<String>>();
+      for (var entry : chainSequences.entrySet()) {
+        sequenceToChains.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()).add(entry.getKey());
       }
       
-      var modelChains = sequenceToModelChains.get(sequence);
-      var newChainName = availableChainNames.get(chainNameIndex++);
-
+      // Create mapping for this model
+      for (var entry : sequenceToChains.entrySet()) {
+        var sequence = entry.getKey();
+        var oldChains = entry.getValue();
+        var newNames = sequenceToNewNames.get(sequence);
+        
+        for (int i = 0; i < oldChains.size(); i++) {
+          modelChainMapping.put(oldChains.get(i), newNames.get(i));
+        }
+      }
+      
       // Log the planned changes
-      var mappingDescription =
-          modelChains.stream()
-              .map(
-                  pair ->
-                      String.format(
-                          "%s:chain %s -> %s", pair.getLeft(), pair.getRight(), newChainName))
-              .collect(Collectors.joining(", "));
-      logger.info("Sequence {}: {}", sequence, mappingDescription);
-
-      // Group chains by model
-      var chainsByModel =
-          modelChains.stream()
-              .collect(
-                  Collectors.groupingBy(
-                      Pair::getLeft, Collectors.mapping(Pair::getRight, Collectors.toList())));
+      var mappingDescription = modelChainMapping.entrySet().stream()
+          .map(entry -> String.format("%s:chain %s -> %s", 
+               model.name, entry.getKey(), entry.getValue()))
+          .collect(Collectors.joining(", "));
+      logger.info("Model {}: {}", model.name, mappingDescription);
 
       // For each model, create and apply its chain mapping
       for (var modelEntry : chainsByModel.entrySet()) {
