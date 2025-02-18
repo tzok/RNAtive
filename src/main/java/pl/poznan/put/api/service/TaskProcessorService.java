@@ -794,7 +794,7 @@ public class TaskProcessorService {
       logger.info("Model {}: {}", model.name, mappingDescription);
 
       // Apply the chain mapping to create new model
-      ParsedModel modelWithRenamedChains = renameChain(model, modelChainMapping);
+      ParsedModel modelWithRenamedChains = renameChainAndRenumberResidues(model, modelChainMapping);
       result.add(modelWithRenamedChains);
     }
 
@@ -802,12 +802,15 @@ public class TaskProcessorService {
   }
 
   /**
-   * Renames chains in the given model according to the provided mapping.
+   * Renames chains and renumbers residues in the given model. Chain renaming is done according to the
+   * provided mapping. Residue renumbering ensures continuous numbering starting from 1 for each chain,
+   * removing any insertion codes.
    *
-   * @param model The model containing the chains to be renamed
+   * @param model The model containing the chains to be renamed and renumbered
    * @param chainMapping Map of current chain names to their new names
+   * @return A new ParsedModel with renamed chains and renumbered residues
    */
-  private ParsedModel renameChain(ParsedModel model, Map<String, String> chainMapping) {
+  private ParsedModel renameChainAndRenumberResidues(ParsedModel model, Map<String, String> chainMapping) {
     // Skip if no changes needed
     if (chainMapping.entrySet().stream().allMatch(e -> e.getKey().equals(e.getValue()))) {
       return model;
