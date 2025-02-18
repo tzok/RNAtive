@@ -813,16 +813,36 @@ public class TaskProcessorService {
       return model;
     }
 
-    List<PdbAtomLine> atoms =
-        model.structure3D.atoms().stream()
-            .map(
-                atom -> {
-                  var newChain = chainMapping.get(atom.chainIdentifier());
-                  return newChain != null
-                      ? ImmutablePdbAtomLine.copyOf(atom).withChainIdentifier(newChain)
-                      : atom;
-                })
-            .collect(Collectors.toList());
+    List<PdbAtomLine> atoms = new ArrayList<>();
+    int currentResidueNumber = 0;
+    String lastChain = null;
+    int lastResidueNumber = Integer.MIN_VALUE;
+    String lastInsertionCode = null;
+
+    for (var atom : model.structure3D.atoms()) {
+      var newChain = chainMapping.get(atom.chainIdentifier());
+      if (newChain == null) {
+        atoms.add(atom);
+        continue;
+      }
+
+      // Increment residue number when chain, residue number or insertion code changes
+      if (!newChain.equals(lastChain)
+          || atom.residueNumber() != lastResidueNumber
+          || !Objects.equals(
+              atom.insertionCode().orElse(null), lastInsertionCode)) {
+        currentResidueNumber++;
+        lastChain = newChain;
+        lastResidueNumber = atom.residueNumber();
+        lastInsertionCode = atom.insertionCode().orElse(null);
+      }
+
+      atoms.add(
+          ImmutablePdbAtomLine.copyOf(atom)
+              .withChainIdentifier(newChain)
+              .withResidueNumber(currentResidueNumber)
+              .withInsertionCode(Optional.empty()));
+    }
 
     PdbModel structure3D = DefaultPdbModel.of(atoms);
     return new ParsedModel(model.name, structure3D.toPdb(), structure3D);
