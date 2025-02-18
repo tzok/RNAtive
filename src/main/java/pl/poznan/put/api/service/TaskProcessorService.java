@@ -526,11 +526,21 @@ public class TaskProcessorService {
 
       if (!mismatchedModels.isEmpty()) {
         logger.error("Models have different nucleotide composition");
-        var message = new StringBuilder("Models have different sequences than the first model:\n");
-        message.append("First model sequences: ").append(firstModelSequences).append("\n");
-        for (String modelName : mismatchedModels) {
-          message.append("Model ").append(modelName).append(" sequences: ")
-              .append(modelSequences.getSequencesForModel(modelName, true)).append("\n");
+        var message = new StringBuilder("Found different sequences across models:\n");
+        
+        // Group models by their sequences
+        var sequenceToModels = new HashMap<Set<String>, List<String>>();
+        for (var model : validModels) {
+          var sequences = modelSequences.getSequencesForModel(model.name, true);
+          sequenceToModels.computeIfAbsent(sequences, k -> new ArrayList<>()).add(model.name);
+        }
+        
+        // Output each unique sequence group
+        var groups = new ArrayList<>(sequenceToModels.entrySet());
+        for (int i = 0; i < groups.size(); i++) {
+          var entry = groups.get(i);
+          message.append(String.format("Group %d sequences: %s\n", i + 1, entry.getKey()));
+          message.append(String.format("Models: %s\n", String.join(", ", entry.getValue())));
         }
         throw new RuntimeException(message.toString());
       }
