@@ -527,8 +527,11 @@ public class TaskProcessorService {
       if (!mismatchedModels.isEmpty()) {
         logger.error("Models have different nucleotide composition");
         var message = new StringBuilder("Models have different sequences than the first model:\n");
-        message.append("First model sequences: ").append(firstModelSequences);
-        message.append("\nMismatched models: ").append(String.join(", ", mismatchedModels));
+        message.append("First model sequences: ").append(firstModelSequences).append("\n");
+        for (String modelName : mismatchedModels) {
+          message.append("Model ").append(modelName).append(" sequences: ")
+              .append(modelSequences.getSequencesForModel(modelName, true)).append("\n");
+        }
         throw new RuntimeException(message.toString());
       }
 
@@ -802,15 +805,16 @@ public class TaskProcessorService {
   }
 
   /**
-   * Renames chains and renumbers residues in the given model. Chain renaming is done according to the
-   * provided mapping. Residue renumbering ensures continuous numbering starting from 1 for each chain,
-   * removing any insertion codes.
+   * Renames chains and renumbers residues in the given model. Chain renaming is done according to
+   * the provided mapping. Residue renumbering ensures continuous numbering starting from 1 for each
+   * chain, removing any insertion codes.
    *
    * @param model The model containing the chains to be renamed and renumbered
    * @param chainMapping Map of current chain names to their new names
    * @return A new ParsedModel with renamed chains and renumbered residues
    */
-  private ParsedModel renameChainAndRenumberResidues(ParsedModel model, Map<String, String> chainMapping) {
+  private ParsedModel renameChainAndRenumberResidues(
+      ParsedModel model, Map<String, String> chainMapping) {
     // Skip if no changes needed
     if (chainMapping.entrySet().stream().allMatch(e -> e.getKey().equals(e.getValue()))) {
       return model;
@@ -832,8 +836,7 @@ public class TaskProcessorService {
       // Increment residue number when chain, residue number or insertion code changes
       if (!newChain.equals(lastChain)
           || atom.residueNumber() != lastResidueNumber
-          || !Objects.equals(
-              atom.insertionCode().orElse(null), lastInsertionCode)) {
+          || !Objects.equals(atom.insertionCode().orElse(null), lastInsertionCode)) {
         currentResidueNumber++;
         lastChain = newChain;
         lastResidueNumber = atom.residueNumber();
