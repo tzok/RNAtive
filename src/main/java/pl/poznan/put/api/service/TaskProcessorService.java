@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.bag.HashBag;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
@@ -33,13 +34,8 @@ import pl.poznan.put.model.BaseInteractions;
 import pl.poznan.put.model.BasePair;
 import pl.poznan.put.notation.LeontisWesthof;
 import pl.poznan.put.notation.NucleobaseEdge;
-import pl.poznan.put.pdb.ImmutablePdbAtomLine;
-import pl.poznan.put.pdb.PdbAtomLine;
-import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
-import pl.poznan.put.pdb.analysis.DefaultPdbModel;
-import pl.poznan.put.pdb.analysis.PdbModel;
-import pl.poznan.put.pdb.analysis.PdbParser;
-import pl.poznan.put.pdb.analysis.PdbResidue;
+import pl.poznan.put.pdb.*;
+import pl.poznan.put.pdb.analysis.*;
 import pl.poznan.put.rnalyzer.MolProbityResponse;
 import pl.poznan.put.rnalyzer.RnalyzerClient;
 import pl.poznan.put.structure.AnalyzedBasePair;
@@ -75,46 +71,6 @@ public class TaskProcessorService {
     this.visualizationService = visualizationService;
     this.conversionClient = conversionClient;
     this.drawerVarnaTz = drawerVarnaTz;
-  }
-
-  private record ModelSequences(
-      Map<String, Map<String, String>> modelToChainSequences, Set<String> uniqueSequences) {
-
-    public Map<String, String> getSequencesForModel(String modelName) {
-      return modelToChainSequences.get(modelName);
-    }
-
-    public Set<String> getSequencesForModel(String modelName, boolean sorted) {
-      var sequences = new HashSet<>(modelToChainSequences.get(modelName).values());
-      return sorted ? new TreeSet<>(sequences) : sequences;
-    }
-  }
-
-  private ModelSequences collectModelSequences(List<ParsedModel> models) {
-    var modelToChainSequences = new HashMap<String, Map<String, String>>();
-    var uniqueSequences = new HashSet<String>();
-
-    for (var model : models) {
-      var chainSequences =
-          model.structure3D.residues().stream()
-              .collect(
-                  Collectors.groupingBy(
-                      PdbResidue::chainIdentifier,
-                      Collectors.collectingAndThen(
-                          Collectors.toList(),
-                          residues ->
-                              residues.stream()
-                                  .sorted()
-                                  .map(PdbResidue::oneLetterName)
-                                  .map(String::valueOf)
-                                  .map(String::toUpperCase)
-                                  .collect(Collectors.joining()))));
-
-      modelToChainSequences.put(model.name, chainSequences);
-      uniqueSequences.addAll(chainSequences.values());
-    }
-
-    return new ModelSequences(modelToChainSequences, uniqueSequences);
   }
 
   private static List<Pair<AnalyzedBasePair, Double>> sortFuzzySet(
@@ -474,100 +430,174 @@ public class TaskProcessorService {
   private record ParsedModel(String name, String content, PdbModel structure3D) {}
 
   private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request, Task task) {
-    // First pass: Parse PDB files and apply MolProbity filtering
-    List<ParsedModel> validModels;
-    try (var rnalyzerClient = new RnalyzerClient()) {
-      if (request.molProbityFilter() != MolProbityFilter.ALL) {
-        rnalyzerClient.initializeSession();
-      }
-
-      validModels =
-          request.files().parallelStream()
-              .map(
-                  file -> {
-                    try {
-                      var structure3D = new PdbParser().parse(file.content()).get(0);
-
-                      // Apply MolProbity filtering if enabled
-                      if (request.molProbityFilter() != MolProbityFilter.ALL) {
-                        var response =
-                            rnalyzerClient.analyzePdbContent(structure3D.toPdb(), file.name());
-                        if (!isModelValid(
-                            file.name(), response.structure(), request.molProbityFilter(), task)) {
-                          return null;
-                        }
-                      }
-
-                      return new ParsedModel(file.name(), file.content(), structure3D);
-                    } catch (Exception e) {
-                      logger.error("Failed to parse or validate file: {}", file.name(), e);
-                      return null;
-                    }
-                  })
-              .filter(Objects::nonNull)
-              .toList();
-    }
-
-    // Check if all models have the same sequence
-    if (validModels.stream().allMatch(Objects::nonNull)) {
-      var modelSequences = collectModelSequences(validModels);
-      var firstModelSequences = modelSequences.getSequencesForModel(validModels.get(0).name, true);
-
-      // Check if all models have the same sequences (ignoring chain names)
-      var mismatchedModels =
-          validModels.stream()
-              .filter(
-                  model ->
-                      !modelSequences
-                          .getSequencesForModel(model.name, true)
-                          .equals(firstModelSequences))
-              .map(model -> model.name)
-              .collect(Collectors.toList());
-
-      if (!mismatchedModels.isEmpty()) {
-        logger.error("Models have different nucleotide composition");
-        var message = new StringBuilder("Found different sequences across models:\n");
-        
-        // Group models by their sequences
-        var sequenceToModels = new HashMap<Set<String>, List<String>>();
-        for (var model : validModels) {
-          var sequences = modelSequences.getSequencesForModel(model.name, true);
-          sequenceToModels.computeIfAbsent(sequences, k -> new ArrayList<>()).add(model.name);
-        }
-        
-        // Output each unique sequence group
-        var groups = new ArrayList<>(sequenceToModels.entrySet());
-        for (int i = 0; i < groups.size(); i++) {
-          var entry = groups.get(i);
-          message.append(String.format("Group %d sequences: %s\n", i + 1, entry.getKey()));
-          message.append(String.format("Models: %s\n", String.join(", ", entry.getValue())));
-        }
-        throw new RuntimeException(message.toString());
-      }
-
-      // If sequences match, unify chain names across all models
-      validModels = unifyChainNames(validModels, modelSequences);
-    }
-
-    // Second pass: Analyze valid models
-    var analyzedModels =
-        validModels.parallelStream()
+    // Parse all files in parallel
+    var models =
+        request.files().parallelStream()
             .map(
-                model -> {
-                  try {
-                    var jsonResult =
-                        analysisClient.analyze(model.name, model.content, request.analyzer());
-                    var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
-                    return new AnalyzedModel(model.name, model.structure3D, structure2D);
-                  } catch (JsonProcessingException e) {
-                    logger.error("Failed to parse analysis result for file: {}", model.name, e);
-                    return null;
-                  }
-                })
-            .filter(Objects::nonNull)
+                fileData ->
+                    new ParsedModel(
+                        fileData.name(),
+                        fileData.content(),
+                        new PdbParser()
+                            .parse(fileData.content()).stream()
+                                .findFirst()
+                                .orElseThrow(
+                                    () ->
+                                        new RuntimeException(
+                                            "No structure found in file " + fileData.name()))))
             .toList();
+    var identifiersToModels =
+        models.stream()
+            .collect(Collectors.groupingBy(model -> model.structure3D.namedResidueIdentifiers()));
 
-    return analyzedModels;
+    // Check if all models have the same sequence of PdbNamedResidueIdentifiers
+    if (identifiersToModels.size() > 1) {
+      // Even if models have different sequences, they may still be saved
+      var sequences =
+          identifiersToModels.keySet().stream()
+              .map(
+                  list ->
+                      list.stream()
+                          .map(PdbNamedResidueIdentifier::oneLetterName)
+                          .map(String::valueOf)
+                          .map(String::toUpperCase)
+                          .collect(Collectors.joining()))
+              .collect(Collectors.toSet());
+
+      // This error is not recoverable
+      if (sequences.size() > 1) {
+        throw new RuntimeException(formatNucleotideCompositionError(identifiersToModels));
+      }
+
+      // Find indices of modified residues in at least one model
+      var modified =
+          models.stream()
+              .map(ParsedModel::structure3D)
+              .map(ResidueCollection::residues)
+              .map(
+                  residues ->
+                      IntStream.range(0, residues.size())
+                          .boxed()
+                          .filter(i -> residues.get(i).isModified())
+                          .toList())
+              .flatMap(Collection::stream)
+              .collect(Collectors.toSet());
+
+      // Regenerate models with unified naming and numbering scheme
+      models =
+          models.stream()
+              .map(
+                  model -> {
+                    // Always chain A, no insertion codes and increasing number
+                    var mapping =
+                        IntStream.range(0, model.structure3D.residues().size())
+                            .boxed()
+                            .collect(
+                                Collectors.toMap(
+                                    i -> model.structure3D.residues().get(i).identifier(),
+                                    i ->
+                                        ImmutablePdbResidueIdentifier.of(
+                                            "A", i + 1, Optional.empty())));
+                    // Force modification detection where other models have it
+                    var modresLines =
+                        IntStream.range(0, model.structure3D.residues().size())
+                            .boxed()
+                            .filter(modified::contains)
+                            .map(
+                                i -> {
+                                  var name =
+                                      model.structure3D.residues().get(i).standardResidueName();
+                                  return ImmutablePdbModresLine.of(
+                                      "",
+                                      name,
+                                      "A",
+                                      i + 1,
+                                      Optional.empty(),
+                                      name.toLowerCase(),
+                                      "");
+                                })
+                            .toList();
+                    // Regenerate atoms with new chain and residue numbers
+                    var atoms =
+                        model.structure3D.atoms().stream()
+                            .map(
+                                atom -> {
+                                  var identifier = PdbResidueIdentifier.from(atom);
+                                  if (!mapping.containsKey(identifier)) {
+                                    throw new RuntimeException(
+                                        "No mapping for residue " + identifier);
+                                  }
+                                  var mapped = mapping.get(identifier);
+                                  return (PdbAtomLine)
+                                      ImmutablePdbAtomLine.copyOf(atom)
+                                          .withChainIdentifier(mapped.chainIdentifier())
+                                          .withResidueNumber(mapped.residueNumber())
+                                          .withInsertionCode(Optional.empty());
+                                })
+                            .toList();
+                    // Finally rebuild the PdbModel
+                    var regenerated =
+                        ImmutableDefaultPdbModel.of(
+                            ImmutablePdbHeaderLine.of("", new Date(0L), ""),
+                            ImmutablePdbExpdtaLine.of(Collections.emptyList()),
+                            ImmutablePdbRemark2Line.of(Double.NaN),
+                            1,
+                            atoms,
+                            modresLines,
+                            Collections.emptyList(),
+                            "",
+                            Collections.emptyList());
+                    return new ParsedModel(model.name, regenerated.toPdb(), regenerated);
+                  })
+              .toList();
+
+      // Perform the check again
+      identifiersToModels =
+          models.stream()
+              .collect(Collectors.groupingBy(model -> model.structure3D.namedResidueIdentifiers()));
+      if (identifiersToModels.size() > 1) {
+        throw new RuntimeException(formatNucleotideCompositionError(identifiersToModels));
+      }
+    }
+
+    // Optionally apply MolProbity filtering
+    List<ParsedModel> validModels;
+    if (request.molProbityFilter() == MolProbityFilter.ALL) {
+      validModels = new ArrayList<>(models);
+    } else {
+      try (var rnalyzerClient = new RnalyzerClient()) {
+        rnalyzerClient.initializeSession();
+        validModels =
+            models.stream()
+                .map(
+                    model -> {
+                      var response =
+                          rnalyzerClient.analyzePdbContent(model.content(), model.name());
+                      return isModelValid(
+                              model.name(), response.structure(), request.molProbityFilter(), task)
+                          ? model
+                          : null;
+                    })
+                .toList();
+      }
+    }
+
+    // Analyze valid models
+    return validModels.parallelStream()
+        .filter(Objects::nonNull)
+        .map(
+            model -> {
+              try {
+                var jsonResult =
+                    analysisClient.analyze(model.name, model.content, request.analyzer());
+                var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
+                return new AnalyzedModel(model.name, model.structure3D, structure2D);
+              } catch (JsonProcessingException e) {
+                throw new RuntimeException(
+                    "Failed to parse analysis result for file: " + model.name, e);
+              }
+            })
+        .toList();
   }
 
   private boolean isModelValid(
@@ -641,6 +671,26 @@ public class TaskProcessorService {
     task.addRemovalReason(modelName, reason);
   }
 
+  private String formatNucleotideCompositionError(
+      Map<List<PdbNamedResidueIdentifier>, List<ParsedModel>> identifiersToModels) {
+    var message = new StringBuilder("Models have different nucleotide composition:\n");
+    int i = 1;
+    for (var entry : identifiersToModels.entrySet()) {
+      message.append("Group ");
+      message.append(i++);
+      message.append("\nModels: ");
+      message.append(
+          entry.getValue().stream().map(ParsedModel::name).collect(Collectors.joining(", ")));
+      message.append("\nIdentifiers: ");
+      message.append(
+          entry.getKey().stream()
+              .map(PdbNamedResidueIdentifier::toString)
+              .collect(Collectors.joining(", ")));
+      message.append("\n\n");
+    }
+    return message.toString();
+  }
+
   private boolean validateGoodAndCaution(
       String modelName, MolProbityResponse.Structure structure, Task task) {
     if ("warning".equalsIgnoreCase(structure.rankCategory())) {
@@ -695,173 +745,6 @@ public class TaskProcessorService {
 
   private int calculateThreshold(double confidenceLevel, int count) {
     return (int) FastMath.ceil(confidenceLevel * count);
-  }
-
-  /**
-   * Unifies chain names across all models based on sequence matching. This ensures that chains with
-   * the same sequence have the same identifier across all models.
-   */
-  private List<ParsedModel> unifyChainNames(
-      List<ParsedModel> models, ModelSequences modelSequences) {
-    logger.info("Starting chain name unification");
-
-    // Create a mapping: sequence -> list of (modelName, chainName) pairs
-    MultiValuedMap<String, Pair<String, String>> sequenceToModelChains =
-        new ArrayListValuedHashMap<>();
-
-    // Populate the mapping
-    for (var model : models) {
-      var chainSequences = modelSequences.getSequencesForModel(model.name);
-      for (var entry : chainSequences.entrySet()) {
-        var chainName = entry.getKey();
-        var sequence = entry.getValue();
-        sequenceToModelChains.put(sequence, Pair.of(model.name, chainName));
-      }
-    }
-
-    // Create a list of available chain names in the specified order
-    var availableChainNames = new ArrayList<String>();
-    // Uppercase ASCII letters (A-Z)
-    for (char c = 'A'; c <= 'Z'; c++) {
-      availableChainNames.add(String.valueOf(c));
-    }
-    // Digits (0-9)
-    for (char c = '0'; c <= '9'; c++) {
-      availableChainNames.add(String.valueOf(c));
-    }
-    // Other printable ASCII characters
-    for (char c : "!#$%&'()*+,-./:;<=>?@[\\]^_`{|}~".toCharArray()) {
-      availableChainNames.add(String.valueOf(c));
-    }
-    // Lowercase ASCII letters (a-z)
-    for (char c = 'a'; c <= 'z'; c++) {
-      availableChainNames.add(String.valueOf(c));
-    }
-
-    // Apply chain renaming
-    var result = new ArrayList<ParsedModel>(models.size());
-    var processedModels = new HashSet<String>();
-    var sequenceToNewNames = new HashMap<String, List<String>>();
-
-    // First, determine new chain names for each sequence occurrence
-    for (var model : models) {
-      if (processedModels.add(model.name)) {
-        var chainSequences = modelSequences.getSequencesForModel(model.name);
-        // Group chains by sequence preserving order of appearance
-        var sequenceToChains = new LinkedHashMap<String, List<String>>();
-        for (var entry : chainSequences.entrySet()) {
-          sequenceToChains
-              .computeIfAbsent(entry.getValue(), k -> new ArrayList<>())
-              .add(entry.getKey());
-        }
-
-        // Assign new names for each sequence occurrence
-        for (var entry : sequenceToChains.entrySet()) {
-          var sequence = entry.getKey();
-          var chainCount = entry.getValue().size();
-          if (!sequenceToNewNames.containsKey(sequence)) {
-            var newNames = new ArrayList<String>();
-            for (int i = 0; i < chainCount; i++) {
-              newNames.add(
-                  availableChainNames.get(
-                      sequenceToNewNames.values().stream().mapToInt(List::size).sum() + i));
-            }
-            sequenceToNewNames.put(sequence, newNames);
-          }
-        }
-      }
-    }
-
-    // Then apply the renaming to each model
-    for (var model : models) {
-      var chainSequences = modelSequences.getSequencesForModel(model.name);
-      var modelChainMapping = new HashMap<String, String>();
-
-      // Group chains by sequence preserving order
-      var sequenceToChains = new LinkedHashMap<String, List<String>>();
-      for (var entry : chainSequences.entrySet()) {
-        sequenceToChains
-            .computeIfAbsent(entry.getValue(), k -> new ArrayList<>())
-            .add(entry.getKey());
-      }
-
-      // Create mapping for this model
-      for (var entry : sequenceToChains.entrySet()) {
-        var sequence = entry.getKey();
-        var oldChains = entry.getValue();
-        var newNames = sequenceToNewNames.get(sequence);
-
-        for (int i = 0; i < oldChains.size(); i++) {
-          modelChainMapping.put(oldChains.get(i), newNames.get(i));
-        }
-      }
-
-      // Log the planned changes
-      var mappingDescription =
-          modelChainMapping.entrySet().stream()
-              .map(
-                  entry ->
-                      String.format(
-                          "%s:chain %s -> %s", model.name, entry.getKey(), entry.getValue()))
-              .collect(Collectors.joining(", "));
-      logger.info("Model {}: {}", model.name, mappingDescription);
-
-      // Apply the chain mapping to create new model
-      ParsedModel modelWithRenamedChains = renameChainAndRenumberResidues(model, modelChainMapping);
-      result.add(modelWithRenamedChains);
-    }
-
-    return result;
-  }
-
-  /**
-   * Renames chains and renumbers residues in the given model. Chain renaming is done according to
-   * the provided mapping. Residue renumbering ensures continuous numbering starting from 1 for each
-   * chain, removing any insertion codes.
-   *
-   * @param model The model containing the chains to be renamed and renumbered
-   * @param chainMapping Map of current chain names to their new names
-   * @return A new ParsedModel with renamed chains and renumbered residues
-   */
-  private ParsedModel renameChainAndRenumberResidues(
-      ParsedModel model, Map<String, String> chainMapping) {
-    // Skip if no changes needed
-    if (chainMapping.entrySet().stream().allMatch(e -> e.getKey().equals(e.getValue()))) {
-      return model;
-    }
-
-    List<PdbAtomLine> atoms = new ArrayList<>();
-    int currentResidueNumber = 0;
-    String lastChain = null;
-    int lastResidueNumber = Integer.MIN_VALUE;
-    String lastInsertionCode = null;
-
-    for (var atom : model.structure3D.atoms()) {
-      var newChain = chainMapping.get(atom.chainIdentifier());
-      if (newChain == null) {
-        atoms.add(atom);
-        continue;
-      }
-
-      // Increment residue number when chain, residue number or insertion code changes
-      if (!newChain.equals(lastChain)
-          || atom.residueNumber() != lastResidueNumber
-          || !Objects.equals(atom.insertionCode().orElse(null), lastInsertionCode)) {
-        currentResidueNumber++;
-        lastChain = newChain;
-        lastResidueNumber = atom.residueNumber();
-        lastInsertionCode = atom.insertionCode().orElse(null);
-      }
-
-      atoms.add(
-          ImmutablePdbAtomLine.copyOf(atom)
-              .withChainIdentifier(newChain)
-              .withResidueNumber(currentResidueNumber)
-              .withInsertionCode(Optional.empty()));
-    }
-
-    PdbModel structure3D = DefaultPdbModel.of(atoms);
-    return new ParsedModel(model.name, structure3D.toPdb(), structure3D);
   }
 
   private List<RankedModel> generateRankedModels(
