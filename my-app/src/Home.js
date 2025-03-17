@@ -1,6 +1,24 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Alert, Button, Card, Col, Collapse, Form, Input, InputNumber, Row, Select, Slider, Spin, Switch, Table, Tabs, Tooltip, Upload } from "antd";
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  Collapse,
+  Form,
+  Input,
+  InputNumber,
+  Row,
+  Select,
+  Slider,
+  Spin,
+  Switch,
+  Table,
+  Tabs,
+  Tooltip,
+  Upload,
+} from "antd";
 import { getTableColumns, getTableRows } from "./utils/tableUtils";
 import { QuestionCircleOutlined, UploadOutlined } from "@ant-design/icons";
 
@@ -102,7 +120,9 @@ function Home() {
   const [consensusMode, setConsensusMode] = useState(consensusOptions[0].value);
   const [analyzer, setAnalyzer] = useState(analyzerOptions[0].value);
   const [visualizer, setVisualizer] = useState(visualizerOptions[0].value);
-  const [molProbityFilter, setMolProbityFilter] = useState(molProbityOptions[0].value);
+  const [molProbityFilter, setMolProbityFilter] = useState(
+    molProbityOptions[0].value
+  );
   const [isFuzzy, setIsFuzzy] = useState(true);
   const [confidenceLevel, setConfidenceLevel] = useState(50);
   const [dotBracket, setDotBracket] = useState(null);
@@ -169,7 +189,7 @@ function Home() {
           fileList.map(async (file) => ({
             name: file.obj.name,
             content: await file.obj.text(), // Reads file content as text
-          })),
+          }))
         );
 
         // Prepare the payload
@@ -227,7 +247,9 @@ function Home() {
       });
 
       if (!statusResponse.ok) {
-        throw new Error(`Failed to get status. Status: ${statusResponse.status}`);
+        throw new Error(
+          `Failed to get status. Status: ${statusResponse.status}`
+        );
       }
 
       const statusData = await statusResponse.json();
@@ -262,7 +284,9 @@ function Home() {
       });
 
       if (!resultResponse.ok) {
-        throw new Error(`Failed to get result. Status: ${resultResponse.status}`);
+        throw new Error(
+          `Failed to get result. Status: ${resultResponse.status}`
+        );
       }
 
       const resultData = await resultResponse.json();
@@ -281,7 +305,21 @@ function Home() {
   const loadRNAPuzzlesExample = async () => {
     try {
       // List of example files
-      const exampleFiles = ["1_bujnicki_1_rpr.pdb", "1_bujnicki_2_rpr.pdb", "1_bujnicki_3_rpr.pdb", "1_bujnicki_4_rpr.pdb", "1_bujnicki_5_rpr.pdb", "1_chen_1_rpr.pdb", "1_das_1_rpr.pdb", "1_das_2_rpr.pdb", "1_das_3_rpr.pdb", "1_das_4_rpr.pdb", "1_das_5_rpr.pdb", "1_dokholyan_1_rpr.pdb", "1_major_1_rpr.pdb"];
+      const exampleFiles = [
+        "1_bujnicki_1_rpr.pdb",
+        "1_bujnicki_2_rpr.pdb",
+        "1_bujnicki_3_rpr.pdb",
+        "1_bujnicki_4_rpr.pdb",
+        "1_bujnicki_5_rpr.pdb",
+        "1_chen_1_rpr.pdb",
+        "1_das_1_rpr.pdb",
+        "1_das_2_rpr.pdb",
+        "1_das_3_rpr.pdb",
+        "1_das_4_rpr.pdb",
+        "1_das_5_rpr.pdb",
+        "1_dokholyan_1_rpr.pdb",
+        "1_major_1_rpr.pdb",
+      ];
 
       // Fetch each file from the public folder
       const files = await Promise.all(
@@ -289,7 +327,7 @@ function Home() {
           const response = await fetch(`/examples/${fileName}`);
           const blob = await response.blob();
           return new File([blob], fileName, { type: blob.type });
-        }),
+        })
       );
 
       // Convert fetched files into compatible format
@@ -303,12 +341,14 @@ function Home() {
       }));
 
       setFileList(newFiles); // Replace current files with examples
-      setDotBracket(">strand_A\n" +
+      setDotBracket(
+        ">strand_A\n" +
           "CCGCCGCGCCAUGCCUGUGGCGG\n" +
           "((((((((.((((...(((((((\n" +
           ">strand_B\n" +
           "CCGCCGCGCCAUGCCUGUGGCGG\n" +
-          ")))))))..)))).).)))))))")
+          ")))))))..)))).).)))))))"
+      );
     } catch (error) {
       console.error("Error loading example files:", error);
     }
@@ -317,7 +357,17 @@ function Home() {
   const loadDecoyExamples = async () => {
     try {
       // List of example files
-      const exampleFiles = ["1a9nR_M1.pdb", "1a9nR_M2.pdb", "1a9nR_M3.pdb", "1a9nR_M4.pdb", "1a9nR_M5.pdb", "1a9nR_M6.pdb", "1a9nR_M7.pdb", "1a9nR_M8.pdb", "1a9nR_M9.pdb"];
+      const exampleFiles = [
+        "1a9nR_M1.pdb",
+        "1a9nR_M2.pdb",
+        "1a9nR_M3.pdb",
+        "1a9nR_M4.pdb",
+        "1a9nR_M5.pdb",
+        "1a9nR_M6.pdb",
+        "1a9nR_M7.pdb",
+        "1a9nR_M8.pdb",
+        "1a9nR_M9.pdb",
+      ];
 
       // Fetch each file from the public folder
       const files = await Promise.all(
@@ -325,7 +375,7 @@ function Home() {
           const response = await fetch(`/examples/${fileName}`);
           const blob = await response.blob();
           return new File([blob], fileName, { type: blob.type });
-        }),
+        })
       );
 
       // Convert fetched files into compatible format
@@ -339,7 +389,11 @@ function Home() {
       }));
 
       setFileList(newFiles); // Replace current files with examples
-      setDotBracket(">strand_R\n" + "CCUGGUAUUGCAGUACCUCCAGGU\n" + "(((((.............))))).");
+      setDotBracket(
+        ">strand_R\n" +
+          "CCUGGUAUUGCAGUACCUCCAGGU\n" +
+          "(((((.............)))))."
+      );
     } catch (error) {
       console.error("Error loading example files:", error);
     }
@@ -411,7 +465,8 @@ function Home() {
                   setIsLoading(false);
                   setResponse(null);
                   navigate(`/`, { replace: true }); //navigate to no taskid
-                }}>
+                }}
+              >
                 Retry
               </Button>
             </Col>
@@ -436,7 +491,8 @@ function Home() {
                 setIsLoading(false);
                 setResponse(null);
                 navigate(`/`, { replace: true }); //navigate to no taskid
-              }}>
+              }}
+            >
               Retry
             </Button>
           </Col>
@@ -446,10 +502,26 @@ function Home() {
 
     if (response) {
       const totalFiles = response.fileNames.length;
-      const rankingColumns = getTableColumns(response.ranking.headers, response.ranking.rows, totalFiles);
-      const canonicalColumns = getTableColumns(response.canonicalPairs.headers, response.canonicalPairs.rows, totalFiles);
-      const nonCanonicalColumns = getTableColumns(response.nonCanonicalPairs.headers, response.nonCanonicalPairs.rows, totalFiles);
-      const stackingColumns = getTableColumns(response.stackings.headers, response.stackings.rows, totalFiles);
+      const rankingColumns = getTableColumns(
+        response.ranking.headers,
+        response.ranking.rows,
+        totalFiles
+      );
+      const canonicalColumns = getTableColumns(
+        response.canonicalPairs.headers,
+        response.canonicalPairs.rows,
+        totalFiles
+      );
+      const nonCanonicalColumns = getTableColumns(
+        response.nonCanonicalPairs.headers,
+        response.nonCanonicalPairs.rows,
+        totalFiles
+      );
+      const stackingColumns = getTableColumns(
+        response.stackings.headers,
+        response.stackings.rows,
+        totalFiles
+      );
       const rankingRows = getTableRows(response.ranking.rows);
       const canonicalRows = getTableRows(response.canonicalPairs.rows);
       const nonCanonicalRows = getTableRows(response.nonCanonicalPairs.rows);
@@ -459,28 +531,51 @@ function Home() {
         {
           key: "consensus-2d-structure",
           label: "Secondary structure",
-          children: [<SvgImg key="svg" serverAddress={serverAddress} taskId={taskIdComplete} />, <pre key="dotbracket">{response.dotBracket}</pre>],
+          children: [
+            <SvgImg
+              key="svg"
+              serverAddress={serverAddress}
+              taskId={taskIdComplete}
+            />,
+            <pre key="dotbracket">{response.dotBracket}</pre>,
+          ],
         },
         {
           key: "consensus-base-pairs",
           label: "Canonical base pairs",
-          children: <Table dataSource={canonicalRows} columns={canonicalColumns} />,
+          children: (
+            <Table dataSource={canonicalRows} columns={canonicalColumns} />
+          ),
         },
         {
           key: "consensus-non-canonical-pairs",
           label: "Non-canonical base pairs",
-          children: <Table dataSource={nonCanonicalRows} columns={nonCanonicalColumns} />,
+          children: (
+            <Table
+              dataSource={nonCanonicalRows}
+              columns={nonCanonicalColumns}
+            />
+          ),
         },
         {
           key: "consensus-stacking-interactions",
           label: "Stacking interactions",
-          children: <Table dataSource={stackingRows} columns={stackingColumns} />,
+          children: (
+            <Table dataSource={stackingRows} columns={stackingColumns} />
+          ),
         },
       ];
       const perFileDetails = response.fileNames.map((filename, index) => ({
         key: index,
         label: filename,
-        children: <FileDetails taskId={taskIdComplete} serverAddress={serverAddress} filename={filename} fileCount={totalFiles} />,
+        children: (
+          <FileDetails
+            taskId={taskIdComplete}
+            serverAddress={serverAddress}
+            filename={filename}
+            fileCount={totalFiles}
+          />
+        ),
       }));
 
       return (
@@ -490,11 +585,17 @@ function Home() {
               <Table dataSource={rankingRows} columns={rankingColumns} />
             </Card>
 
-            <Card title={"Consensus details"} style={{ marginBottom: "24px" }}>
+            <Card
+              title={"Consensus structure"}
+              style={{ marginBottom: "24px" }}
+            >
               <Collapse items={consensusDetails} />
             </Card>
 
-            <Card title={"Results for each file"} style={{ marginBottom: "24px" }}>
+            <Card
+              title={"Results for each file"}
+              style={{ marginBottom: "24px" }}
+            >
               <Tabs items={perFileDetails} tabPosition={"left"} />
             </Card>
 
@@ -503,7 +604,10 @@ function Home() {
               (() => {
                 const [columns, rows] = handleRemovalReasons();
                 return (
-                  <Card title={"Removed files"} style={{ marginBottom: "24px" }}>
+                  <Card
+                    title={"Removed files"}
+                    style={{ marginBottom: "24px" }}
+                  >
                     <Table dataSource={rows} columns={columns} />
                   </Card>
                 );
@@ -518,7 +622,24 @@ function Home() {
       <Row justify={"center"}>
         <Col span={20}>
           <div style={{ marginBottom: "24px", textAlign: "justify" }}>
-            <p>RNAtive is a consensus-based RNA structure analysis system that combines multiple structural models to identify reliable base pairs and stacking interactions. Upload your RNA 3D structure models in PDB or mmCIF format, and RNAtive will analyze them using state-of-the-art base pair annotation tools. The system generates a consensus structure by comparing annotations across all models, providing a reliable representation of the RNA's secondary structure and tertiary interactions.</p>
+            {/* <p>RNAtive is a consensus-based RNA structure analysis system that combines multiple structural models to identify 
+              reliable base pairs and stacking interactions. Upload your RNA 3D structure models in PDB or mmCIF format, and 
+              RNAtive will analyze them using state-of-the-art base pair annotation tools. The system generates a consensus 
+              structure by comparing annotations across all models, providing a reliable representation of the RNA's secondary 
+              structure and tertiary interactions.</p> */}
+            <p>
+              RNAtive is a consensus-based RNA structure analysis system
+              designed to process multiple structural models to identify
+              reliable base pairs and stacking interactions. Tailored for RNA
+              structural biologists and bioinformaticians, it aids in validating
+              RNA models, improving structural predictions, and studying the
+              evolution of RNA structures. The tool accepts 2-? RNA 3D structure
+              models in PDB or mmCIF format, analyzes them using
+              state-of-the-art base pair annotation tools, and generates a
+              consensus structure by comparing annotations across all input
+              models. Additionally, it ranks the input models based on their
+              consistency with the derived consensus.
+            </p>
           </div>
           <Form labelCol={{ span: 6 }} wrapperCol={{ span: 14 }}>
             <Form.Item
@@ -529,16 +650,29 @@ function Home() {
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
-              }>
+              }
+            >
               <Row gutter={8}>
                 <Col>
                   <Button onClick={loadRNAPuzzlesExample}>
-                    <Tooltip title={"Models submitted to the first challenge in RNA-Puzzles contest."}>RNA-Puzzles 1</Tooltip>
+                    <Tooltip
+                      title={
+                        "Models submitted to the first challenge in RNA-Puzzles contest."
+                      }
+                    >
+                      RNA-Puzzles 1
+                    </Tooltip>
                   </Button>
                 </Col>
                 <Col>
                   <Button onClick={loadDecoyExamples}>
-                    <Tooltip title={"Nine decoys of the U2 small nuclear RNA (PDB id: 1A9N)"}>Decoys</Tooltip>
+                    <Tooltip
+                      title={
+                        "Nine decoys of the U2 small nuclear RNA (PDB id: 1A9N)"
+                      }
+                    >
+                      Decoys
+                    </Tooltip>
                   </Button>
                 </Col>
               </Row>
@@ -552,7 +686,8 @@ function Home() {
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
-              }>
+              }
+            >
               <Upload
                 accept={".pdb,.cif"}
                 multiple={true}
@@ -563,7 +698,8 @@ function Home() {
                 showUploadList={{
                   showDownloadIcon: true,
                   downloadIcon: "Download",
-                }}>
+                }}
+              >
                 <Button icon={<UploadOutlined />}>Upload</Button>
               </Upload>
             </Form.Item>
@@ -576,8 +712,13 @@ function Home() {
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
-              }>
-              <Select options={molProbityOptions} defaultValue={molProbityOptions[0]} onChange={setMolProbityFilter} />
+              }
+            >
+              <Select
+                options={molProbityOptions}
+                defaultValue={molProbityOptions[0]}
+                onChange={setMolProbityFilter}
+              />
             </Form.Item>
 
             <Form.Item
@@ -588,8 +729,16 @@ function Home() {
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
-              }>
-              <TextArea rows={6} variant={"filled"} placeholder={"Optional"} value={dotBracket} onChange={handleDotBracket} style={{ fontFamily: "monospace" }} />
+              }
+            >
+              <TextArea
+                rows={6}
+                variant={"filled"}
+                placeholder={"Optional"}
+                value={dotBracket}
+                onChange={handleDotBracket}
+                style={{ fontFamily: "monospace" }}
+              />
             </Form.Item>
 
             <Form.Item
@@ -600,8 +749,13 @@ function Home() {
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
-              }>
-              <Select options={analyzerOptions} defaultValue={analyzerOptions[0]} onChange={setAnalyzer} />
+              }
+            >
+              <Select
+                options={analyzerOptions}
+                defaultValue={analyzerOptions[0]}
+                onChange={setAnalyzer}
+              />
             </Form.Item>
 
             <Form.Item
@@ -612,8 +766,13 @@ function Home() {
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
-              }>
-              <Select options={consensusOptions} defaultValue={consensusOptions[0]} onChange={setConsensusMode} />
+              }
+            >
+              <Select
+                options={consensusOptions}
+                defaultValue={consensusOptions[0]}
+                onChange={setConsensusMode}
+              />
             </Form.Item>
 
             <Form.Item
@@ -624,7 +783,8 @@ function Home() {
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
-              }>
+              }
+            >
               <Switch checked={isFuzzy} onChange={setIsFuzzy} />
             </Form.Item>
 
@@ -637,13 +797,28 @@ function Home() {
                       <QuestionCircleOutlined />
                     </Tooltip>
                   </span>
-                }>
+                }
+              >
                 <Row gutter={8} style={{ display: "flex" }}>
                   <Col flex={"auto"}>
-                    <Slider min={1} max={100} onChange={setConfidenceLevel} value={typeof confidenceLevel === "number" ? confidenceLevel : 50} />
+                    <Slider
+                      min={1}
+                      max={100}
+                      onChange={setConfidenceLevel}
+                      value={
+                        typeof confidenceLevel === "number"
+                          ? confidenceLevel
+                          : 50
+                      }
+                    />
                   </Col>
                   <Col flex={"none"}>
-                    <InputNumber min={1} max={100} value={confidenceLevel} onChange={setConfidenceLevel} />
+                    <InputNumber
+                      min={1}
+                      max={100}
+                      value={confidenceLevel}
+                      onChange={setConfidenceLevel}
+                    />
                   </Col>
                 </Row>
               </Form.Item>
@@ -657,8 +832,13 @@ function Home() {
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
-              }>
-              <Select options={visualizerOptions} defaultValue={visualizerOptions[0]} onChange={setVisualizer} />
+              }
+            >
+              <Select
+                options={visualizerOptions}
+                defaultValue={visualizerOptions[0]}
+                onChange={setVisualizer}
+              />
             </Form.Item>
 
             <Form.Item wrapperCol={{ offset: 6 }}>
