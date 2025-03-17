@@ -269,6 +269,120 @@ const Help = () => {
                 </ol>
               </li>
             </ol>
+            <CustomTitle level={2}>References</CustomTitle>
+            <Paragraph>
+              RNAtive's functioning would not be possible without the
+              integration of state-of-the-art methods and tools. References (in
+              order of apperance on the main page):
+              <ol>
+                <li>
+                  <b>RNA-Puzzles: </b>M. Magnus, M. Antczak, T. Zok, J.
+                  Wiedemann, P. Lukasiak, Y. Cao, J. M. Bujnicki, E. Westhof, M.
+                  Szachniuk, Z. Miao (2020) RNA-Puzzles toolkit: A computational
+                  resource of RNA 3D structure benchmark datasets, structure
+                  manipulation, and evaluation tools. Nucleic Acids Research,
+                  48(2): 576-588 (doi:10.1093/nar/gkz1108).
+                </li>
+                <li>
+                  <b>Decoys: </b>Emidio Capriotti, Tomas Norambuena, Marc A.
+                  Marti-Renom, Francisco Melo, All-atom knowledge-based
+                  potential for RNA structure prediction and assessment,
+                  Bioinformatics, Volume 27, Issue 8, April 2011, Pages
+                  1086–1093, https://doi.org/10.1093/bioinformatics/btr093
+                </li>
+                <li>
+                  <b>MolProbity:</b> MolProbity: all-atom contacts and structure
+                  validation for proteins and nucleic acids I. W. Davis, A.
+                  Leaver-Fay, V. B. Chen, J. N. Block, G. J. Kapral, X. Wang, L.
+                  W. Murray, W. B. Arendall, III, J. Snoeyink, J. S. Richardson,
+                  and D. C. Richardson. Nucl. Acids Res. 35: W375-W383 (2007)
+                </li>
+                <li>
+                  <b>RNAPolis Annotator:</b> Szachniuk, Marta. "RNApolis:
+                  Computational Platform for RNA Structure Analysis" Foundations
+                  of Computing and Decision Sciences, vol. 44, no. 2, Sciendo,
+                  2019, pp. 241-257. https://doi.org/10.2478/fcds-2019-0012
+                </li>
+                <li>
+                  <b>BPNet:</b> Roy, P., Bhattacharyya, D. Contact networks in
+                  RNA: a structural bioinformatics study with a new tool. J
+                  Comput Aided Mol Des 36, 131–140 (2022).
+                  https://doi.org/10.1007/s10822-021-00438-x
+                </li>
+                <li>
+                  <b>FR3D:</b> FR3D: Finding Local and Composite Recurrent
+                  Structural Motifs in RNA 3D Structures, Michael Sarver; Craig
+                  L. Zirbel; Jesse Stombaugh; Ali Mokdad; Neocles B. Leontis.
+                  Journal of Mathematical Biology (2008) 56:215–252. <br></br>
+                  WebFR3D – a server for finding, aligning and analyzing
+                  recurrent RNA 3D motifs, Anton I. Petrov; Craig L. Zirbel;
+                  Neocles B. Leontis. Nucleic Acids Research, 2011.
+                </li>
+                {/* https://www.bgsu.edu/research/rna/software/fr3d.html */}
+
+                <li>
+                  <b>MC-Annotate:</b> Patrick Gendron, Sébastien Lemieux,
+                  François Major, Quantitative analysis of nucleic acid
+                  three-dimensional structures11Edited by I. Tinoco, Journal of
+                  Molecular Biology, Volume 308, Issue 5, 2001, Pages 919-936,
+                  ISSN 0022-2836, https://doi.org/10.1006/jmbi.2001.4626.
+                  (https://www.sciencedirect.com/science/article/pii/S0022283601946261)
+                </li>
+                <li>
+                  <b>RNAView:</b> Yang, H., Jossinet, F., Leontis, N., Chen, L.,
+                  Westbrook, J., Berman, H.M., Westhof, E. (2003). Tools for the
+                  automatic identification and classification of RNA base pairs.
+                  Nucleic Acids Research 31.13: 3450-3460.
+                </li>
+                <li>
+                  <b>barnaba:</b> Bottaro S, Bussi G, Pinamonti G, Reißer S,
+                  Boomsma W, Lindorff-Larsen K. Barnaba: software for analysis
+                  of nucleic acid structures and trajectories. RNA. 2019
+                  Feb;25(2):219-231. doi: 10.1261/rna.067678.118. Epub 2018 Nov
+                  12. PMID: 30420522; PMCID: PMC6348988.
+                </li>
+                <li>
+                  <b>VRNA:</b> VARNA: Interactive drawing and editing of the RNA
+                  secondary structure Kévin Darty, Alain Denise and Yann Ponty
+                  Bioinformatics, pp. 1974-1975, Vol. 25, no. 15, 2009
+                </li>
+                <li>
+                  <b>RNApuzzler: </b>Daniel Wiegreffe, Daniel Alexander, Peter F
+                  Stadler, Dirk Zeckzer, RNApuzzler: efficient outerplanar
+                  drawing of RNA-secondary structures, Bioinformatics, Volume
+                  35, Issue 8, April 2019, Pages 1342–1349,
+                  https://doi.org/10.1093/bioinformatics/bty817
+                </li>
+                <li>
+                  <b>PseudoViewer:</b> Byun Y, Han K. PseudoViewer: web
+                  application and web service for visualizing RNA pseudoknots
+                  and secondary structures. Nucleic Acids Res. 2006 Jul 1;34(Web
+                  Server issue):W416-22. doi: 10.1093/nar/gkl210. PMID:
+                  16845039; PMCID: PMC1538805.
+                </li>
+                <li>
+                  <b>R-Chie: </b>
+                  Volodymyr Tsybulskyi, Mohamed Mounir, Irmtraud M Meyer,
+                  R-CHIE: a web server and R package for visualizing cis and
+                  trans RNA–RNA, RNA–DNA and DNA–DNA interactions, Nucleic Acids
+                  Research, Volume 48, Issue 18, 09 October 2020, Page e105,
+                  doi:10.1093/nar/gkaa708
+                  <br></br>
+                  Daniel Lai, Jeff R. Proctor, Jing Yun A. Zhu, and Irmtraud M.
+                  Meyer (2012) R-chie: a web server and R package for
+                  visualizing RNA secondary structures. Nucleic Acids Research,
+                  first published online March 19, 2012. doi:10.1093/nar/gks241
+                </li>
+              </ol>
+            </Paragraph>
+            <Paragraph>
+              Additionally, there are following references used by our team:
+              <ol>
+                <li>Ref1</li>
+                <li>Ref2</li>
+                <li>Ref3</li>
+              </ol>
+            </Paragraph>
           </Typography>
         </div>
       </Col>
