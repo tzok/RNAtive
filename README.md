@@ -36,6 +36,10 @@ Key configurations include:
 For development, the application connects to a PostgreSQL database and analysis service containers
 defined in the Docker Compose configuration.
 
+## Adapters Service
+
+The application uses the `rnapdbee-adapters-image` which is built from the [RNApdbee-adapters](https://github.com/rnapdbee/rnapdbee-adapters) repository. This service provides RNA structure analysis tools that are essential for the application's functionality.
+
 ## Running in CLI Mode
 
 The application can be run in CLI mode for command-line processing. To use the CLI:
