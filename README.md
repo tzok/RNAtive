@@ -22,7 +22,19 @@ mvn clean package
 docker-compose up --build
 ```
 
-The application will be available at `http://localhost:8080`.
+By default, Docker Compose reads both `docker-compose.yml` and `docker-compose.override.yml` files. The override file configures the application for local development without HTTPS, making it available at `http://localhost`.
+
+### Running with HTTPS (Production Mode)
+
+To run the application in production mode with HTTPS support:
+
+```bash
+docker-compose -f docker-compose.yml up --build
+```
+
+This command explicitly uses only the base configuration file, ignoring the override file, which enables the HTTPS configuration and certbot service for SSL certificate management.
+
+The production deployment will be available at `https://rnative.cs.put.poznan.pl` (or your configured domain).
 
 ## Configuration
 
@@ -35,6 +47,19 @@ Key configurations include:
 
 For development, the application connects to a PostgreSQL database and analysis service containers
 defined in the Docker Compose configuration.
+
+### Docker Compose Configuration
+
+The project uses two Docker Compose configuration files:
+
+1. `docker-compose.yml` - Base configuration for all environments, including production settings with HTTPS
+2. `docker-compose.override.yml` - Local development overrides that:
+   - Configure services for local access without HTTPS
+   - Map local ports appropriately
+   - Mount additional volumes for development
+   - Disable production-only services like certbot
+
+When you run `docker-compose up` without specifying a file, Docker Compose automatically merges both files, with settings in the override file taking precedence.
 
 ## Adapters Service
 
