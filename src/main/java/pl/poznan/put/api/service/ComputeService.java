@@ -153,7 +153,7 @@ public class ComputeService {
       HashBag<AnalyzedBasePair> allInteractions,
       int totalModelCount,
       List<pl.poznan.put.structure.BasePair> referenceStructure) {
-    var headers = List.of("Nt1", "Nt2", "Leontis-Westhof", "Confidence", "Is reference?");
+    var headers = List.of("Nt1", "Nt2", "Leontis-Westhof classification", "Confidence", "Is reference?");
     var rows =
         pairs.stream()
             .distinct()
