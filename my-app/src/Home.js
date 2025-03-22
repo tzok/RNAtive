@@ -25,6 +25,8 @@ import { QuestionCircleOutlined, UploadOutlined } from "@ant-design/icons";
 import SvgImg from "./SvgImg";
 import FileDetails from "./FileDetails";
 import * as configs from "./config";
+import DownloadButton from "./DownloadButton";
+import "./customTextInput.css";
 
 const { TextArea } = Input;
 
@@ -124,9 +126,18 @@ function Home() {
     molProbityOptions[0].value
   );
   const [isFuzzy, setIsFuzzy] = useState(true);
-  const [confidenceLevel, setConfidenceLevel] = useState(50);
+  const [confidenceLevel, setConfidenceLevel] = useState(fileList.length);
   const [dotBracket, setDotBracket] = useState(null);
 
+  // Ensure confidenceLevel is within valid range when fileList updates
+  useEffect(() => {
+    setConfidenceLevel((prev) => Math.min(prev, fileList.length) || 2);
+  }, [fileList.length]);
+  const handleSliderChange = (value) => {
+    if (value <= fileList.length) {
+      setConfidenceLevel(value);
+    }
+  };
   const beforeUpload = (file) => {
     file.url = URL.createObjectURL(file);
     file.obj = new File([file], file.name, { type: file.type });
@@ -201,7 +212,7 @@ function Home() {
         if (isFuzzy) {
           payload.confidenceLevel = null;
         } else {
-          payload.confidenceLevel = confidenceLevel / 100.0;
+          payload.confidenceLevel = confidenceLevel / fileList.length; //100.0;
         }
         payload.molProbityFilter = molProbityFilter;
         if (dotBracket) {
@@ -543,26 +554,46 @@ function Home() {
         {
           key: "consensus-base-pairs",
           label: "Canonical base pairs",
-          children: (
-            <Table dataSource={canonicalRows} columns={canonicalColumns} />
-          ),
+          children:
+            ((<Table dataSource={canonicalRows} columns={canonicalColumns} />),
+            (
+              <DownloadButton
+                dataSource={canonicalRows}
+                columns={canonicalColumns}
+                fileName={`consensus_base_pairs.txt`}
+              />
+            )),
         },
         {
           key: "consensus-non-canonical-pairs",
           label: "Non-canonical base pairs",
-          children: (
-            <Table
-              dataSource={nonCanonicalRows}
-              columns={nonCanonicalColumns}
-            />
-          ),
+          children:
+            ((
+              <Table
+                dataSource={nonCanonicalRows}
+                columns={nonCanonicalColumns}
+              />
+            ),
+            (
+              <DownloadButton
+                dataSource={nonCanonicalRows}
+                columns={nonCanonicalColumns}
+                fileName={`consensus_non_canonical_pairs.txt`}
+              />
+            )),
         },
         {
           key: "consensus-stacking-interactions",
           label: "Stacking interactions",
-          children: (
-            <Table dataSource={stackingRows} columns={stackingColumns} />
-          ),
+          children:
+            ((<Table dataSource={stackingRows} columns={stackingColumns} />),
+            (
+              <DownloadButton
+                dataSource={stackingRows}
+                columns={stackingColumns}
+                fileName={`consensus_stacking_interactions.txt`}
+              />
+            )),
         },
       ];
       const perFileDetails = response.fileNames.map((filename, index) => ({
@@ -583,6 +614,11 @@ function Home() {
           <Col span={20}>
             <Card title={"Ranking"} style={{ marginBottom: "24px" }}>
               <Table dataSource={rankingRows} columns={rankingColumns} />
+              <DownloadButton
+                dataSource={rankingRows}
+                columns={rankingColumns}
+                fileName={`ranking.txt`}
+              />
             </Card>
 
             <Card
@@ -641,6 +677,7 @@ function Home() {
               consistency with the derived consensus.
             </p>
           </div>
+
           <Form labelCol={{ span: 6 }} wrapperCol={{ span: 14 }}>
             <Form.Item
               label={
@@ -657,7 +694,7 @@ function Home() {
                   <Button onClick={loadRNAPuzzlesExample}>
                     <Tooltip
                       title={
-                        "Models submitted to the first challenge in RNA-Puzzles contest."
+                        "13 models submitted to the first challenge in RNA-Puzzles contest."
                       }
                     >
                       RNA-Puzzles 1
@@ -791,7 +828,7 @@ function Home() {
             {!isFuzzy && (
               <Form.Item
                 label={
-                  <span>
+                  <span style={{ opacity: fileList.length < 2 ? 0.5 : 1 }}>
                     Confidence level{" "}
                     <Tooltip title="The minimum percentage threshold determining whether a nucleotide interaction becomes part of the consensus secondary structure. For instance, setting a 50 threshold requires an interaction to appear in at least half of the analyzed models to be included in the consensus structure.">
                       <QuestionCircleOutlined />
@@ -802,24 +839,54 @@ function Home() {
                 <Row gutter={8} style={{ display: "flex" }}>
                   <Col flex={"auto"}>
                     <Slider
-                      min={1}
-                      max={100}
-                      onChange={setConfidenceLevel}
-                      value={
-                        typeof confidenceLevel === "number"
-                          ? confidenceLevel
-                          : 50
-                      }
+                      min={2}
+                      max={fileList.length} // Ensure max updates dynamically
+                      onChange={handleSliderChange}
+                      value={confidenceLevel}
+                      disabled={fileList.length < 2} // Gray out if fileList.length < 2
                     />
                   </Col>
                   <Col flex={"none"}>
                     <InputNumber
-                      min={1}
-                      max={100}
+                      min={2}
+                      max={fileList.length}
                       value={confidenceLevel}
-                      onChange={setConfidenceLevel}
+                      onChange={handleSliderChange}
+                      disabled={fileList.length < 2} // Gray out if fileList.length < 2
+                      status=""
+                      style={{
+                        color: fileList.length < 2 ? "gray" : "inherit",
+                      }}
                     />
                   </Col>
+
+                  {fileList.length >= 2 && (
+                    <span
+                      style={{
+                        opacity: fileList.length < 2 ? 0.5 : 1,
+                        display: "inline-block",
+                        minWidth: "4ch",
+                        fontFamily: "monospace",
+                      }}
+                    >
+                      {Math.round((confidenceLevel / fileList.length) * 100)}%
+                    </span>
+                  )}
+                  {/* {Math.round((confidenceLevel / fileList.length) * 100) > 9 &&
+                    Math.round((confidenceLevel / fileList.length) * 100) <
+                      100 && (
+                      <span style={{ opacity: fileList.length < 2 ? 0.5 : 1 }}>
+                        {"     "}
+                        {Math.round((confidenceLevel / fileList.length) * 100)}%
+                      </span>
+                    )}
+                  {Math.round((confidenceLevel / fileList.length) * 100) <
+                    10 && (
+                    <span style={{ opacity: fileList.length < 2 ? 0.5 : 1 }}>
+                      {"  "}
+                      {Math.round((confidenceLevel / fileList.length) * 100)}%
+                    </span>
+                  )} */}
                 </Row>
               </Form.Item>
             )}

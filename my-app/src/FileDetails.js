@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Alert, Collapse, Spin, Table } from "antd";
 import { getTableColumns, getTableRows } from "./utils/tableUtils";
+import DownloadButton from "./DownloadButton";
 
 const FileDetails = ({ taskId, serverAddress, filename, fileCount }) => {
   const [data, setData] = useState(null);
@@ -10,7 +11,9 @@ const FileDetails = ({ taskId, serverAddress, filename, fileCount }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(`${serverAddress}/${taskId}/result/${filename}`);
+        const response = await fetch(
+          `${serverAddress}/${taskId}/result/${filename}`
+        );
         if (!response.ok) {
           throw new Error("Failed to fetch file details");
         }
@@ -36,9 +39,21 @@ const FileDetails = ({ taskId, serverAddress, filename, fileCount }) => {
     return <Alert type={"warning"} message={"No details available"} />;
   }
 
-  const canonicalColumns = getTableColumns(data.canonicalPairs.headers, data.canonicalPairs.rows, fileCount);
-  const nonCanonicalColumns = getTableColumns(data.nonCanonicalPairs.headers, data.nonCanonicalPairs.rows, fileCount);
-  const stackingColumns = getTableColumns(data.stackings.headers, data.stackings.rows, fileCount);
+  const canonicalColumns = getTableColumns(
+    data.canonicalPairs.headers,
+    data.canonicalPairs.rows,
+    fileCount
+  );
+  const nonCanonicalColumns = getTableColumns(
+    data.nonCanonicalPairs.headers,
+    data.nonCanonicalPairs.rows,
+    fileCount
+  );
+  const stackingColumns = getTableColumns(
+    data.stackings.headers,
+    data.stackings.rows,
+    fileCount
+  );
   const canonicalRows = getTableRows(data.canonicalPairs.rows);
   const nonCanonicalRows = getTableRows(data.nonCanonicalPairs.rows);
   const stackingRows = getTableRows(data.stackings.rows);
@@ -52,17 +67,43 @@ const FileDetails = ({ taskId, serverAddress, filename, fileCount }) => {
     {
       key: filename + "-base-pairs",
       label: "Canonical base pairs",
-      children: <Table dataSource={canonicalRows} columns={canonicalColumns} />,
+      children:
+        ((<Table dataSource={canonicalRows} columns={canonicalColumns} />),
+        (
+          <DownloadButton
+            dataSource={canonicalRows}
+            columns={canonicalColumns}
+            fileName={`${filename}_canonical_base_pairs.txt`}
+          />
+        )),
     },
     {
       key: filename + "-non-canonical-pairs",
       label: "Non-canonical base pairs",
-      children: <Table dataSource={nonCanonicalRows} columns={nonCanonicalColumns} />,
+      children:
+        ((
+          <Table dataSource={nonCanonicalRows} columns={nonCanonicalColumns} />
+        ),
+        (
+          <DownloadButton
+            dataSource={nonCanonicalRows}
+            columns={nonCanonicalColumns}
+            fileName={`${filename}_non-canonical_base_pairs.txt`}
+          />
+        )),
     },
     {
       key: filename + "-stacking-interactions",
       label: "Stacking interactions",
-      children: <Table dataSource={stackingRows} columns={stackingColumns} />,
+      children:
+        ((<Table dataSource={stackingRows} columns={stackingColumns} />),
+        (
+          <DownloadButton
+            dataSource={stackingRows}
+            columns={stackingColumns}
+            fileName={`${filename}_stacking_interactions.txt`}
+          />
+        )),
     },
   ];
 
