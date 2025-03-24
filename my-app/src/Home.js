@@ -554,46 +554,47 @@ function Home() {
         {
           key: "consensus-base-pairs",
           label: "Canonical base pairs",
-          children:
-            ((<Table dataSource={canonicalRows} columns={canonicalColumns} />),
-            (
+          children: (
+            <>
+              <Table dataSource={canonicalRows} columns={canonicalColumns} />
               <DownloadButton
                 dataSource={canonicalRows}
                 columns={canonicalColumns}
                 fileName={`consensus_base_pairs.txt`}
               />
-            )),
+            </>
+          ),
         },
         {
           key: "consensus-non-canonical-pairs",
           label: "Non-canonical base pairs",
-          children:
-            ((
+          children: (
+            <>
               <Table
                 dataSource={nonCanonicalRows}
                 columns={nonCanonicalColumns}
               />
-            ),
-            (
               <DownloadButton
                 dataSource={nonCanonicalRows}
                 columns={nonCanonicalColumns}
                 fileName={`consensus_non_canonical_pairs.txt`}
               />
-            )),
+            </>
+          ),
         },
         {
           key: "consensus-stacking-interactions",
           label: "Stacking interactions",
-          children:
-            ((<Table dataSource={stackingRows} columns={stackingColumns} />),
-            (
+          children: (
+            <>
+              <Table dataSource={stackingRows} columns={stackingColumns} />
               <DownloadButton
                 dataSource={stackingRows}
                 columns={stackingColumns}
                 fileName={`consensus_stacking_interactions.txt`}
               />
-            )),
+            </>
+          ),
         },
       ];
       const perFileDetails = response.fileNames.map((filename, index) => ({

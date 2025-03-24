@@ -67,43 +67,44 @@ const FileDetails = ({ taskId, serverAddress, filename, fileCount }) => {
     {
       key: filename + "-base-pairs",
       label: "Canonical base pairs",
-      children:
-        ((<Table dataSource={canonicalRows} columns={canonicalColumns} />),
-        (
+      children: (
+        <>
+          <Table dataSource={canonicalRows} columns={canonicalColumns} />
           <DownloadButton
             dataSource={canonicalRows}
             columns={canonicalColumns}
             fileName={`${filename}_canonical_base_pairs.txt`}
           />
-        )),
+        </>
+      ),
     },
     {
       key: filename + "-non-canonical-pairs",
       label: "Non-canonical base pairs",
-      children:
-        ((
+      children: (
+        <>
           <Table dataSource={nonCanonicalRows} columns={nonCanonicalColumns} />
-        ),
-        (
           <DownloadButton
             dataSource={nonCanonicalRows}
             columns={nonCanonicalColumns}
             fileName={`${filename}_non-canonical_base_pairs.txt`}
           />
-        )),
+        </>
+      ),
     },
     {
       key: filename + "-stacking-interactions",
       label: "Stacking interactions",
-      children:
-        ((<Table dataSource={stackingRows} columns={stackingColumns} />),
-        (
+      children: (
+        <>
+          <Table dataSource={stackingRows} columns={stackingColumns} />
           <DownloadButton
             dataSource={stackingRows}
             columns={stackingColumns}
             fileName={`${filename}_stacking_interactions.txt`}
           />
-        )),
+        </>
+      ),
     },
   ];
 
