@@ -669,13 +669,12 @@ function Home() {
               reliable base pairs and stacking interactions. Tailored for RNA
               structural biologists and bioinformaticians, it aids in validating
               RNA models, improving structural predictions, and studying the
-              evolution of RNA structures. The tool accepts minimum of two RNA 3D structure
-              models in PDB or mmCIF format, analyzes them using
+              evolution of RNA structures. The tool accepts 2-100 RNA 3D
+              structure models in PDB or mmCIF format, analyzes them using
               state-of-the-art base pair annotation tools, and generates a
               consensus structure by comparing annotations across all input
               models. Additionally, it ranks the input models based on their
-              consistency with the derived consensus. Note, that providing a big amount of files to rank
-              (multiple thousands and more) will result in a longer waiting time.
+              consistency with the derived consensus.
             </p>
           </div>
 
