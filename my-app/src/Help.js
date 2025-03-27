@@ -3,6 +3,17 @@ import { useEffect, useState, useRef } from "react";
 import flowDiff from "./assets/rnative-flow-diff.png";
 import uploadScreen from "./assets/upload.png";
 import fuzzyMode from "./assets/fuzzy-mode.png";
+import results1 from "./assets/results1.png";
+import results2 from "./assets/results2a.png";
+import results2b from "./assets/results2b.png";
+
+import A1 from "./assets/a1.png";
+import A2 from "./assets/a2.png";
+import A3 from "./assets/a3.png";
+import A4 from "./assets/a4.png";
+import B1 from "./assets/B1.png";
+import B3 from "./assets/B3.png";
+import B4 from "./assets/B4.png";
 const { Title, Paragraph, Text, Link } = Typography;
 
 const Help = () => {
@@ -247,28 +258,147 @@ const Help = () => {
             </Paragraph>
             <CustomTitle level={2}>Results</CustomTitle>
             <Paragraph>RNAtive returns the following:</Paragraph>
+            <img
+              src={results1}
+              alt="Results"
+              style={{
+                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                maxWidth: "800px", // Prevents overflow
+                height: "auto",
+                display: "inline-block",
+              }}
+            />
+            <Paragraph>
+              Ranking of sent files (as seen in an image above. Note a
+              "download" button in the left bottom corner (marked in red in the
+              image), that allows to download the entirety of the table as a txt
+              file, as well as, visible in the bottom right of the image, a set
+              of buttons allowing to scroll through the table, if it is longer)
+            </Paragraph>
+            <img
+              src={results2}
+              alt="Results"
+              style={{
+                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                maxWidth: "800px", // Prevents overflow
+                height: "auto",
+                display: "inline-block",
+              }}
+            />
+            <Paragraph>
+              Consensus structure: (section A in the image above)
+            </Paragraph>
             <ol>
-              <li>Visualization by the selected visualizer</li>
-              <li>Ranking of sent files</li>
-              <li>
-                Consensus details:
-                <ol>
-                  <li>Dot bracket of consensus molecule</li>
-                  <li>Canonical base pairs</li>
-                  <li>Non-canonical base pairs</li>
-                  <li>Stackings for the consensus molecule</li>
-                </ol>
-              </li>
-              <li>
-                Results for each sent file:
-                <ol>
-                  <li>Dot bracket</li>
-                  <li>Canonical pairs</li>
-                  <li>Non-canonical pairs</li>
-                  <li>Stackings</li>
-                </ol>
-              </li>
+              <li>Visualization by the selected visualizer (A1)</li>
+              <li>Dot bracket of consensus molecule (A1)</li>
+              <li>Canonical base pairs (A2)</li>
+              <li>Non-canonical base pairs (A3)</li>
+              <li>Stackings for the consensus molecule(A4)</li>
             </ol>
+            <img
+              src={results2b}
+              alt="Results"
+              style={{
+                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                maxWidth: "800px", // Prevents overflow
+                height: "auto",
+                display: "inline-block",
+              }}
+            />
+            <Paragraph>
+              Results for each sent file: (section B in the image above)
+            </Paragraph>
+            <ol>
+              <li>Dot bracket (B1)</li>
+              <li>Canonical pairs (B2)</li>
+              <li>Non-canonical pairs (B3)</li>
+              <li>Stackings (B4)</li>
+            </ol>
+            Note that file displayed can be switched using the list on the left
+            (section C in the image above).
+            <Paragraph>
+              Sections A1-A4 and B1-B4 can be opened by clicking on the given
+              tile, to reveal their contents, as shown in the images below.
+              Note, that the content of the tables can be downloaded using the
+              download button, in the same way as it was for the result table.
+              To download the visualization, click on it with the left mouse
+              button, and an image viewer will appear, then, clicking on the
+              image with right mouse button shall open a menu with an option
+              "save image as". Picking this option will allow the user to
+              download the .svg file with the visualization. The dot-bracket
+              structure is displayed in selectable format, therefore it can be
+              simply selected with mouse and copied.
+            </Paragraph>
+            <img
+              src={A1}
+              alt="Results"
+              style={{
+                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                maxWidth: "800px", // Prevents overflow
+                height: "auto",
+                display: "inline-block",
+              }}
+            />
+            <img
+              src={A2}
+              alt="Results"
+              style={{
+                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                maxWidth: "800px", // Prevents overflow
+                height: "auto",
+                display: "inline-block",
+              }}
+            />
+            <img
+              src={A3}
+              alt="Results"
+              style={{
+                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                maxWidth: "800px", // Prevents overflow
+                height: "auto",
+                display: "inline-block",
+              }}
+            />
+            <img
+              src={A4}
+              alt="Results"
+              style={{
+                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                maxWidth: "800px", // Prevents overflow
+                height: "auto",
+                display: "inline-block",
+              }}
+            />
+            <img
+              src={B1}
+              alt="Results"
+              style={{
+                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                maxWidth: "800px", // Prevents overflow
+                height: "auto",
+                display: "inline-block",
+              }}
+            />
+            <img
+              src={B3}
+              alt="Results"
+              style={{
+                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                maxWidth: "800px", // Prevents overflow
+                height: "auto",
+                display: "inline-block",
+              }}
+            />
+            <img
+              src={B4}
+              alt="Results"
+              style={{
+                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                maxWidth: "800px", // Prevents overflow
+                height: "auto",
+                display: "inline-block",
+              }}
+            />
             <CustomTitle level={2}>References</CustomTitle>
             <Paragraph>
               RNAtive's functioning would not be possible without the
