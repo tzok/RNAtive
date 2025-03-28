@@ -309,7 +309,9 @@ public class App {
                     })
             .toArray(Object[][]::new);
     Object[] columnNames =
-        new String[] {"Nt1", "Nt2", "Leontis-Westhof classification", "Confidence", "Is reference?"};
+        new String[] {
+          "Nt1", "Nt2", "Leontis-Westhof classification", "Confidence", "Is reference?"
+        };
     return new DefaultTableModel(data, columnNames);
   }
 
