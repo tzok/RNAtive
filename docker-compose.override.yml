@@ -10,6 +10,10 @@ services:
     volumes:
       - /mnt:/mnt
 
+  adapters:
+    environment:
+      - ADAPTERS_WORKERS=32
+
   nginx:
     ports:
       - "80:80"
