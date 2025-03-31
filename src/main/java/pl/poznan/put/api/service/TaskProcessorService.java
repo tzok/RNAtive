@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import pl.poznan.put.AnalyzedModel;
 import pl.poznan.put.ConsensusMode;
 import pl.poznan.put.InteractionNetworkFidelity;
+import pl.poznan.put.F1score;
 import pl.poznan.put.RankedModel;
 import pl.poznan.put.api.dto.*;
 import pl.poznan.put.api.exception.TaskNotFoundException;
@@ -299,6 +300,9 @@ public class TaskProcessorService {
                   var inf =
                       InteractionNetworkFidelity.calculateFuzzy(
                           fuzzyInteractions, modelInteractions);
+                  logger.debug("Calculating fuzzy f1 score");
+                  var f1score =F1score.calculateFuzzy(
+                              fuzzyInteractions, modelInteractions);        
                   logger.debug("Computing canonical base pairs");
                   var canonicalBasePairs =
                       computeCorrectInteractions(
@@ -308,7 +312,7 @@ public class TaskProcessorService {
                           0);
                   logger.debug("Generating dot bracket for model");
                   var dotBracket = generateDotBracket(model, canonicalBasePairs);
-                  return new RankedModel(model, inf, dotBracket);
+                  return new RankedModel(model, inf,f1score, dotBracket);
                 })
             .collect(Collectors.toList());
 
@@ -763,6 +767,10 @@ public class TaskProcessorService {
                   var inf =
                       InteractionNetworkFidelity.calculate(
                           correctConsideredInteractions, modelInteractions);
+                  logger.debug("Calculating interaction network fidelity");
+                  var f1 =
+                      F1score.calculate(
+                          correctConsideredInteractions, modelInteractions);        
                   logger.debug("Computing canonical base pairs");
                   var canonicalBasePairs =
                       computeCorrectInteractions(
@@ -772,7 +780,7 @@ public class TaskProcessorService {
                           0);
                   logger.debug("Generating dot bracket for model");
                   var dotBracket = generateDotBracket(model, canonicalBasePairs);
-                  return new RankedModel(model, inf, dotBracket);
+                  return new RankedModel(model, inf, f1,dotBracket);
                 })
             .collect(Collectors.toList());
 

@@ -415,10 +415,11 @@ public class App {
                     new Object[] {
                       rankedModel.getRank(),
                       rankedModel.getName(),
-                      String.format(Locale.US, "%.3f", rankedModel.getInteractionNetworkFidelity())
+                      String.format(Locale.US, "%.3f", rankedModel.getInteractionNetworkFidelity(),
+                      String.format(Locale.US, "%.3f", rankedModel.getF1score())
                     })
             .toArray(Object[][]::new);
-    Object[] columnNames = new String[] {"Rank", "File name", "INF"};
+    Object[] columnNames = new String[] {"Rank", "File name", "INF","F1 score"};
     return new DefaultTableModel(data, columnNames);
   }
 
@@ -428,7 +429,9 @@ public class App {
         analyzedModel.streamBasePairs(consensusMode).collect(Collectors.toSet());
     double interactionNetworkFidelity =
         InteractionNetworkFidelity.calculate(referenceInteractions, modelInteractions);
-    return new RankedModel(analyzedModel, interactionNetworkFidelity, null); // TODO: dot-bracket
+    double F1score =
+        F1score.calculate(referenceInteractions, modelInteractions);    
+    return new RankedModel(analyzedModel, interactionNetworkFidelity,F1score, null); // TODO: dot-bracket
   }
 
   private Set<AnalyzedBasePair> correctInteractions(int threshold) {
