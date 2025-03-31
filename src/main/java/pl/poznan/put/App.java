@@ -415,7 +415,7 @@ public class App {
                     new Object[] {
                       rankedModel.getRank(),
                       rankedModel.getName(),
-                      String.format(Locale.US, "%.3f", rankedModel.getInteractionNetworkFidelity(),
+                      String.format(Locale.US, "%.3f", rankedModel.getInteractionNetworkFidelity()),
                       String.format(Locale.US, "%.3f", rankedModel.getF1score())
                     })
             .toArray(Object[][]::new);
