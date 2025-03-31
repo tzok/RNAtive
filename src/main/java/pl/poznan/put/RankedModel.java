@@ -93,7 +93,7 @@ public class RankedModel implements Comparable<RankedModel> {
     return f1score;
   }
 
-  public void setF1score(double F1score) {
+  public void setF1score(double f1score) {
     this.f1score = f1score;
   }
 
