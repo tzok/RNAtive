@@ -17,7 +17,7 @@ public class RankedModel implements Comparable<RankedModel> {
 
   private double interactionNetworkFidelity;
 
-  private double F1score;
+  private double f1score;
 
   private int rank = -1;
 
@@ -29,7 +29,7 @@ public class RankedModel implements Comparable<RankedModel> {
   public RankedModel(
       AnalyzedModel analyzedModel,
       double interactionNetworkFidelity,
-      double F1score,
+      double f1score,
       DefaultDotBracketFromPdb dotBracket) {
     this.name = analyzedModel.name();
     this.basePairsAndStackings = analyzedModel.basePairsAndStackings();
@@ -37,7 +37,7 @@ public class RankedModel implements Comparable<RankedModel> {
     this.nonCanonicalBasePairs = analyzedModel.nonCanonicalBasePairs();
     this.stackings = analyzedModel.stackings();
     this.interactionNetworkFidelity = interactionNetworkFidelity;
-    this.F1score = F1score;
+    this.f1score = f1score;
     this.dotBracket = dotBracket.toStringWithStrands();
   }
 
@@ -90,11 +90,11 @@ public class RankedModel implements Comparable<RankedModel> {
   }
 
     public double getF1score() {
-    return F1score;
+    return f1score;
   }
 
   public void setF1score(double F1score) {
-    this.F1score = F1score;
+    this.f1score = f1score;
   }
 
   public int getRank() {

@@ -429,9 +429,9 @@ public class App {
         analyzedModel.streamBasePairs(consensusMode).collect(Collectors.toSet());
     double interactionNetworkFidelity =
         InteractionNetworkFidelity.calculate(referenceInteractions, modelInteractions);
-    double F1score =
+    double f1score =
         F1score.calculate(referenceInteractions, modelInteractions);    
-    return new RankedModel(analyzedModel, interactionNetworkFidelity,F1score, null); // TODO: dot-bracket
+    return new RankedModel(analyzedModel, interactionNetworkFidelity,f1score, null); // TODO: dot-bracket
   }
 
   private Set<AnalyzedBasePair> correctInteractions(int threshold) {
