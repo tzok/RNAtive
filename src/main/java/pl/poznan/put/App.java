@@ -431,7 +431,7 @@ public class App {
         InteractionNetworkFidelity.calculate(referenceInteractions, modelInteractions);
     double f1score = -31;
     f1score = F1score.calculate(referenceInteractions, modelInteractions);    
-    logger.debug("rankModel Fuzzy F1 score: {}", f1score);
+    LOGGER.debug("rankModel Fuzzy F1 score: {}", f1score);
   
     return new RankedModel(analyzedModel, interactionNetworkFidelity,f1score, null); // TODO: dot-bracket
   }
