@@ -303,11 +303,8 @@ public class TaskProcessorService {
                   logger.debug("Calculating fuzzy f1 score");
                   var f1score =F1score.calculateFuzzy(
                               fuzzyInteractions, modelInteractions);      
-                  if (f1score != null) {
                     logger.debug("Fuzzy F1 score: {}", f1score);
-                  } else {
-                    logger.debug("Fuzzy F1 score calculation returned null.");
-                  }
+
                                           
                   logger.debug("Computing canonical base pairs");
                   var canonicalBasePairs =

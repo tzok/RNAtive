@@ -429,13 +429,10 @@ public class App {
         analyzedModel.streamBasePairs(consensusMode).collect(Collectors.toSet());
     double interactionNetworkFidelity =
         InteractionNetworkFidelity.calculate(referenceInteractions, modelInteractions);
-    double f1score =
-        F1score.calculate(referenceInteractions, modelInteractions);    
-    if (f1score != null) {
-          logger.debug("rankModel Fuzzy F1 score: {}", f1score);
-    } else {
-          logger.debug("rankModel Fuzzy F1 score calculation returned null.");
-        }    
+    double f1score = -31;
+    f1score = F1score.calculate(referenceInteractions, modelInteractions);    
+    logger.debug("rankModel Fuzzy F1 score: {}", f1score);
+  
     return new RankedModel(analyzedModel, interactionNetworkFidelity,f1score, null); // TODO: dot-bracket
   }
 
