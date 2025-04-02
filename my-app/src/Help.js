@@ -152,10 +152,18 @@ const Help = () => {
               it. To send it for evaluation, press the "Submit" button at the
               bottom of the form.{" "}
             </Paragraph>
-            <CustomTitle level={3}>Pdb files provided by user</CustomTitle>
+            <CustomTitle level={3}>Files provided by user</CustomTitle>
             <Paragraph>
-              To evaluate your own pdb files, please drop them in "Upload"
-              button or click on the "Upload" button and select the .pdb files
+              RNAtive accepts both <b>.pdb </b>and <b>.mmCIF</b> files. For a file to be
+              evaluated, it must contain at least one RNA chain. It is important 
+              to note, that from a file containing multiple RNA chains, only the first
+              chain shall be processed. Proteins, ligands, ions and water will be completely
+              ignored during the analysis. 
+
+            </Paragraph>
+            <Paragraph>
+              To evaluate your own files, please drop them in "Upload"
+              button or click on the "Upload" button and select the .pdb/.mmCIF files
               from your computer.
             </Paragraph>
             <img
