@@ -419,7 +419,7 @@ public class App {
                       String.format(Locale.US, "%.3f", rankedModel.getF1score())
                     })
             .toArray(Object[][]::new);
-    Object[] columnNames = new String[] {"Rank", "File name", "INF","F1 score"};
+    Object[] columnNames = new String[] {"Rank", "File name", "INF", "F1 score"};
     return new DefaultTableModel(data, columnNames);
   }
 
@@ -430,10 +430,12 @@ public class App {
     double interactionNetworkFidelity =
         InteractionNetworkFidelity.calculate(referenceInteractions, modelInteractions);
     double f1score = -31;
-    f1score = F1score.calculate(referenceInteractions, modelInteractions);    
+    f1score = F1score.calculate(referenceInteractions, modelInteractions);
     LOGGER.debug("rankModel Fuzzy F1 score: {}", f1score);
-  
-    return new RankedModel(analyzedModel, interactionNetworkFidelity,f1score, null); // TODO: dot-bracket
+    LOGGER.debug("rankModel Fuzzy INF score: {}", interactionNetworkFidelity);
+
+    return new RankedModel(
+        analyzedModel, interactionNetworkFidelity, f1score, null); // TODO: dot-bracket
   }
 
   private Set<AnalyzedBasePair> correctInteractions(int threshold) {

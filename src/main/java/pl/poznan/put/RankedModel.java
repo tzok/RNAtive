@@ -89,7 +89,7 @@ public class RankedModel implements Comparable<RankedModel> {
     this.interactionNetworkFidelity = interactionNetworkFidelity;
   }
 
-    public double getF1score() {
+  public double getF1score() {
     return f1score;
   }
 

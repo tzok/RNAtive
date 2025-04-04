@@ -137,13 +137,16 @@ public class ComputeService {
   }
 
   private TableData generateRankingTable(List<RankedModel> models) {
-    var headers = List.of("Rank", "File name", "INF","F1");
+    var headers = List.of("Rank", "File name", "INF", "F1");
     var rows =
         models.stream()
             .map(
                 model ->
                     List.<Object>of(
-                        model.getRank(), model.getName(), model.getInteractionNetworkFidelity(), model.getF1score()))
+                        model.getRank(),
+                        model.getName(),
+                        model.getInteractionNetworkFidelity(),
+                        model.getF1score()))
             .collect(Collectors.toList());
     return new TableData(headers, rows);
   }
