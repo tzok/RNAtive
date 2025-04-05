@@ -156,18 +156,33 @@ const Help = () => {
               What files are used in the example mode
             </CustomTitle>
             <Paragraph>
-              <b>RNA-Puzzles 1</b> will use all pdb files provided by the
+              The <b>RNA-Puzzles 1</b> will use all pdb files provided by the
               competitors of RNA-Puzzles <sup>[1] </sup>
-              for their Puzzle 1, that being a molecule of PDB ID <i>"3mei"</i>.
+              for their Puzzle 1, that being a molecule of the PDB ID{" "}
+              <i>"3mei"</i>.
+            </Paragraph>
+            <Paragraph>
+              The <b>Decoys</b> will use nine pdb files from the <i>1a9nR</i>{" "}
+              target in the Decoys<sup>[2] </sup>
+              dataset.
+            </Paragraph>
+            <Paragraph>
+              Both sets of files contain, therefore, a subset of molecules being
+              attempts at generating a 3D model from sequence/secondary
+              structure. Running those examples before using one's own data can
+              be beneficial, for it may help with accustoming oneself to modes
+              and parameters available, and with results generated that way.
             </Paragraph>
             <CustomTitle level={3}>Files provided by user</CustomTitle>
             <Paragraph>
               RNAtive accepts both <b>.pdb </b>and <b>.mmCIF</b> files. For a
               file to be evaluated, it must contain at least one RNA chain. It
-              is important to note, that from a file containing multiple RNA
-              chains, only the first chain shall be processed. Proteins,
-              ligands, ions and water will be completely ignored during the
-              analysis.
+              is important to note, that from a single .pdb/.mmCIF file
+              containing multiple RNA chains, only the first chain shall be
+              processed. Proteins, ligands, ions and water will be completely
+              ignored during the analysis.<br></br>
+              The minimum number of uploaded files for the evaluation to be
+              performed is two. The maximum is a hundred files.
             </Paragraph>
             <Paragraph>
               To evaluate your own files, please drop them in "Upload" button or
