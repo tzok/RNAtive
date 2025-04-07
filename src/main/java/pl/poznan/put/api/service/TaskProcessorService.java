@@ -198,7 +198,9 @@ public class TaskProcessorService {
       } else {
         logger.info("Calculating threshold");
         var threshold = calculateThreshold(request.confidenceLevel(), modelCount);
-
+        logger.info("modelCount {}", modelCount);
+        logger.info("confidenceLevel {}", request.confidenceLevel());
+        logger.info("threshold {}", threshold);
         logger.info("Computing correct interactions");
         correctConsideredInteractions =
             computeCorrectInteractions(
@@ -750,7 +752,11 @@ public class TaskProcessorService {
   }
 
   private int calculateThreshold(double confidenceLevel, int count) {
-    return (int) FastMath.ceil(confidenceLevel * count);
+    if(confidenceLevel> count || confidenceLevel<2){ //confidence level must be between 2 to number of files
+      logger.error("Confidence level set to higher than the number of files");
+      System.exit(1);
+    }
+    return (int) FastMath.ceil(confidenceLevel); //file count no longer required for this
   }
 
   private List<RankedModel> generateRankedModels(
@@ -769,10 +775,10 @@ public class TaskProcessorService {
                   var inf =
                       InteractionNetworkFidelity.calculate(
                           correctConsideredInteractions, modelInteractions);
-                  logger.debug("Normal INF score: {}", inf);//TODO returns 0.0
+                  logger.debug("Normal INF score: {}", inf); // TODO returns 0.0
                   logger.debug("Calculating interaction network fidelity");
                   var f1 = F1score.calculate(correctConsideredInteractions, modelInteractions);
-                  logger.debug("Normal F1 score: {}", f1); //TODO returns 0.0
+                  logger.debug("Normal F1 score: {}", f1); // TODO returns 0.0
                   logger.debug("Computing canonical base pairs");
                   var canonicalBasePairs =
                       computeCorrectInteractions(

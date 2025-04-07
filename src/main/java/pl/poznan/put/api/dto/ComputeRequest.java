@@ -29,9 +29,10 @@ public record ComputeRequest(
       visualizationTool = VisualizationTool.RNAPUZZLER;
     }
 
-    // Validate confidence level
-    if (confidenceLevel != null && (confidenceLevel < 0 || confidenceLevel > 1)) {
-      throw new IllegalArgumentException("Confidence level must be between 0 and 1");
-    }
+    // Validate confidence level | no longer required, as  confidenceLevel at this stage is the
+    // number of files
+    // if (confidenceLevel != null && (confidenceLevel < 0 || confidenceLevel > 1)) {
+    //   throw new IllegalArgumentException("Confidence level must be between 0 and 1");
+    // }
   }
 }
