@@ -6,6 +6,7 @@ import fuzzyMode from "./assets/fuzzy-mode.png";
 import results1 from "./assets/results1.png";
 import results2 from "./assets/results2a.png";
 import results2b from "./assets/results2b.png";
+import puzzles1 from "./assets/F1large.jpg";
 
 import A1 from "./assets/a1.png";
 import A2 from "./assets/a2.png";
@@ -158,8 +159,33 @@ const Help = () => {
             <Paragraph>
               The <b>RNA-Puzzles 1</b> will use all pdb files provided by the
               competitors of RNA-Puzzles <sup>[1] </sup>
-              for their Puzzle 1, that being a molecule of the PDB ID{" "}
-              <i>"3mei"</i>.
+              for their Puzzle 1, that being a dimer molecule of the PDB ID{" "}
+              <i>"3mei"</i>. The task provided to the participants, according to
+              the RNA-Puzzles paper<sup>[a]</sup> was:
+            </Paragraph>
+            <Paragraph>
+              <i>
+                Predict the structure of the following sequence:
+                <br></br>
+                5'CCGCCGCGCCAUGCCUGUGGCGG-3',<br></br>
+                knowing that the crystal structure shows a homodimer that
+                contains two strands of the sequence that hybridize with blunt
+                ends (C-G closing base pairs).
+              </i>
+            </Paragraph>
+            <Paragraph>
+              Structure visualization from the authors of the paper:
+              <sup>[b]</sup>
+              <img
+                src={puzzles1}
+                alt="RNA Puzzles structure"
+                style={{
+                  width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                  maxWidth: "100%", // Prevents overflow
+                  height: "auto",
+                  display: "inline-block",
+                }}
+              />
             </Paragraph>
             <Paragraph>
               The <b>Decoys</b> will use nine pdb files from the <i>1a9nR</i>{" "}
@@ -543,9 +569,18 @@ const Help = () => {
             </Paragraph>
             <Paragraph>
               Additionally, there are following references used by our team:
-              <ol>
-                <li>Ref1</li>
-                <li>Ref2</li>
+              <ol type="a" style={{ listStyleType: "lower-alpha" }}>
+                <li>https://rnajournal.cshlp.org/content/18/4/610.full</li>{" "}
+                {/*cite this correctly*/}
+                <li>
+                  <a
+                    href="https://rnajournal.cshlp.org/content/18/4/610/F1.expansion.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    https://rnajournal.cshlp.org/content/18/4/610/F1.expansion.html
+                  </a>
+                </li>
                 <li>Ref3</li>
               </ol>
             </Paragraph>
