@@ -15,11 +15,11 @@ public class InteractionNetworkFidelity {
   public static double calculate(
       Iterable<? extends ClassifiedBasePair> correctBasePairs,
       Iterable<? extends ClassifiedBasePair> modelBasePairs) {
-    var tp = CollectionUtils.intersection(correctBasePairs, modelBasePairs).size();
-    var fp = CollectionUtils.subtract(modelBasePairs, correctBasePairs).size();
-    var fn = CollectionUtils.subtract(correctBasePairs, modelBasePairs).size();
-    var ppv = tp / (tp + fp);
-    var sty = tp / (tp + fn);
+    double tp = CollectionUtils.intersection(correctBasePairs, modelBasePairs).size();
+    double fp = CollectionUtils.subtract(modelBasePairs, correctBasePairs).size();
+    double fn = CollectionUtils.subtract(correctBasePairs, modelBasePairs).size();
+    double ppv = tp / (tp + fp);
+    double sty = tp / (tp + fn);
     return FastMath.sqrt(ppv * sty);
   }
 

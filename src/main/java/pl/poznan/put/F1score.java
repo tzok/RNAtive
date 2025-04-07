@@ -14,13 +14,12 @@ public class F1score {
   public static double calculate(
       Iterable<? extends ClassifiedBasePair> correctBasePairs,
       Iterable<? extends ClassifiedBasePair> modelBasePairs) {
-    var tp = CollectionUtils.intersection(correctBasePairs, modelBasePairs).size();
-    var fp = CollectionUtils.subtract(modelBasePairs, correctBasePairs).size();
-    var fn = CollectionUtils.subtract(correctBasePairs, modelBasePairs).size();
+    double tp = CollectionUtils.intersection(correctBasePairs, modelBasePairs).size();
+    double fp = CollectionUtils.subtract(modelBasePairs, correctBasePairs).size();
+    double fn = CollectionUtils.subtract(correctBasePairs, modelBasePairs).size();
 
     // F1 score: 2tp / (2tp+fp+fn)
-    var f1score = (2 * tp) / (2 * tp + fp + fn);
-    return f1score;
+    return (2 * tp) / (2 * tp + fp + fn);
   }
 
   public static double calculateFuzzy(
@@ -39,7 +38,6 @@ public class F1score {
       }
     }
 
-    var f1score = (2 * tp) / (2 * tp + fp + fn);
-    return f1score;
+    return (2 * tp) / (2 * tp + fp + fn);
   }
 }

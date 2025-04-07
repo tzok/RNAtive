@@ -212,7 +212,7 @@ function Home() {
         if (isFuzzy) {
           payload.confidenceLevel = null;
         } else {
-          payload.confidenceLevel = confidenceLevel; // / fileList.length; //100.0;
+          payload.confidenceLevel = confidenceLevel;
         }
         payload.molProbityFilter = molProbityFilter;
         if (dotBracket) {

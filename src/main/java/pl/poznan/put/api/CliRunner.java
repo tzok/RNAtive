@@ -164,17 +164,18 @@ public class CliRunner implements CommandLineRunner {
         }
       }
 
-      Double confidenceLevel = null;
+      Integer confidenceLevel = null;
       if (cmd.hasOption("confidence")) {
         try {
-          double value = Double.parseDouble(cmd.getOptionValue("confidence"));
-          if (value < 0.0 || value > 1.0) {
-            System.err.println("Confidence level must be between 0.0 and 1.0");
+          int value = Integer.parseInt(cmd.getOptionValue("confidence"));
+          if (value < 2 || value > files.size()) {
+            System.err.println("Confidence level must be between 2 and the number of files");
             return;
           }
           confidenceLevel = value;
         } catch (NumberFormatException e) {
-          System.err.println("Invalid confidence level. Must be a number between 0.0 and 1.0");
+          System.err.println(
+              "Invalid confidence level. Must be a number between 2 and the number of files");
           return;
         }
       }

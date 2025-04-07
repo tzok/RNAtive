@@ -10,7 +10,6 @@ import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.bag.HashBag;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.commons.math3.util.FastMath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -196,12 +195,8 @@ public class TaskProcessorService {
                       fuzzyCanonicalPairs, fuzzyNonCanonicalPairs, fuzzyStackings);
                 });
       } else {
-        logger.info("Calculating threshold");
-        var threshold = calculateThreshold(request.confidenceLevel(), modelCount);
-        logger.info("modelCount {}", modelCount);
-        logger.info("confidenceLevel {}", request.confidenceLevel());
-        logger.info("threshold {}", threshold);
         logger.info("Computing correct interactions");
+        var threshold = request.confidenceLevel();
         correctConsideredInteractions =
             computeCorrectInteractions(
                 request.consensusMode(), consideredInteractionsBag, referenceStructure, threshold);
@@ -749,14 +744,6 @@ public class TaskProcessorService {
       return false;
     }
     return true;
-  }
-
-  private int calculateThreshold(double confidenceLevel, int count) {
-    if(confidenceLevel> count || confidenceLevel<2){ //confidence level must be between 2 to number of files
-      logger.error("Confidence level set to higher than the number of files");
-      System.exit(1);
-    }
-    return (int) FastMath.ceil(confidenceLevel); //file count no longer required for this
   }
 
   private List<RankedModel> generateRankedModels(

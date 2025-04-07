@@ -1,6 +1,7 @@
 package pl.poznan.put.api.dto;
 
 import java.util.List;
+import java.util.Objects;
 import pl.poznan.put.Analyzer;
 import pl.poznan.put.ConsensusMode;
 import pl.poznan.put.api.model.MolProbityFilter;
@@ -8,7 +9,7 @@ import pl.poznan.put.api.model.VisualizationTool;
 
 public record ComputeRequest(
     List<FileData> files,
-    Double confidenceLevel,
+    Integer confidenceLevel,
     Analyzer analyzer,
     ConsensusMode consensusMode,
     String dotBracket,
@@ -29,10 +30,10 @@ public record ComputeRequest(
       visualizationTool = VisualizationTool.RNAPUZZLER;
     }
 
-    // Validate confidence level | no longer required, as  confidenceLevel at this stage is the
-    // number of files
-    // if (confidenceLevel != null && (confidenceLevel < 0 || confidenceLevel > 1)) {
-    //   throw new IllegalArgumentException("Confidence level must be between 0 and 1");
-    // }
+    if (!Objects.isNull(confidenceLevel)
+        && (confidenceLevel < 2 || confidenceLevel > files.size())) {
+      throw new IllegalArgumentException(
+          "Confidence level must be between 2 and the number of files in the request");
+    }
   }
 }
