@@ -120,7 +120,6 @@ public class TaskProcessorService {
       var firstModel = analyzedModels.get(0);
       var referenceStructure =
           ReferenceStructureUtil.readReferenceStructure(request.dotBracket(), firstModel);
-      System.out.println("referenceStructure: " + referenceStructure);
 
       logger.info("Collecting all interactions");
       var canonicalPairsBag =
@@ -162,12 +161,15 @@ public class TaskProcessorService {
       if (request.confidenceLevel() == null) {
         logger.info("Computing fuzzy interactions");
         var fuzzyCanonicalPairs =
-            computeFuzzyInteractions(canonicalPairsBag, referenceStructure, modelCount);
+            computeFuzzyInteractions(canonicalPairsBag, referenceStructure.basePairs(), modelCount);
         var fuzzyNonCanonicalPairs =
-            computeFuzzyInteractions(nonCanonicalPairsBag, referenceStructure, modelCount);
-        var fuzzyStackings = computeFuzzyInteractions(stackingsBag, referenceStructure, modelCount);
+            computeFuzzyInteractions(
+                nonCanonicalPairsBag, referenceStructure.basePairs(), modelCount);
+        var fuzzyStackings =
+            computeFuzzyInteractions(stackingsBag, referenceStructure.basePairs(), modelCount);
         var fuzzyAllInteractions =
-            computeFuzzyInteractions(allInteractionsBag, referenceStructure, modelCount);
+            computeFuzzyInteractions(
+                allInteractionsBag, referenceStructure.basePairs(), modelCount);
         var fuzzyConsideredInteractions =
             switch (request.consensusMode()) {
               case CANONICAL -> fuzzyCanonicalPairs;
@@ -215,8 +217,7 @@ public class TaskProcessorService {
       }
 
       logger.info("Creating task result");
-      var taskResult =
-          new TaskResult(rankedModels, referenceStructure, dotBracket.toStringWithStrands());
+      var taskResult = new TaskResult(rankedModels, referenceStructure, dotBracket.toStringWithStrands());
       var resultJson = objectMapper.writeValueAsString(taskResult);
       task.setResult(resultJson);
 
@@ -307,7 +308,7 @@ public class TaskProcessorService {
                       computeCorrectInteractions(
                           ConsensusMode.CANONICAL,
                           new HashBag<>(model.canonicalBasePairs()),
-                          List.of(),
+                          new ReferenceStructureUtil.ReferenceParseResult(List.of(), List.of()),
                           0);
                   logger.debug("Generating dot bracket for model");
                   var dotBracket = generateDotBracket(model, canonicalBasePairs);
@@ -333,14 +334,22 @@ public class TaskProcessorService {
   private Set<AnalyzedBasePair> computeCorrectInteractions(
       ConsensusMode consensusMode,
       HashBag<AnalyzedBasePair> consideredInteractionsBag,
-      List<pl.poznan.put.structure.BasePair> referenceStructure,
+      ReferenceStructureUtil.ReferenceParseResult referenceStructure,
       int threshold) {
     logger.debug("Filtering relevant base pairs based on reference structure and threshold");
+    List<PdbNamedResidueIdentifier> residuesUnpairedInReference =
+        referenceStructure.markedResidues();
     var correctConsideredInteractions =
         consideredInteractionsBag.stream()
             .filter(
+                classifiedBasePair -> {
+                  pl.poznan.put.structure.BasePair pair = classifiedBasePair.basePair();
+                  return !residuesUnpairedInReference.contains(pair.left())
+                      && !residuesUnpairedInReference.contains(pair.right());
+                })
+            .filter(
                 classifiedBasePair ->
-                    referenceStructure.contains(classifiedBasePair.basePair())
+                    referenceStructure.basePairs().contains(classifiedBasePair.basePair())
                         || consideredInteractionsBag.getCount(classifiedBasePair) >= threshold)
             .collect(Collectors.toSet());
 
@@ -771,7 +780,7 @@ public class TaskProcessorService {
                       computeCorrectInteractions(
                           ConsensusMode.CANONICAL,
                           new HashBag<>(model.canonicalBasePairs()),
-                          List.of(),
+                          new ReferenceStructureUtil.ReferenceParseResult(List.of(), List.of()),
                           0);
                   logger.debug("Generating dot bracket for model");
                   var dotBracket = generateDotBracket(model, canonicalBasePairs);

@@ -155,9 +155,15 @@ public class ComputeService {
       List<? extends AnalyzedBasePair> pairs,
       HashBag<AnalyzedBasePair> allInteractions,
       int totalModelCount,
-      List<pl.poznan.put.structure.BasePair> referenceStructure) {
+      ReferenceStructureUtil.ReferenceParseResult referenceStructure) {
     var headers =
-        List.of("Nt1", "Nt2", "Leontis-Westhof classification", "Confidence", "Is reference?");
+        List.of(
+            "Nt1",
+            "Nt2",
+            "Leontis-Westhof classification",
+            "Confidence",
+            "Paired in reference",
+            "Unpaired in reference");
     var rows =
         pairs.stream()
             .distinct()
@@ -169,7 +175,9 @@ public class ComputeService {
                       pair.basePair().right().toString(),
                       pair.leontisWesthof().toString(),
                       confidence,
-                      referenceStructure.contains(pair.basePair()));
+                      referenceStructure.basePairs().contains(pair.basePair()),
+                      referenceStructure.markedResidues().contains(pair.basePair().left())
+                          || referenceStructure.markedResidues().contains(pair.basePair().right()));
                 })
             .collect(Collectors.toList());
     return new TableData(headers, rows);
