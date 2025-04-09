@@ -230,6 +230,9 @@ function Home() {
         });
 
         if (!response.ok) {
+          if (response.status === 413) {
+            throw new Error("Request too large. Please reduce the size or number of files.");
+          }
           throw new Error(`Server responded with status ${response.status}`);
         }
 
@@ -250,6 +253,8 @@ function Home() {
       if (taskId) {
         console.error(`Task ID: ${taskId}`);
       }
+      setServerError(error.message);
+      setIsLoading(false);
     }
   };
 
