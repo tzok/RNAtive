@@ -21,26 +21,11 @@ public class ReferenceStructureUtil {
       return new ReferenceParseResult(Collections.emptyList(), Collections.emptyList());
     }
 
-    String[] lines = dotBracketInput.trim().split("\\R", 2); // Split into max 2 lines
-    String sequenceLine = lines[0];
-    String structureLine = (lines.length > 1) ? lines[1] : ""; // Use second line if present
+    // Replace 'x' or 'X' with '-' which signifies a missing residue in DotBracketSymbol
+    String modifiedDotBracketInput = dotBracketInput.replace('x', '-').replace('X', '-');
 
-    List<Integer> xIndices = new ArrayList<>();
-    StringBuilder modifiedStructureLineBuilder = new StringBuilder();
-    for (int i = 0; i < structureLine.length(); i++) {
-      char c = structureLine.charAt(i);
-      if (c == 'x' || c == 'X') {
-        xIndices.add(i);
-        modifiedStructureLineBuilder.append('.'); // Replace 'x' with '.' for parsing
-      } else {
-        modifiedStructureLineBuilder.append(c);
-      }
-    }
-    String modifiedStructureLine = modifiedStructureLineBuilder.toString();
-
-    // Use sequence and modified structure for parsing
-    String dotBracketStringForParsing = sequenceLine + "\n" + modifiedStructureLine;
-    var dotBracketObj = DefaultDotBracket.fromString(dotBracketStringForParsing);
+    // DefaultDotBracket.fromString handles the multi-line format
+    var dotBracketObj = DefaultDotBracket.fromString(modifiedDotBracketInput);
     int modelResidueCount = model.structure3D().residues().size();
 
     if (dotBracketObj.sequence().length() != modelResidueCount) {
@@ -76,11 +61,17 @@ public class ReferenceStructureUtil {
                 })
             .collect(Collectors.toList());
 
-    List<PdbNamedResidueIdentifier> markedResidues =
-        xIndices.stream()
-            .map(index -> structure.symbols().get(index))
-            .map(symbol -> model.findResidue(structure.identifier(symbol)).namedResidueIdentifier())
-            .collect(Collectors.toList());
+    List<PdbNamedResidueIdentifier> markedResidues = new ArrayList<>();
+    List<DotBracketSymbol> symbols = structure.symbols();
+    for (DotBracketSymbol symbol : symbols) {
+      // isMissing() checks if the character was '-' (or originally 'x'/'X')
+      if (symbol.isMissing()) {
+        ChainNumberICode identifier = structure.identifier(symbol);
+        PdbNamedResidueIdentifier namedIdentifier =
+            model.findResidue(identifier).namedResidueIdentifier();
+        markedResidues.add(namedIdentifier);
+      }
+    }
 
     return new ReferenceParseResult(basePairs, markedResidues);
   }
