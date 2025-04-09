@@ -47,8 +47,7 @@ public class CliRunner implements CommandLineRunner {
             .longOpt("mol-probity")
             .hasArg()
             .argName("filter")
-            .desc(
-                "Set MolProbity filter level (ALL, CLASHSCORE, CLASHSCORE_BONDS_ANGLES)")
+            .desc("Set MolProbity filter level (ALL, CLASHSCORE, CLASHSCORE_BONDS_ANGLES)")
             .build());
 
     options.addOption(

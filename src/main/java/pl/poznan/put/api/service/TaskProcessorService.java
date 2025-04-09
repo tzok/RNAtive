@@ -637,8 +637,7 @@ public class TaskProcessorService {
               modelName,
               task,
               String.format(
-                  "Clashscore rank category is '%s' (required: 'good')",
-                  structure.rankCategory()));
+                  "Clashscore rank category is '%s' (required: 'good')", structure.rankCategory()));
           return false;
         }
         return true; // Only clashscore needs to be good
@@ -650,8 +649,7 @@ public class TaskProcessorService {
               modelName,
               task,
               String.format(
-                  "Clashscore rank category is '%s' (required: 'good')",
-                  structure.rankCategory()));
+                  "Clashscore rank category is '%s' (required: 'good')", structure.rankCategory()));
           isValid = false;
         }
         if (!"good".equalsIgnoreCase(structure.badBondsCategory())) {
@@ -659,8 +657,7 @@ public class TaskProcessorService {
               modelName,
               task,
               String.format(
-                  "Bad bonds category is '%s' (required: 'good')",
-                  structure.badBondsCategory()));
+                  "Bad bonds category is '%s' (required: 'good')", structure.badBondsCategory()));
           isValid = false;
         }
         if (!"good".equalsIgnoreCase(structure.badAnglesCategory())) {
@@ -668,8 +665,7 @@ public class TaskProcessorService {
               modelName,
               task,
               String.format(
-                  "Bad angles category is '%s' (required: 'good')",
-                  structure.badAnglesCategory()));
+                  "Bad angles category is '%s' (required: 'good')", structure.badAnglesCategory()));
           isValid = false;
         }
         return isValid;
