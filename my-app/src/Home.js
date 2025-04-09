@@ -763,7 +763,7 @@ function Home() {
               label={
                 <span>
                   Expected 2D structure{" "}
-                  <Tooltip title="If desired, input the expected 2D structure using dot-bracket notation. These specified base pairs will be considered essential, and their absence in models will result in lower rankings.">
+                  <Tooltip title="Optionally, provide the expected 2D structure in dot-bracket notation. Use brackets like '()' or '[]' to indicate required base pairs. Mark residues that must be unpaired with 'x'. Use '.' for positions with no constraints.">
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
