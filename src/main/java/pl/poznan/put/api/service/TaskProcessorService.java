@@ -164,8 +164,7 @@ public class TaskProcessorService {
             computeFuzzyInteractions(canonicalPairsBag, referenceStructure, modelCount);
         var fuzzyNonCanonicalPairs =
             computeFuzzyInteractions(nonCanonicalPairsBag, referenceStructure, modelCount);
-        var fuzzyStackings =
-            computeFuzzyInteractions(stackingsBag, referenceStructure, modelCount);
+        var fuzzyStackings = computeFuzzyInteractions(stackingsBag, referenceStructure, modelCount);
         var fuzzyAllInteractions =
             computeFuzzyInteractions(allInteractionsBag, referenceStructure, modelCount);
         var fuzzyConsideredInteractions =
