@@ -4,10 +4,27 @@ const decimalToFraction = (decimal, denominator) => {
 };
 
 export const getTableColumns = (headers, rows, fileCount = 100) => {
+  // Find indices for the reference columns
+  const pairedIndex = headers.indexOf("Paired in reference");
+  const unpairedIndex = headers.indexOf("Unpaired in reference");
+
+  // Check if any row has a true value in either reference column
+  let showReferenceColumns = false;
+  if (pairedIndex !== -1 || unpairedIndex !== -1) {
+    showReferenceColumns = rows.some(
+      (row) =>
+        (pairedIndex !== -1 && row[pairedIndex]) ||
+        (unpairedIndex !== -1 && row[unpairedIndex])
+    );
+  }
+
   return headers
     .map((header, index) => {
-      // Skip "Is reference?" column if all values are empty
-      if (header === "Is reference?" && rows.every((row) => !row[index])) {
+      // Skip reference columns if no row has true in either
+      if (
+        !showReferenceColumns &&
+        (header === "Paired in reference" || header === "Unpaired in reference")
+      ) {
         return null;
       }
 
