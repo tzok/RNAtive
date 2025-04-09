@@ -1,5 +1,6 @@
 package pl.poznan.put.api.util;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -7,17 +8,15 @@ import pl.poznan.put.AnalyzedModel;
 import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
 import pl.poznan.put.pdb.analysis.PdbResidue;
 import pl.poznan.put.structure.*;
-import java.util.ArrayList;
-import java.util.stream.IntStream;
 import pl.poznan.put.structure.formats.DefaultDotBracket;
 import pl.poznan.put.structure.formats.ImmutableDefaultDotBracketFromPdb;
 
 public class ReferenceStructureUtil {
-
   public record ReferenceParseResult(
       List<BasePair> basePairs, List<PdbNamedResidueIdentifier> markedResidues) {}
 
-  public static ReferenceParseResult readReferenceStructure(String dotBracketInput, AnalyzedModel model) {
+  public static ReferenceParseResult readReferenceStructure(
+      String dotBracketInput, AnalyzedModel model) {
     if (dotBracketInput == null || dotBracketInput.isBlank()) {
       return new ReferenceParseResult(Collections.emptyList(), Collections.emptyList());
     }
@@ -64,17 +63,18 @@ public class ReferenceStructureUtil {
         ImmutableDefaultDotBracketFromPdb.of(
             dotBracketObj.sequence(), dotBracketObj.structure(), model.structure3D());
 
-    List<BasePair> basePairs = structure.pairs().keySet().stream()
-        .map(
-            symbol -> {
-              DotBracketSymbol paired = structure.pairs().get(symbol);
-              PdbNamedResidueIdentifier left =
-                  model.findResidue(structure.identifier(symbol)).namedResidueIdentifier();
-              PdbNamedResidueIdentifier right =
-                  model.findResidue(structure.identifier(paired)).namedResidueIdentifier();
-              return ImmutableBasePair.of(left, right);
-            })
-        .collect(Collectors.toList());
+    List<BasePair> basePairs =
+        structure.pairs().keySet().stream()
+            .map(
+                symbol -> {
+                  DotBracketSymbol paired = structure.pairs().get(symbol);
+                  PdbNamedResidueIdentifier left =
+                      model.findResidue(structure.identifier(symbol)).namedResidueIdentifier();
+                  PdbNamedResidueIdentifier right =
+                      model.findResidue(structure.identifier(paired)).namedResidueIdentifier();
+                  return ImmutableBasePair.of(left, right);
+                })
+            .collect(Collectors.toList());
 
     List<PdbNamedResidueIdentifier> markedResidues =
         xIndices.stream()

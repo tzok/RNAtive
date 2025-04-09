@@ -217,7 +217,8 @@ public class TaskProcessorService {
       }
 
       logger.info("Creating task result");
-      var taskResult = new TaskResult(rankedModels, referenceStructure, dotBracket.toStringWithStrands());
+      var taskResult =
+          new TaskResult(rankedModels, referenceStructure, dotBracket.toStringWithStrands());
       var resultJson = objectMapper.writeValueAsString(taskResult);
       task.setResult(resultJson);
 
