@@ -677,11 +677,12 @@ function Home() {
               reliable base pairs and stacking interactions. Tailored for RNA
               structural biologists and bioinformaticians, it aids in validating
               RNA models, improving structural predictions, and studying the
-              evolution of RNA structures. The tool accepts 2-100 RNA 3D
+              evolution of RNA structures. The tool accepts a minimum of two RNA 3D
               structure models in PDB or mmCIF format, analyzes them using
               state-of-the-art base pair annotation tools, and generates a
               consensus structure by comparing annotations across all input
-              models. Additionally, it ranks the input models based on their
+              models. The combined size of all PDB/mmCIF files cannot exceed 100MB.
+              Additionally, it ranks the input models based on their
               consistency with the derived consensus.
             </p>
           </div>
@@ -690,8 +691,8 @@ function Home() {
             <Form.Item
               label={
                 <span>
-                  Load example{" "}
-                  <Tooltip title="Load one of the predefined datasets.">
+                  Example datasets{" "}
+                  <Tooltip title="Click a button to load a demo dataset.">
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
@@ -702,10 +703,10 @@ function Home() {
                   <Button onClick={loadRNAPuzzlesExample}>
                     <Tooltip
                       title={
-                        "13 models submitted to the first challenge in RNA-Puzzles contest."
+                        "13 models of the regulatory RNA motif from thymidylate synthase mRNA (3MEI), predicted in PZ01."
                       }
                     >
-                      RNA-Puzzles 1
+                      RNA-Puzzles models
                     </Tooltip>
                   </Button>
                 </Col>
@@ -713,10 +714,10 @@ function Home() {
                   <Button onClick={loadDecoyExamples}>
                     <Tooltip
                       title={
-                        "Nine decoys of the U2 small nuclear RNA (PDB id: 1A9N)"
+                        "9 decoy models of the U2 small nuclear RNA fragment (1A9N)"
                       }
                     >
-                      Decoys
+                      U2 snRNA decoys
                     </Tooltip>
                   </Button>
                 </Col>
@@ -727,7 +728,7 @@ function Home() {
               label={
                 <span>
                   Files{" "}
-                  <Tooltip title="Upload one or more structural files in PDB or PDBx/mmCIF format for analysis.">
+                  <Tooltip title="Upload a minimum of two structural files in PDB or PDBx/mmCIF format for analysis. The combined size of files cannot exceed 100MB.">
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>

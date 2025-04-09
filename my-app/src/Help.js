@@ -157,7 +157,7 @@ const Help = () => {
               What files are used in the example mode
             </CustomTitle>
             <Paragraph>
-              The <b>RNA-Puzzles 1</b> will use all pdb files provided by the
+              The <b>RNA-Puzzles 1</b> will use 13 pdb files provided by the
               competitors of RNA-Puzzles <sup>[1] </sup>
               for their Puzzle 1, that being a dimer molecule of the PDB ID{" "}
               <i>"3mei"</i>. The task provided to the participants, according to
@@ -173,6 +173,7 @@ const Help = () => {
                 ends (C-G closing base pairs).
               </i>
             </Paragraph>
+            <Paragraph>It is worth noting that 14 files were provided to RNA-Puzzles 1; however, the prediction provided by the Santalucia lab had a different sequence than the rest of the files. RNAtive requires all files to contain identical sequence, therefore this file had to be discarded. </Paragraph>
             <Paragraph>
               Structure visualization from the authors of the paper:
               <sup>[b]</sup>
@@ -208,7 +209,7 @@ const Help = () => {
               processed. Proteins, ligands, ions and water will be completely
               ignored during the analysis.<br></br>
               The minimum number of uploaded files for the evaluation to be
-              performed is two. The maximum is a hundred files.
+              performed is two. The maximum combined size of all provided files is 100MB.
             </Paragraph>
             <Paragraph>
               To evaluate your own files, please drop them in "Upload" button or
@@ -234,6 +235,8 @@ const Help = () => {
               Based on the selected filter, models failing to meet quality
               standards will be excluded from subsequent evaluation.
             </Paragraph>
+            <Paragraph>If the option "Clashscore only" is selected, models that received a clashscore of "good" will be uploaded, but issues with angles and bonds shall be ignored. <br>
+           </br> Option "Strict" will only accept files that got a score of "good" in clashscore, bonds, and angles criteria. </Paragraph>
             <CustomTitle level={3}>Expected 2D structure</CustomTitle>
             <Paragraph>
               If desired, a dot-bracket form of the molecule can be given to the
@@ -266,6 +269,12 @@ const Help = () => {
               <br />
               )))))))))))))..))))))))
             </pre>
+            <Paragraph>
+              The following syntax is used to describe the interactions within the expected structure:<br></br>
+              <i>( )</i> - represents a pair of nucleotides.<br></br>
+              <i>x</i> - represents a situation in which the nucleotide is left unpaired.<br></br>
+              <i>.</i> - represents a lack of any restrictions for the given nucleotide.<br></br>
+            </Paragraph>
             <CustomTitle level={3}>Base pair analyzer</CustomTitle>
             <Paragraph>
               There are six built-in annotators for extracting nucleotide
