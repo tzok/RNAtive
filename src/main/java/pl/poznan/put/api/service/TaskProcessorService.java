@@ -161,15 +161,13 @@ public class TaskProcessorService {
       if (request.confidenceLevel() == null) {
         logger.info("Computing fuzzy interactions");
         var fuzzyCanonicalPairs =
-            computeFuzzyInteractions(canonicalPairsBag, referenceStructure.basePairs(), modelCount);
+            computeFuzzyInteractions(canonicalPairsBag, referenceStructure, modelCount);
         var fuzzyNonCanonicalPairs =
-            computeFuzzyInteractions(
-                nonCanonicalPairsBag, referenceStructure.basePairs(), modelCount);
+            computeFuzzyInteractions(nonCanonicalPairsBag, referenceStructure, modelCount);
         var fuzzyStackings =
-            computeFuzzyInteractions(stackingsBag, referenceStructure.basePairs(), modelCount);
+            computeFuzzyInteractions(stackingsBag, referenceStructure, modelCount);
         var fuzzyAllInteractions =
-            computeFuzzyInteractions(
-                allInteractionsBag, referenceStructure.basePairs(), modelCount);
+            computeFuzzyInteractions(allInteractionsBag, referenceStructure, modelCount);
         var fuzzyConsideredInteractions =
             switch (request.consensusMode()) {
               case CANONICAL -> fuzzyCanonicalPairs;
@@ -424,7 +422,7 @@ public class TaskProcessorService {
 
   private Map<AnalyzedBasePair, Double> computeFuzzyInteractions(
       HashBag<AnalyzedBasePair> consideredInteractionsBag,
-      List<pl.poznan.put.structure.BasePair> referenceStructure,
+      ReferenceStructureUtil.ReferenceParseResult referenceStructure,
       int modelCount) {
     logger.info("Starting computation of fuzzy interactions");
     return consideredInteractionsBag.stream()
@@ -433,9 +431,16 @@ public class TaskProcessorService {
             Collectors.toMap(
                 k -> k,
                 v -> {
-                  if (referenceStructure.contains(v.basePair())) {
+                  // If either residue is marked as unpaired in reference, score is 0.0
+                  if (referenceStructure.markedResidues().contains(v.basePair().left())
+                      || referenceStructure.markedResidues().contains(v.basePair().right())) {
+                    return 0.0;
+                  }
+                  // If the pair exists in the reference structure base pairs, score is 1.0
+                  if (referenceStructure.basePairs().contains(v.basePair())) {
                     return 1.0;
                   }
+                  // Otherwise, score is the confidence level (frequency)
                   return (double) (consideredInteractionsBag.getCount(v)) / modelCount;
                 }));
   }
