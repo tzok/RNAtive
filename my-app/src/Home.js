@@ -748,7 +748,7 @@ function Home() {
               label={
                 <span>
                   Molprobity filter{" "}
-                  <Tooltip title="When enabled, individual models undergo MolProbity evaluation, receiving ratings of 'good', 'caution', or 'warning' across four key metrics: clashscore, backbone conformation, bonds, and angles. Based on the selected filter, models failing to meet quality standards will be excluded from subsequent evaluation.">
+                  <Tooltip title="MolProbity evaluates structural quality by analyzing atomic clashes, bond lengths, and angles. The filter options determine which models are included in the consensus analysis: 'No filtering' accepts all models, 'Clashscore only' requires good clash scores, and 'Strict' requires good scores for clashes, bonds, and angles.">
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
