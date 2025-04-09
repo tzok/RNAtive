@@ -584,26 +584,47 @@ public class TaskProcessorService {
     // Optionally apply MolProbity filtering
     List<ParsedModel> validModels;
     if (request.molProbityFilter() == MolProbityFilter.ALL) {
+      logger.info("MolProbity filtering is set to ALL, skipping filtering.");
       validModels = new ArrayList<>(models);
     } else {
+      logger.info("Attempting MolProbity filtering with level: {}", request.molProbityFilter());
       try (var rnalyzerClient = new RnalyzerClient()) {
         rnalyzerClient.initializeSession();
         validModels =
             models.stream()
                 .map(
                     model -> {
-                      var response =
-                          rnalyzerClient.analyzePdbContent(model.content(), model.name());
-                      return isModelValid(
-                              model.name(), response.structure(), request.molProbityFilter(), task)
-                          ? model
-                          : null;
+                      try {
+                        var response =
+                            rnalyzerClient.analyzePdbContent(model.content(), model.name());
+                        return isModelValid(
+                                model.name(), response.structure(), request.molProbityFilter(), task)
+                            ? model
+                            : null; // Filtered out
+                      } catch (Exception e) {
+                        logger.warn(
+                            "MolProbity analysis failed for model {}: {}. Model will be included.",
+                            model.name(),
+                            e.getMessage());
+                        return model; // Include model if analysis fails
+                      }
                     })
+                .filter(Objects::nonNull) // Remove nulls (filtered models)
                 .toList();
+        logger.info(
+            "MolProbity filtering completed. {} models passed out of {}.",
+            validModels.size(),
+            models.size());
+      } catch (Exception e) {
+        logger.warn(
+            "MolProbity filtering failed due to an error with the RNAlyzer service: {}. Proceeding without MolProbity filtering.",
+            e.getMessage());
+        // If the RNAlyzer service fails entirely, proceed with all models
+        validModels = new ArrayList<>(models);
       }
     }
 
-    // Analyze valid models
+    // Analyze valid models (now contains either filtered or all models)
     return validModels.parallelStream()
         .filter(Objects::nonNull)
         .map(
