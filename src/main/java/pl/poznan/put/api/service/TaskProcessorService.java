@@ -598,7 +598,10 @@ public class TaskProcessorService {
                         var response =
                             rnalyzerClient.analyzePdbContent(model.content(), model.name());
                         return isModelValid(
-                                model.name(), response.structure(), request.molProbityFilter(), task)
+                                model.name(),
+                                response.structure(),
+                                request.molProbityFilter(),
+                                task)
                             ? model
                             : null; // Filtered out
                       } catch (Exception e) {
@@ -617,7 +620,8 @@ public class TaskProcessorService {
             models.size());
       } catch (Exception e) {
         logger.warn(
-            "MolProbity filtering failed due to an error with the RNAlyzer service: {}. Proceeding without MolProbity filtering.",
+            "MolProbity filtering failed due to an error with the RNAlyzer service: {}. Proceeding"
+                + " without MolProbity filtering.",
             e.getMessage());
         // If the RNAlyzer service fails entirely, proceed with all models
         validModels = new ArrayList<>(models);
