@@ -24,7 +24,8 @@ public record ComputeRequest(
       consensusMode = ConsensusMode.CANONICAL;
     }
     if (molProbityFilter == null) {
-      molProbityFilter = MolProbityFilter.GOOD_ONLY;
+      // Default to no filtering
+      molProbityFilter = MolProbityFilter.ALL;
     }
     if (visualizationTool == null) {
       visualizationTool = VisualizationTool.RNAPUZZLER;

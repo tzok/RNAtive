@@ -1,7 +1,7 @@
 package pl.poznan.put.api.model;
 
 public enum MolProbityFilter {
-  GOOD_ONLY,
-  GOOD_AND_CAUTION,
-  ALL
+  ALL, // No filtering based on MolProbity scores
+  CLASHSCORE, // Filter based only on clashscore rank category
+  CLASHSCORE_BONDS_ANGLES // Filter based on clashscore, bad bonds, and bad angles categories
 }

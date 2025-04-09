@@ -627,64 +627,58 @@ public class TaskProcessorService {
       MolProbityFilter filter,
       Task task) {
 
-    if (filter == MolProbityFilter.GOOD_ONLY) {
-      return validateGoodOnly(modelName, structure, task);
-    } else if (filter == MolProbityFilter.GOOD_AND_CAUTION) {
-      return validateGoodAndCaution(modelName, structure, task);
-    }
-    return true;
-  }
+    switch (filter) {
+      case ALL:
+        return true; // No filtering
 
-  private boolean validateGoodOnly(
-      String modelName, MolProbityResponse.Structure structure, Task task) {
-    if (!"good".equalsIgnoreCase(structure.rankCategory())) {
-      addRemovalReason(
-          modelName,
-          task,
-          String.format(
-              "Overall rank category is %s (clashscore: %s, percentile rank: %s)",
-              structure.rankCategory(), structure.clashscore(), structure.pctRank()));
-      return false;
+      case CLASHSCORE:
+        if (!"good".equalsIgnoreCase(structure.rankCategory())) {
+          addRemovalReason(
+              modelName,
+              task,
+              String.format(
+                  "Clashscore rank category is '%s' (required: 'good')",
+                  structure.rankCategory()));
+          return false;
+        }
+        return true; // Only clashscore needs to be good
+
+      case CLASHSCORE_BONDS_ANGLES:
+        boolean isValid = true;
+        if (!"good".equalsIgnoreCase(structure.rankCategory())) {
+          addRemovalReason(
+              modelName,
+              task,
+              String.format(
+                  "Clashscore rank category is '%s' (required: 'good')",
+                  structure.rankCategory()));
+          isValid = false;
+        }
+        if (!"good".equalsIgnoreCase(structure.badBondsCategory())) {
+          addRemovalReason(
+              modelName,
+              task,
+              String.format(
+                  "Bad bonds category is '%s' (required: 'good')",
+                  structure.badBondsCategory()));
+          isValid = false;
+        }
+        if (!"good".equalsIgnoreCase(structure.badAnglesCategory())) {
+          addRemovalReason(
+              modelName,
+              task,
+              String.format(
+                  "Bad angles category is '%s' (required: 'good')",
+                  structure.badAnglesCategory()));
+          isValid = false;
+        }
+        return isValid;
+
+      default:
+        // Should not happen, but default to true (no filtering) if enum changes unexpectedly
+        logger.warn("Unknown MolProbityFilter value: {}. Applying no filter.", filter);
+        return true;
     }
-    if (!"good".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
-      addRemovalReason(
-          modelName,
-          task,
-          String.format(
-              "Sugar pucker category is %s (%s%%)",
-              structure.probablyWrongSugarPuckersCategory(),
-              structure.pctProbablyWrongSugarPuckers()));
-      return false;
-    }
-    if (!"good".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
-      addRemovalReason(
-          modelName,
-          task,
-          String.format(
-              "Backbone conformations category is %s (%s%%)",
-              structure.badBackboneConformationsCategory(),
-              structure.pctBadBackboneConformations()));
-      return false;
-    }
-    if (!"good".equalsIgnoreCase(structure.badBondsCategory())) {
-      addRemovalReason(
-          modelName,
-          task,
-          String.format(
-              "Bonds category is %s (%s%%)",
-              structure.badBondsCategory(), structure.pctBadBonds()));
-      return false;
-    }
-    if (!"good".equalsIgnoreCase(structure.badAnglesCategory())) {
-      addRemovalReason(
-          modelName,
-          task,
-          String.format(
-              "Angles category is %s (%s%%)",
-              structure.badAnglesCategory(), structure.pctBadAngles()));
-      return false;
-    }
-    return true;
   }
 
   private void addRemovalReason(String modelName, Task task, String reason) {
@@ -712,57 +706,7 @@ public class TaskProcessorService {
     return message.toString();
   }
 
-  private boolean validateGoodAndCaution(
-      String modelName, MolProbityResponse.Structure structure, Task task) {
-    if ("warning".equalsIgnoreCase(structure.rankCategory())) {
-      addRemovalReason(
-          modelName,
-          task,
-          String.format(
-              "Overall rank category is %s (clashscore: %s, percentile rank: %s)",
-              structure.rankCategory(), structure.clashscore(), structure.pctRank()));
-      return false;
-    }
-    if ("warning".equalsIgnoreCase(structure.probablyWrongSugarPuckersCategory())) {
-      addRemovalReason(
-          modelName,
-          task,
-          String.format(
-              "Sugar pucker category is %s (%s%%)",
-              structure.probablyWrongSugarPuckersCategory(),
-              structure.pctProbablyWrongSugarPuckers()));
-      return false;
-    }
-    if ("warning".equalsIgnoreCase(structure.badBackboneConformationsCategory())) {
-      addRemovalReason(
-          modelName,
-          task,
-          String.format(
-              "Backbone conformations category is %s (%s%%)",
-              structure.badBackboneConformationsCategory(),
-              structure.pctBadBackboneConformations()));
-      return false;
-    }
-    if ("warning".equalsIgnoreCase(structure.badBondsCategory())) {
-      addRemovalReason(
-          modelName,
-          task,
-          String.format(
-              "Bonds category is %s (%s%%)",
-              structure.badBondsCategory(), structure.pctBadBonds()));
-      return false;
-    }
-    if ("warning".equalsIgnoreCase(structure.badAnglesCategory())) {
-      addRemovalReason(
-          modelName,
-          task,
-          String.format(
-              "Angles category is %s (%s%%)",
-              structure.badAnglesCategory(), structure.pctBadAngles()));
-      return false;
-    }
-    return true;
-  }
+  // Removed validateGoodAndCaution as it's no longer used
 
   private List<RankedModel> generateRankedModels(
       ConsensusMode consensusMode,

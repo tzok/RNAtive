@@ -47,7 +47,8 @@ public class CliRunner implements CommandLineRunner {
             .longOpt("mol-probity")
             .hasArg()
             .argName("filter")
-            .desc("Set MolProbity filter level (GOOD_ONLY, GOOD_AND_CAUTION, ALL)")
+            .desc(
+                "Set MolProbity filter level (ALL, CLASHSCORE, CLASHSCORE_BONDS_ANGLES)")
             .build());
 
     options.addOption(
@@ -130,13 +131,14 @@ public class CliRunner implements CommandLineRunner {
       }
 
       // Parse options with validation
-      MolProbityFilter molProbityFilter = MolProbityFilter.ALL;
+      // Default set in ComputeRequest (ALL), retrieve it if not specified
+      MolProbityFilter molProbityFilter = null; // Will be set by ComputeRequest default if null
       if (cmd.hasOption("mol-probity")) {
+        String filterValue = cmd.getOptionValue("mol-probity").toUpperCase();
         try {
-          molProbityFilter =
-              MolProbityFilter.valueOf(cmd.getOptionValue("mol-probity").toUpperCase());
+          molProbityFilter = MolProbityFilter.valueOf(filterValue);
         } catch (IllegalArgumentException e) {
-          System.err.println("Invalid MolProbity filter value");
+          System.err.println("Invalid MolProbity filter value: " + filterValue);
           printHelp();
           return;
         }

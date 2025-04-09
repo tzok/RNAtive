@@ -95,15 +95,17 @@ const visualizerOptions = [
 const molProbityOptions = [
   {
     value: "ALL",
-    label: "No filtering - accept all models regardless of quality",
+    label: "No filtering - Accept all models regardless of MolProbity scores.",
   },
   {
-    value: "GOOD_AND_CAUTION",
-    label: "Medium - accept models with good or acceptable quality",
+    value: "CLASHSCORE",
+    label:
+      "Clashscore only - Accept models with a 'good' clashscore rank. Ignore bond/angle issues.",
   },
   {
-    value: "GOOD_ONLY",
-    label: "Strict - only accept high-quality models",
+    value: "CLASHSCORE_BONDS_ANGLES",
+    label:
+      "Strict - Accept models with 'good' clashscore, bond, and angle ranks.",
   },
 ];
 
@@ -754,7 +756,7 @@ function Home() {
             >
               <Select
                 options={molProbityOptions}
-                defaultValue={molProbityOptions[0]}
+                value={molProbityFilter} // Use value prop for controlled component
                 onChange={setMolProbityFilter}
               />
             </Form.Item>

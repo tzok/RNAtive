@@ -86,7 +86,7 @@ APP_MODE=cli java -jar app.jar [options]
 
 Available options:
 - `--help`: Show help message
-- `--mol-probity <filter>`: Set MolProbity filter (GOOD_ONLY, GOOD_AND_CAUTION, ALL)
+- `--mol-probity <filter>`: Set MolProbity filter (ALL, CLASHSCORE, CLASHSCORE_BONDS_ANGLES)
 - `--analyzer <analyzer>`: Set analyzer (BARNABA, BPNET, FR3D, MCANNOTATE, RNAPOLIS, RNAVIEW)
 - `--consensus <mode>`: Set consensus mode (CANONICAL, NON_CANONICAL, STACKING, ALL)
 - `--confidence <level>`: Set confidence level (0.0-1.0)
@@ -107,6 +107,7 @@ Options:
 - `--wait`: Wait for analysis completion and show results
 - `--consensus-mode`: Analysis mode (ALL, CANONICAL, NON_CANONICAL, STACKING)
 - `--confidence`: Confidence level (0.0-1.0)
+- `--molprobity-filter`: MolProbity filter (ALL, CLASHSCORE, CLASHSCORE_BONDS_ANGLES)
 - `--analyzer`: Analysis tool (BARNABA, BPNET, FR3D, MCANNOTATE, RNAPOLIS, RNAVIEW)
 - `--visualization`: Visualization tool (PSEUDOVIEWER, VARNA, RCHIE, RNAPUZZLER)
 
