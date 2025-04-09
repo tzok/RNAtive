@@ -18,9 +18,15 @@ public class InteractionNetworkFidelity {
     double tp = CollectionUtils.intersection(correctBasePairs, modelBasePairs).size();
     double fp = CollectionUtils.subtract(modelBasePairs, correctBasePairs).size();
     double fn = CollectionUtils.subtract(correctBasePairs, modelBasePairs).size();
-    double ppv = tp / (tp + fp);
-    double sty = tp / (tp + fn);
-    return FastMath.sqrt(ppv * sty);
+
+    double ppvDenominator = tp + fp;
+    double styDenominator = tp + fn;
+
+    double ppv = (ppvDenominator == 0) ? 0.0 : tp / ppvDenominator;
+    double sty = (styDenominator == 0) ? 0.0 : tp / styDenominator;
+
+    // If either ppv or sty is 0, the geometric mean is 0
+    return (ppv == 0 || sty == 0) ? 0.0 : FastMath.sqrt(ppv * sty);
   }
 
   public static double calculateFuzzy(
@@ -39,8 +45,13 @@ public class InteractionNetworkFidelity {
       }
     }
 
-    var ppv = tp / (tp + fp);
-    var sty = tp / (tp + fn);
-    return FastMath.sqrt(ppv * sty);
+    double ppvDenominator = tp + fp;
+    double styDenominator = tp + fn;
+
+    double ppv = (ppvDenominator == 0) ? 0.0 : tp / ppvDenominator;
+    double sty = (styDenominator == 0) ? 0.0 : tp / styDenominator;
+
+    // If either ppv or sty is 0, the geometric mean is 0
+    return (ppv == 0 || sty == 0) ? 0.0 : FastMath.sqrt(ppv * sty);
   }
 }
