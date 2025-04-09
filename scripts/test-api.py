@@ -184,7 +184,7 @@ def main():
     submit_parser.add_argument(
         "--molprobity-filter",
         choices=["ALL", "CLASHSCORE", "CLASHSCORE_BONDS_ANGLES"],
-        default="ALL", # Default to no filtering
+        default="ALL",  # Default to no filtering
         help="MolProbity filtering level (default: ALL)",
     )
     submit_parser.add_argument(
