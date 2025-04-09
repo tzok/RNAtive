@@ -26,12 +26,16 @@ export const getTableColumns = (headers, rows, fileCount = 100) => {
           return String(valA).localeCompare(String(valB));
         },
         render: (text) => {
-          // Handle "Is reference?" column
-          if (header === "Is reference?" && text) {
-            return "✓";
+          // Handle boolean columns for reference pairing
+          if (
+            (header === "Paired in reference" ||
+              header === "Unpaired in reference") &&
+            typeof text === "boolean"
+          ) {
+            return text ? "✓" : "";
           }
           // Handle different number formats
-          if (!isNaN(text)) {
+          if (typeof text === "number" && !isNaN(text)) {
             if (header === "Rank") {
               return Number(text);
             }
