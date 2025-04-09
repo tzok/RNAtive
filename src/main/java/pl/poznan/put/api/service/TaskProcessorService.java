@@ -270,7 +270,7 @@ public class TaskProcessorService {
       var analyzedBasePair = entry.getKey();
       var basePair = analyzedBasePair.basePair();
 
-      logger.trace("Base pair: {} with probability {}", analyzedBasePair, probability);
+      logger.trace("Base pair: {} with probability {}", analyzedBasePair, entry.getValue());
 
       if (used.contains(basePair.left()) || used.contains(basePair.right())) {
         continue;
