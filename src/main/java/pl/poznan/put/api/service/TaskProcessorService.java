@@ -261,10 +261,14 @@ public class TaskProcessorService {
     var used = new HashSet<PdbNamedResidueIdentifier>();
     var filtered = new ArrayList<AnalyzedBasePair>();
 
-    for (var entry : sortFuzzySet(fuzzyCanonicalPairs)) {
+    // Filter out pairs with probability 0 before conflict resolution
+    var sortedSet = sortFuzzySet(fuzzyCanonicalPairs);
+    var positiveProbabilityPairs =
+        sortedSet.stream().filter(pair -> pair.getRight() > 0.0).toList();
+
+    for (var entry : positiveProbabilityPairs) {
       var analyzedBasePair = entry.getKey();
       var basePair = analyzedBasePair.basePair();
-      var probability = entry.getValue();
 
       logger.trace("Base pair: {} with probability {}", analyzedBasePair, probability);
 
@@ -776,10 +780,10 @@ public class TaskProcessorService {
                   var inf =
                       InteractionNetworkFidelity.calculate(
                           correctConsideredInteractions, modelInteractions);
-                  logger.debug("Normal INF score: {}", inf); // TODO returns 0.0
+                  logger.debug("Normal INF score: {}", inf);
                   logger.debug("Calculating interaction network fidelity");
                   var f1 = F1score.calculate(correctConsideredInteractions, modelInteractions);
-                  logger.debug("Normal F1 score: {}", f1); // TODO returns 0.0
+                  logger.debug("Normal F1 score: {}", f1);
                   logger.debug("Computing canonical base pairs");
                   var canonicalBasePairs =
                       computeCorrectInteractions(
@@ -841,7 +845,12 @@ public class TaskProcessorService {
     var used = new HashSet<Pair<PdbNamedResidueIdentifier, NucleobaseEdge>>();
     var filtered = new ArrayList<AnalyzedBasePair>();
 
-    for (var entry : sortFuzzySet(fuzzyNonCanonicalPairs)) {
+    // Filter out pairs with probability 0 before conflict resolution
+    var sortedSet = sortFuzzySet(fuzzyNonCanonicalPairs);
+    var positiveProbabilityPairs =
+        sortedSet.stream().filter(pair -> pair.getRight() > 0.0).toList();
+
+    for (var entry : positiveProbabilityPairs) {
       logger.trace("Base pair: {} with probability {}", entry.getKey(), entry.getValue());
       var key = entry.getKey();
       var left = Pair.of(key.basePair().left(), key.leontisWesthof().edge5());
@@ -861,7 +870,11 @@ public class TaskProcessorService {
 
   private List<AnalyzedBasePair> correctFuzzyStackings(
       Map<AnalyzedBasePair, Double> fuzzyStackings) {
-    return sortFuzzySet(fuzzyStackings).stream().map(Pair::getLeft).toList();
+    // Filter out pairs with probability 0
+    return sortFuzzySet(fuzzyStackings).stream()
+        .filter(pair -> pair.getRight() > 0.0)
+        .map(Pair::getLeft)
+        .toList();
   }
 
   private List<AnalyzedBasePair> correctFuzzyAllInteraction(
