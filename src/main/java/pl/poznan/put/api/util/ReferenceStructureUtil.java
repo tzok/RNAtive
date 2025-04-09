@@ -1,6 +1,5 @@
 package pl.poznan.put.api.util;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -61,17 +60,15 @@ public class ReferenceStructureUtil {
                 })
             .collect(Collectors.toList());
 
-    List<PdbNamedResidueIdentifier> markedResidues = new ArrayList<>();
-    List<DotBracketSymbol> symbols = structure.symbols();
-    for (DotBracketSymbol symbol : symbols) {
-      // isMissing() checks if the character was '-' (or originally 'x'/'X')
-      if (symbol.isMissing()) {
-        ChainNumberICode identifier = structure.identifier(symbol);
-        PdbNamedResidueIdentifier namedIdentifier =
-            model.findResidue(identifier).namedResidueIdentifier();
-        markedResidues.add(namedIdentifier);
-      }
-    }
+    List<PdbNamedResidueIdentifier> markedResidues =
+        structure.symbols().stream()
+            .filter(DotBracketSymbol::isMissing)
+            .map(
+                dotBracketSymbol ->
+                    model
+                        .findResidue(structure.identifier(dotBracketSymbol))
+                        .namedResidueIdentifier())
+            .toList();
 
     return new ReferenceParseResult(basePairs, markedResidues);
   }
