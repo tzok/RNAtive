@@ -15,6 +15,7 @@ import pl.poznan.put.api.exception.TaskNotFoundException;
 import pl.poznan.put.api.model.Task;
 import pl.poznan.put.api.model.TaskStatus;
 import pl.poznan.put.api.repository.TaskRepository;
+import pl.poznan.put.api.util.ReferenceStructureUtil;
 import pl.poznan.put.structure.AnalyzedBasePair;
 
 @Service
