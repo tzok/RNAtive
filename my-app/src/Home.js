@@ -146,6 +146,18 @@ function Home() {
     file.url = URL.createObjectURL(file);
     file.obj = new File([file], file.name, { type: file.type });
     
+    // Add the file to the list with a processing status
+    const fileWithUid = {
+      uid: `${Date.now()}_${file.name}`,
+      name: file.name,
+      status: 'uploading',
+      percent: 0,
+      url: file.url,
+      obj: file.obj
+    };
+    
+    setFileList(prevFileList => [...prevFileList, fileWithUid]);
+    
     try {
       // Create a FormData object to send the file
       const formData = new FormData();
@@ -187,8 +199,8 @@ function Home() {
           
           // Update the file list with the split files
           setFileList(prevFileList => {
-            // Remove the original file
-            const filteredList = prevFileList.filter(f => f.uid !== file.uid);
+            // Remove the original file (the one with uploading status)
+            const filteredList = prevFileList.filter(f => f.uid !== fileWithUid.uid);
             // Add the split files
             return [...filteredList, ...splitFiles];
           });
@@ -196,16 +208,42 @@ function Home() {
           // Clean up the original file URL
           URL.revokeObjectURL(file.url);
           
-          // Return true to prevent the original file from being added
+          // Return true to prevent the original file from being added again
           return true;
+        } else {
+          // Only one file returned, update the status of the existing file
+          setFileList(prevFileList => 
+            prevFileList.map(f => 
+              f.uid === fileWithUid.uid 
+                ? { ...f, status: 'done' } 
+                : f
+            )
+          );
         }
+      } else {
+        // No files returned, update the status of the existing file
+        setFileList(prevFileList => 
+          prevFileList.map(f => 
+            f.uid === fileWithUid.uid 
+              ? { ...f, status: 'done' } 
+              : f
+          )
+        );
       }
     } catch (error) {
       console.error("Error splitting file:", error);
-      // If there's an error, continue with the original file
+      // If there's an error, update the file status to error
+      setFileList(prevFileList => 
+        prevFileList.map(f => 
+          f.uid === fileWithUid.uid 
+            ? { ...f, status: 'error', error: error.message } 
+            : f
+        )
+      );
     }
     
-    return false;
+    // Return true because we've already handled adding the file to the list
+    return true;
   };
 
   const handleDownload = (file) => {
@@ -225,10 +263,10 @@ function Home() {
       }
     });
     
-    // Only update the file list if it's not being handled by the beforeUpload function
-    // (when a file is being split)
-    const isBeingProcessed = newFileList.some(file => file.status === 'uploading');
-    if (!isBeingProcessed) {
+    // We'll let the beforeUpload function handle the file list updates
+    // This is mainly for handling file removals
+    const hasRemovals = fileList.length > newFileList.length;
+    if (hasRemovals) {
       setFileList(newFileList);
     }
   };
@@ -885,13 +923,9 @@ function Home() {
                     showUploadList={{
                       showDownloadIcon: true,
                       downloadIcon: "Download",
+                      showRemoveIcon: true,
                     }}
-                    customRequest={({ onSuccess }) => {
-                      // This is needed to handle the async beforeUpload
-                      setTimeout(() => {
-                        onSuccess("ok");
-                      }, 0);
-                    }}
+                    // We don't need customRequest anymore as we're handling the file status directly
                   >
                     <Button icon={<UploadOutlined />}>Upload</Button>
                   </Upload>
