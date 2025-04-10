@@ -52,8 +52,11 @@ public class RnapolisClient {
             headers.setContentType(MediaType.MULTIPART_FORM_DATA);
             
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-            body.add("arguments", "[\"unifier-wrapper.py\", \"--format\", \"PDB\", \"input.tar.gz\"]");
-            body.add("output_files", "[\"output.tar.gz\"]");
+            body.add("arguments", "unifier-wrapper.py");
+            body.add("arguments", "--format");
+            body.add("arguments", "PDB");
+            body.add("arguments", "input.tar.gz");
+            body.add("output_files", "output.tar.gz");
             
             // Add the tar.gz file
             ByteArrayResource fileResource = new ByteArrayResource(tarGzData) {
