@@ -162,10 +162,11 @@ public class RnapolisClient {
 
           if (!filename.isEmpty()) {
             // Determine if the file is binary
-            boolean isBinary = filename.toLowerCase().endsWith(".zip") || 
-                              filename.toLowerCase().endsWith(".tar.gz") || 
-                              filename.toLowerCase().endsWith(".tgz");
-            
+            boolean isBinary =
+                filename.toLowerCase().endsWith(".zip")
+                    || filename.toLowerCase().endsWith(".tar.gz")
+                    || filename.toLowerCase().endsWith(".tgz");
+
             if (isBinary) {
               // For binary files, use Base64 encoding
               String content = Base64.getEncoder().encodeToString(contentBytes);
@@ -412,10 +413,11 @@ public class RnapolisClient {
           }
 
           // Determine if the file is binary
-          boolean isBinary = filename.toLowerCase().endsWith(".zip") || 
-                            filename.toLowerCase().endsWith(".tar.gz") || 
-                            filename.toLowerCase().endsWith(".tgz");
-          
+          boolean isBinary =
+              filename.toLowerCase().endsWith(".zip")
+                  || filename.toLowerCase().endsWith(".tar.gz")
+                  || filename.toLowerCase().endsWith(".tgz");
+
           if (isBinary) {
             // For binary files, use Base64 encoding
             String content = Base64.getEncoder().encodeToString(contentBytes);

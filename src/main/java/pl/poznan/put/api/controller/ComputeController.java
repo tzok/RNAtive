@@ -2,6 +2,7 @@ package pl.poznan.put.api.controller;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,12 +67,13 @@ public class ComputeController {
       if (filename == null || filename.isEmpty()) {
         filename = "input_file";
       }
-      
+
       // Check if file is binary (zip, tar.gz, etc)
-      boolean isBinary = filename.toLowerCase().endsWith(".zip") || 
-                         filename.toLowerCase().endsWith(".tar.gz") || 
-                         filename.toLowerCase().endsWith(".tgz");
-      
+      boolean isBinary =
+          filename.toLowerCase().endsWith(".zip")
+              || filename.toLowerCase().endsWith(".tar.gz")
+              || filename.toLowerCase().endsWith(".tgz");
+
       FileData fileData;
       if (isBinary) {
         // For binary files, use Base64 encoding
