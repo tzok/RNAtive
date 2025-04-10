@@ -146,6 +146,11 @@ function Home() {
     file.url = URL.createObjectURL(file);
     file.obj = new File([file], file.name, { type: file.type });
     
+    // Check if file is an archive
+    const isArchive = file.name.toLowerCase().endsWith('.zip') || 
+                      file.name.toLowerCase().endsWith('.tar.gz') || 
+                      file.name.toLowerCase().endsWith('.tgz');
+    
     // Add the file to the list with a processing status
     const fileWithUid = {
       uid: `${Date.now()}_${file.name}`,
@@ -153,7 +158,8 @@ function Home() {
       status: 'uploading',
       percent: 0,
       url: file.url,
-      obj: file.obj
+      obj: file.obj,
+      isArchive: isArchive
     };
     
     setFileList(prevFileList => [...prevFileList, fileWithUid]);
@@ -162,6 +168,17 @@ function Home() {
       // Create a FormData object to send the file
       const formData = new FormData();
       formData.append('file', file);
+      
+      // Update the status message for archives
+      if (fileWithUid.isArchive) {
+        setFileList(prevFileList => 
+          prevFileList.map(f => 
+            f.uid === fileWithUid.uid 
+              ? { ...f, status: 'uploading', percent: 10, name: `${file.name} (Extracting archive...)` } 
+              : f
+          )
+        );
+      }
       
       // Call the split endpoint
       const response = await fetch(`${serverAddress}/split`, {
@@ -178,7 +195,8 @@ function Home() {
       // If we got split files back
       if (result.files && result.files.length > 0) {
         // If there's more than one file returned, it means the file was split
-        if (result.files.length > 1) {
+        // or it was an archive that was extracted
+        if (result.files.length > 1 || fileWithUid.isArchive) {
           // Sort files by model number if they follow the pattern base_model_n.ext
           const sortedFiles = [...result.files].sort((a, b) => {
             const modelNumberA = a.name.match(/_model_(\d+)\./);
@@ -213,7 +231,16 @@ function Home() {
             // Remove the original file (the one with uploading status)
             const filteredList = prevFileList.filter(f => f.uid !== fileWithUid.uid);
             // Add the split files
-            return [...filteredList, ...splitFiles];
+            const newList = [...filteredList, ...splitFiles];
+            
+            // Log the result for debugging
+            if (fileWithUid.isArchive) {
+              console.log(`Archive ${file.name} extracted into ${splitFiles.length} files`);
+            } else {
+              console.log(`File ${file.name} split into ${splitFiles.length} files`);
+            }
+            
+            return newList;
           });
           
           // Clean up the original file URL
@@ -242,12 +269,16 @@ function Home() {
         );
       }
     } catch (error) {
-      console.error("Error splitting file:", error);
-      // If there's an error, update the file status to error
+      console.error("Error processing file:", error);
+      // If there's an error, update the file status to error with appropriate message
+      const errorMessage = fileWithUid.isArchive 
+        ? `Error extracting archive: ${error.message}` 
+        : `Error splitting file: ${error.message}`;
+      
       setFileList(prevFileList => 
         prevFileList.map(f => 
           f.uid === fileWithUid.uid 
-            ? { ...f, status: 'error', error: error.message } 
+            ? { ...f, status: 'error', error: errorMessage, name: file.name } 
             : f
         )
       );
