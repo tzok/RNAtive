@@ -111,6 +111,7 @@ const molProbityOptions = [
 
 function Home() {
   const serverAddress = configs.default.SERVER_ADDRESS;
+  console.log("Server address from config:", serverAddress);
 
   const { id } = useParams();
   const navigate = useNavigate();
@@ -185,6 +186,8 @@ function Home() {
         method: 'POST',
         body: formData,
       });
+      
+      console.log("Split endpoint URL:", `${serverAddress}/split`);
       
       if (!response.ok) {
         throw new Error(`Server responded with status ${response.status}`);
