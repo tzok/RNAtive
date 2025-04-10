@@ -916,7 +916,7 @@ function Home() {
               label={
                 <span>
                   Files{" "}
-                  <Tooltip title="Upload a minimum of two structural files in PDB or PDBx/mmCIF format for analysis. The combined size of files cannot exceed 100MB.">
+                  <Tooltip title="Upload a minimum of two structural files in PDB or PDBx/mmCIF format for analysis. You can also upload .zip, .tar.gz, or .tgz archives containing multiple structure files. The combined size of files cannot exceed 100MB.">
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
@@ -925,7 +925,7 @@ function Home() {
               <Row gutter={8}>
                 <Col>
                   <Upload
-                    accept={".pdb,.cif"}
+                    accept={".pdb,.cif,.zip,.tar.gz,.tgz"}
                     multiple={true}
                     beforeUpload={beforeUpload}
                     fileList={fileList}
