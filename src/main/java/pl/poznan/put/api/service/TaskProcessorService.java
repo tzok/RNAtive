@@ -54,6 +54,7 @@ public class TaskProcessorService {
   private final DrawerVarnaTz drawerVarnaTz;
   private final VisualizationService visualizationService;
   private final ConversionClient conversionClient;
+  private final RnapolisClient rnapolisClient;
 
   @Autowired
   public TaskProcessorService(
@@ -63,7 +64,8 @@ public class TaskProcessorService {
       VisualizationClient visualizationClient,
       VisualizationService visualizationService,
       ConversionClient conversionClient,
-      DrawerVarnaTz drawerVarnaTz) {
+      DrawerVarnaTz drawerVarnaTz,
+      RnapolisClient rnapolisClient) {
     this.taskRepository = taskRepository;
     this.objectMapper = objectMapper;
     this.analysisClient = analysisClient;
@@ -71,6 +73,7 @@ public class TaskProcessorService {
     this.visualizationService = visualizationService;
     this.conversionClient = conversionClient;
     this.drawerVarnaTz = drawerVarnaTz;
+    this.rnapolisClient = rnapolisClient;
   }
 
   private static List<Pair<AnalyzedBasePair, Double>> sortFuzzySet(
@@ -80,6 +83,25 @@ public class TaskProcessorService {
         .map(entry -> Pair.of(entry.getKey(), entry.getValue()))
         .sorted(Comparator.comparing(pair -> Pair.of(-pair.getRight(), pair.getLeft())))
         .toList();
+  }
+
+  /**
+   * Process files through RNApolis service to unify their format.
+   * 
+   * @param files List of files to process
+   * @return List of processed files
+   */
+  private List<FileData> processFilesWithRnapolis(List<FileData> files) {
+    logger.info("Processing {} files with RNApolis service", files.size());
+    try {
+      List<FileData> processedFiles = rnapolisClient.processFiles(files);
+      logger.info("RNApolis processing completed, received {} files", processedFiles.size());
+      return processedFiles;
+    } catch (Exception e) {
+      logger.error("Error processing files with RNApolis", e);
+      // Return original files if processing fails
+      return files;
+    }
   }
 
   @Async("taskExecutor")
@@ -94,9 +116,24 @@ public class TaskProcessorService {
 
       logger.info("Parsing task request");
       var request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
+      
+      // Process files through RNApolis to unify their format
+      logger.info("Processing files with RNApolis service");
+      List<FileData> processedFiles = processFilesWithRnapolis(request.files());
+      
+      // Create a new request with the processed files
+      ComputeRequest processedRequest = new ComputeRequest(
+          processedFiles,
+          request.analyzer(),
+          request.visualizationTool(),
+          request.consensusMode(),
+          request.confidenceLevel(),
+          request.molProbityFilter(),
+          request.dotBracket()
+      );
 
       logger.info("Parsing, analyzing and filtering files with MolProbity");
-      var analyzedModels = parseAndAnalyzeFiles(request, task);
+      var analyzedModels = parseAndAnalyzeFiles(processedRequest, task);
       if (analyzedModels.stream().anyMatch(Objects::isNull)) {
         task.setStatus(TaskStatus.FAILED);
         task.setMessage("Failed to parse one or more models");
