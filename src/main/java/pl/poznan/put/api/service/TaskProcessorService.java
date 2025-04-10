@@ -87,7 +87,7 @@ public class TaskProcessorService {
 
   /**
    * Process files through RNApolis service to unify their format.
-   * 
+   *
    * @param files List of files to process
    * @return List of processed files
    */
@@ -116,21 +116,21 @@ public class TaskProcessorService {
 
       logger.info("Parsing task request");
       var request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
-      
+
       // Process files through RNApolis to unify their format
       logger.info("Processing files with RNApolis service");
       List<FileData> processedFiles = processFilesWithRnapolis(request.files());
-      
+
       // Create a new request with the processed files
-      ComputeRequest processedRequest = new ComputeRequest(
-          processedFiles,
-          request.analyzer(),
-          request.visualizationTool(),
-          request.consensusMode(),
-          request.confidenceLevel(),
-          request.molProbityFilter(),
-          request.dotBracket()
-      );
+      ComputeRequest processedRequest =
+          new ComputeRequest(
+              processedFiles,
+              request.confidenceLevel(),
+              request.analyzer(),
+              request.consensusMode(),
+              request.dotBracket(),
+              request.molProbityFilter(),
+              request.visualizationTool());
 
       logger.info("Parsing, analyzing and filtering files with MolProbity");
       var analyzedModels = parseAndAnalyzeFiles(processedRequest, task);
