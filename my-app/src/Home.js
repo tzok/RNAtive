@@ -179,8 +179,19 @@ function Home() {
       if (result.files && result.files.length > 0) {
         // If there's more than one file returned, it means the file was split
         if (result.files.length > 1) {
+          // Sort files by model number if they follow the pattern base_model_n.ext
+          const sortedFiles = [...result.files].sort((a, b) => {
+            const modelNumberA = a.name.match(/_model_(\d+)\./);
+            const modelNumberB = b.name.match(/_model_(\d+)\./);
+            
+            if (modelNumberA && modelNumberB) {
+              return parseInt(modelNumberA[1]) - parseInt(modelNumberB[1]);
+            }
+            return a.name.localeCompare(b.name); // Fallback to alphabetical sort
+          });
+          
           // Create File objects for each split file
-          const splitFiles = result.files.map((fileData, index) => {
+          const splitFiles = sortedFiles.map((fileData, index) => {
             const newFile = new File(
               [fileData.content], 
               fileData.name || `split_${index}_${file.name}`, 
