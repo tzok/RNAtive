@@ -130,7 +130,9 @@ function Home() {
   const [isFuzzy, setIsFuzzy] = useState(true);
   const [confidenceLevel, setConfidenceLevel] = useState(fileList.length);
   const [dotBracket, setDotBracket] = useState(null);
-
+  const resetFileList = (file) => {
+    setFileList([]);
+  };
   // Ensure confidenceLevel is within valid range when fileList updates
   useEffect(() => {
     setConfidenceLevel((prev) => Math.min(prev, fileList.length) || 2);
@@ -231,7 +233,9 @@ function Home() {
 
         if (!response.ok) {
           if (response.status === 413) {
-            throw new Error("Request too large. Please reduce the size or number of files.");
+            throw new Error(
+              "Request too large. Please reduce the size or number of files."
+            );
           }
           throw new Error(`Server responded with status ${response.status}`);
         }
@@ -677,12 +681,12 @@ function Home() {
               reliable base pairs and stacking interactions. Tailored for RNA
               structural biologists and bioinformaticians, it aids in validating
               RNA models, improving structural predictions, and studying the
-              evolution of RNA structures. The tool accepts a minimum of two RNA 3D
-              structure models in PDB or mmCIF format, analyzes them using
+              evolution of RNA structures. The tool accepts a minimum of two RNA
+              3D structure models in PDB or mmCIF format, analyzes them using
               state-of-the-art base pair annotation tools, and generates a
               consensus structure by comparing annotations across all input
-              models. The combined size of all PDB/mmCIF files cannot exceed 100MB.
-              Additionally, it ranks the input models based on their
+              models. The combined size of all PDB/mmCIF files cannot exceed
+              100MB. Additionally, it ranks the input models based on their
               consistency with the derived consensus.
             </p>
           </div>
@@ -734,7 +738,7 @@ function Home() {
                 </span>
               }
             >
-              <Upload
+              {/* <Upload
                 accept={".pdb,.cif"}
                 multiple={true}
                 beforeUpload={beforeUpload}
@@ -747,7 +751,32 @@ function Home() {
                 }}
               >
                 <Button icon={<UploadOutlined />}>Upload</Button>
-              </Upload>
+              </Upload> */}
+              <Row gutter={8}>
+                <Col>
+                  <Upload
+                    accept={".pdb,.cif"}
+                    multiple={true}
+                    beforeUpload={beforeUpload}
+                    fileList={fileList}
+                    onChange={handleFileListChange}
+                    onDownload={handleDownload}
+                    showUploadList={{
+                      showDownloadIcon: true,
+                      downloadIcon: "Download",
+                    }}
+                  >
+                    <Button icon={<UploadOutlined />}>Upload</Button>
+                  </Upload>
+                  {fileList.length > 0 && (
+                    <Button onClick={resetFileList}>
+                      <Tooltip title={"Remove all uploaded files."}>
+                        Reset
+                      </Tooltip>
+                    </Button>
+                  )}
+                </Col>
+              </Row>
             </Form.Item>
 
             <Form.Item
