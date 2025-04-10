@@ -89,11 +89,11 @@ public class RnapolisClient {
     List<FileData> extractedFiles;
     String filename = archiveData.name().toLowerCase();
 
-    // Extract files from the archive
+    // Extract files from the archive using the correct byte content
     if (filename.endsWith(".zip")) {
-      extractedFiles = extractZipArchive(archiveData.content().getBytes(StandardCharsets.UTF_8));
+      extractedFiles = extractZipArchive(archiveData.getContentBytes());
     } else if (filename.endsWith(".tar.gz") || filename.endsWith(".tgz")) {
-      extractedFiles = extractTarGzArchive(archiveData.content().getBytes(StandardCharsets.UTF_8));
+      extractedFiles = extractTarGzArchive(archiveData.getContentBytes());
     } else {
       logger.warn("Unsupported archive format: {}", filename);
       return List.of(archiveData);
