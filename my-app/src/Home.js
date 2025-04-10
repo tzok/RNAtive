@@ -421,6 +421,52 @@ function Home() {
     }
   };
 
+  const loadmiRNAExample = async () => {
+    try {
+      // List of example files
+      const exampleFiles = [
+        "mir663_0001.pdb",
+        "mir663_0002.pdb",
+        "mir663_0003.pdb",
+        "mir663_0004.pdb",
+        "mir663_0005.pdb",
+        "mir663_0006.pdb",
+        "mir663_0007.pdb",
+        "mir663_0008.pdb",
+        "mir663_0009.pdb",
+        "mir663_0010.pdb",
+      ];
+
+      // Fetch each file from the public folder
+      const files = await Promise.all(
+        exampleFiles.map(async (fileName) => {
+          const response = await fetch(`/examples/${fileName}`);
+          const blob = await response.blob();
+          return new File([blob], fileName, { type: blob.type });
+        })
+      );
+
+      // Convert fetched files into compatible format
+      const newFiles = files.map((file, index) => ({
+        uid: Date.now() + index,
+        name: file.name,
+        status: "done",
+        url: URL.createObjectURL(file),
+        originFileObj: file,
+        obj: file,
+      }));
+
+      setFileList(newFiles); // Replace current files with examples
+      setDotBracket(
+        ">strand_A\n" +
+          "CCUUCCGGCGUCCCAGGCGGGGCGCCGCGGGACCGCCCUCGUGUCUGUGGCGGUGGGAUCCCGCGGCCGUGUUUUCCUGGUGGCCCGGCC\n" +
+          "	....((((..(((((((.((.(((((((((((((((((........).))))).....))))))))).)).))..))))).)).)))).."
+      );
+    } catch (error) {
+      console.error("Error loading example files:", error);
+    }
+  };
+
   const handleRemovalReasons = () => {
     let columns = [
       {
@@ -725,9 +771,32 @@ function Home() {
                     </Tooltip>
                   </Button>
                 </Col>
+                <Col>
+                  <Button onClick={loadmiRNAExample}>
+                    <Tooltip
+                      title={
+                        "10 models of miRNA mir-663 from Rfam: RF00957, predicted by RNAComposer from a secondary structure predicted by centroidfold."
+                      }
+                    >
+                      miRNA mir-663
+                    </Tooltip>
+                  </Button>
+                </Col>
               </Row>
             </Form.Item>
-
+            <Form.Item
+              label={
+                <span>
+                  {" "}
+                  <b>NOTE</b>{" "}
+                </span>
+              }
+            >
+              <span>
+                {" "}
+                Please only provide files that all have the same sequence.
+              </span>
+            </Form.Item>
             <Form.Item
               label={
                 <span>
@@ -738,20 +807,6 @@ function Home() {
                 </span>
               }
             >
-              {/* <Upload
-                accept={".pdb,.cif"}
-                multiple={true}
-                beforeUpload={beforeUpload}
-                fileList={fileList}
-                onChange={handleFileListChange}
-                onDownload={handleDownload}
-                showUploadList={{
-                  showDownloadIcon: true,
-                  downloadIcon: "Download",
-                }}
-              >
-                <Button icon={<UploadOutlined />}>Upload</Button>
-              </Upload> */}
               <Row gutter={8}>
                 <Col>
                   <Upload

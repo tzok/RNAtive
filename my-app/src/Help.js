@@ -173,7 +173,13 @@ const Help = () => {
                 ends (C-G closing base pairs).
               </i>
             </Paragraph>
-            <Paragraph>It is worth noting that 14 files were provided to RNA-Puzzles 1; however, the prediction provided by the Santalucia lab had a different sequence than the rest of the files. RNAtive requires all files to contain identical sequence, therefore this file had to be discarded. </Paragraph>
+            <Paragraph>
+              It is worth noting that 14 files were provided to RNA-Puzzles 1;
+              however, the prediction provided by the Santalucia lab had a
+              different sequence than the rest of the files. RNAtive requires
+              all files to contain identical sequence, therefore this file had
+              to be discarded.{" "}
+            </Paragraph>
             <Paragraph>
               Structure visualization from the authors of the paper:
               <sup>[b]</sup>
@@ -194,6 +200,18 @@ const Help = () => {
               dataset.
             </Paragraph>
             <Paragraph>
+              The <b>miRNA mir-663</b> will provide 10 models of miRNA mir-663
+              from Rfam: RF00957<sup>[d] </sup>, predicted by RNAComposer
+              <sup>[c] </sup> from a secondary structure predicted by
+              centroidfold.<br></br>
+              The following sequence was being predicted:
+              <br></br>
+              <i>
+                CCUUCCGGCGUCCCAGGCGGGGCGCCGCGGGACCGCCCUCGUGUCUGUGGCGGUGGGAUCCCGCGGCCGUGUUUUCCUGGUGGCCCGGCC
+              </i>{" "}
+              <br></br>
+            </Paragraph>
+            <Paragraph>
               Both sets of files contain, therefore, a subset of molecules being
               attempts at generating a 3D model from sequence/secondary
               structure. Running those examples before using one's own data can
@@ -209,7 +227,8 @@ const Help = () => {
               processed. Proteins, ligands, ions and water will be completely
               ignored during the analysis.<br></br>
               The minimum number of uploaded files for the evaluation to be
-              performed is two. The maximum combined size of all provided files is 100MB.
+              performed is two. The maximum combined size of all provided files
+              is 100MB.
             </Paragraph>
             <Paragraph>
               To evaluate your own files, please drop them in "Upload" button or
@@ -235,8 +254,13 @@ const Help = () => {
               Based on the selected filter, models failing to meet quality
               standards will be excluded from subsequent evaluation.
             </Paragraph>
-            <Paragraph>If the option "Clashscore only" is selected, models that received a clashscore of "good" will be uploaded, but issues with angles and bonds shall be ignored. <br>
-           </br> Option "Strict" will only accept files that got a score of "good" in clashscore, bonds, and angles criteria. </Paragraph>
+            <Paragraph>
+              If the option "Clashscore only" is selected, models that received
+              a clashscore of "good" will be uploaded, but issues with angles
+              and bonds shall be ignored. <br></br> Option "Strict" will only
+              accept files that got a score of "good" in clashscore, bonds, and
+              angles criteria.{" "}
+            </Paragraph>
             <CustomTitle level={3}>Expected 2D structure</CustomTitle>
             <Paragraph>
               If desired, a dot-bracket form of the molecule can be given to the
@@ -270,10 +294,13 @@ const Help = () => {
               )))))))))))))..))))))))
             </pre>
             <Paragraph>
-              The following syntax is used to describe the interactions within the expected structure:<br></br>
+              The following syntax is used to describe the interactions within
+              the expected structure:<br></br>
               <i>( )</i> - represents a pair of nucleotides.<br></br>
-              <i>x</i> - represents a situation in which the nucleotide is left unpaired.<br></br>
-              <i>.</i> - represents a lack of any restrictions for the given nucleotide.<br></br>
+              <i>x</i> - represents a situation in which the nucleotide is left
+              unpaired.<br></br>
+              <i>.</i> - represents a lack of any restrictions for the given
+              nucleotide.<br></br>
             </Paragraph>
             <CustomTitle level={3}>Base pair analyzer</CustomTitle>
             <Paragraph>
@@ -590,7 +617,20 @@ const Help = () => {
                     https://rnajournal.cshlp.org/content/18/4/610/F1.expansion.html
                   </a>
                 </li>
-                <li>Ref3</li>
+                <li>
+                  Popenda, M., Szachniuk, M., Antczak, M., Purzycka, K. J.,
+                  Lukasiak, P., Bartol, N., Blazewicz, J., & Adamiak, R. W.
+                  (2012). Automated 3D structure composition for large RNAs.
+                  <i>Nucleic Acids Research</i>, 40(14), e112–e112.
+                  https://doi.org/10.1093/nar/gks339.
+                </li>
+                <li>
+                  Ontiveros-Palacios, N., Cooke, E., Nawrocki, E. P., Triebel,
+                  S., Marz, M., Rivas, E., Griffiths-Jones, S., Petrov, A. I.,
+                  Bateman, A., & Sweeney, B. (2025). Rfam 15: RNA families
+                  database in 2025. <i>Nucleic Acids Research</i>, 53(D1),
+                  D258–D267. https://doi.org/10.1093/nar/gkae1023.
+                </li>
               </ol>
             </Paragraph>
           </Typography>
