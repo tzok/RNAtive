@@ -50,4 +50,34 @@ public class ComputeController {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
     }
   }
+  
+  @PostMapping(value = "/split", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public SplitFileResponse splitFile(@RequestParam("file") MultipartFile file) {
+    logger.info("Received file splitting request for file: {}", file.getOriginalFilename());
+    
+    try {
+      // Convert MultipartFile to FileData
+      String content = new String(file.getBytes(), StandardCharsets.UTF_8);
+      String filename = file.getOriginalFilename();
+      
+      if (filename == null || filename.isEmpty()) {
+        filename = "input_file";
+      }
+      
+      FileData fileData = new FileData(filename, content);
+      
+      // Use RnapolisClient to split the file
+      List<FileData> splitFiles = computeService.splitFile(fileData);
+      
+      return new SplitFileResponse(splitFiles);
+    } catch (IOException e) {
+      logger.error("Error reading uploaded file", e);
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Error reading uploaded file: " + e.getMessage(), e);
+    } catch (Exception e) {
+      logger.error("Error splitting file", e);
+      throw new ResponseStatusException(
+          HttpStatus.INTERNAL_SERVER_ERROR, "Error splitting file: " + e.getMessage(), e);
+    }
+  }
 }

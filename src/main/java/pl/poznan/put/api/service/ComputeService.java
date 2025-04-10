@@ -24,15 +24,18 @@ public class ComputeService {
   private final TaskRepository taskRepository;
   private final ObjectMapper objectMapper;
   private final TaskProcessorService taskProcessorService;
+  private final RnapolisClient rnapolisClient;
 
   @Autowired
   public ComputeService(
       TaskRepository taskRepository,
       ObjectMapper objectMapper,
-      TaskProcessorService taskProcessorService) {
+      TaskProcessorService taskProcessorService,
+      RnapolisClient rnapolisClient) {
     this.taskRepository = taskRepository;
     this.objectMapper = objectMapper;
     this.taskProcessorService = taskProcessorService;
+    this.rnapolisClient = rnapolisClient;
   }
 
   public ComputeResponse submitComputation(ComputeRequest request) throws Exception {
@@ -71,6 +74,16 @@ public class ComputeService {
     }
 
     return task.getSvg();
+  }
+  
+  /**
+   * Splits a file into multiple files using RNApolis service.
+   *
+   * @param fileData The file to split
+   * @return List of split files
+   */
+  public List<FileData> splitFile(FileData fileData) {
+    return rnapolisClient.splitFile(fileData);
   }
 
   public TablesResponse getTables(String taskId) throws Exception {
