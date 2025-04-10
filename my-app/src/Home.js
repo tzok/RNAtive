@@ -249,8 +249,8 @@ function Home() {
           // Clean up the original file URL
           URL.revokeObjectURL(file.url);
           
-          // Return true to prevent the original file from being added again
-          return true;
+          // Return false to prevent the default antd upload behavior
+          return false;
         } else {
           // Only one file returned, update the status of the existing file
           setFileList(prevFileList => 
