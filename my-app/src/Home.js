@@ -287,8 +287,8 @@ function Home() {
       );
     }
     
-    // Return true because we've already handled adding the file to the list
-    return true;
+    // Return false to prevent the default antd upload behavior in all cases
+    return false;
   };
 
   const handleDownload = (file) => {
