@@ -61,15 +61,28 @@ public class ComputeController {
     logger.info("Received file splitting request for file: {}", file.getOriginalFilename());
 
     try {
-      // Convert MultipartFile to FileData
-      String content = new String(file.getBytes(), StandardCharsets.UTF_8);
+      // Get filename
       String filename = file.getOriginalFilename();
-
       if (filename == null || filename.isEmpty()) {
         filename = "input_file";
       }
-
-      FileData fileData = new FileData(filename, content);
+      
+      // Check if file is binary (zip, tar.gz, etc)
+      boolean isBinary = filename.toLowerCase().endsWith(".zip") || 
+                         filename.toLowerCase().endsWith(".tar.gz") || 
+                         filename.toLowerCase().endsWith(".tgz");
+      
+      FileData fileData;
+      if (isBinary) {
+        // For binary files, use Base64 encoding
+        String content = Base64.getEncoder().encodeToString(file.getBytes());
+        fileData = new FileData(filename, content, true);
+        logger.info("Processing binary file: {}, size: {} bytes", filename, file.getSize());
+      } else {
+        // For text files, use UTF-8
+        String content = new String(file.getBytes(), StandardCharsets.UTF_8);
+        fileData = new FileData(filename, content, false);
+      }
 
       // Log file type information
       logger.info("Processing file: {}, size: {} bytes", filename, file.getSize());

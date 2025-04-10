@@ -151,7 +151,7 @@ public class RnapolisClient {
             fileContent.write(buffer, 0, len);
           }
 
-          String content = fileContent.toString(StandardCharsets.UTF_8);
+          byte[] contentBytes = fileContent.toByteArray();
           String filename = entry.getName();
 
           // Extract just the filename without path
@@ -161,7 +161,20 @@ public class RnapolisClient {
           }
 
           if (!filename.isEmpty()) {
-            extractedFiles.add(new FileData(filename, content));
+            // Determine if the file is binary
+            boolean isBinary = filename.toLowerCase().endsWith(".zip") || 
+                              filename.toLowerCase().endsWith(".tar.gz") || 
+                              filename.toLowerCase().endsWith(".tgz");
+            
+            if (isBinary) {
+              // For binary files, use Base64 encoding
+              String content = Base64.getEncoder().encodeToString(contentBytes);
+              extractedFiles.add(new FileData(filename, content, true));
+            } else {
+              // For text files, use UTF-8
+              String content = new String(contentBytes, StandardCharsets.UTF_8);
+              extractedFiles.add(new FileData(filename, content, false));
+            }
           }
         }
         zipIn.closeEntry();
@@ -188,9 +201,9 @@ public class RnapolisClient {
       body.add("arguments", fileData.name());
       body.add("output_files", "output.tar.gz");
 
-      // Add the input file
+      // Add the input file - handle both text and binary content
       ByteArrayResource fileResource =
-          new ByteArrayResource(fileData.content().getBytes(StandardCharsets.UTF_8)) {
+          new ByteArrayResource(fileData.getContentBytes()) {
             @Override
             public String getFilename() {
               return fileData.name();
@@ -359,7 +372,7 @@ public class RnapolisClient {
       tarOut.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
 
       for (FileData file : files) {
-        byte[] content = file.content().getBytes(StandardCharsets.UTF_8);
+        byte[] content = file.getContentBytes();
         TarArchiveEntry entry = new TarArchiveEntry(file.name());
         entry.setSize(content.length);
 
@@ -390,7 +403,7 @@ public class RnapolisClient {
             fileContent.write(buffer, 0, len);
           }
 
-          String content = fileContent.toString(StandardCharsets.UTF_8);
+          byte[] contentBytes = fileContent.toByteArray();
 
           // Remove leading "./" from filename if present
           String filename = entry.getName();
@@ -398,7 +411,20 @@ public class RnapolisClient {
             filename = filename.substring(2);
           }
 
-          extractedFiles.add(new FileData(filename, content));
+          // Determine if the file is binary
+          boolean isBinary = filename.toLowerCase().endsWith(".zip") || 
+                            filename.toLowerCase().endsWith(".tar.gz") || 
+                            filename.toLowerCase().endsWith(".tgz");
+          
+          if (isBinary) {
+            // For binary files, use Base64 encoding
+            String content = Base64.getEncoder().encodeToString(contentBytes);
+            extractedFiles.add(new FileData(filename, content, true));
+          } else {
+            // For text files, use UTF-8
+            String content = new String(contentBytes, StandardCharsets.UTF_8);
+            extractedFiles.add(new FileData(filename, content, false));
+          }
         }
       }
     }
