@@ -50,60 +50,62 @@ public class RnapolisClient {
   public List<FileData> splitFile(FileData fileData) {
     try {
       logger.info("Splitting file: {}", fileData.name());
-      
+
       // Prepare request
       HttpHeaders headers = new HttpHeaders();
       headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-      
+
       MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
       body.add("arguments", "splitter-wrapper.py");
       body.add("arguments", fileData.name());
       body.add("output_files", "output.tar.gz");
-      
+
       // Add the input file
-      ByteArrayResource fileResource = new ByteArrayResource(fileData.content().getBytes(StandardCharsets.UTF_8)) {
-        @Override
-        public String getFilename() {
-          return fileData.name();
-        }
-      };
+      ByteArrayResource fileResource =
+          new ByteArrayResource(fileData.content().getBytes(StandardCharsets.UTF_8)) {
+            @Override
+            public String getFilename() {
+              return fileData.name();
+            }
+          };
       body.add("input_files", fileResource);
-      
+
       HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
-      
+
       // Execute request
       String url = serviceUrl + RUN_COMMAND_PATH;
       logger.debug("Sending split request to RNApolis service at: {}", url);
-      
+
       Map<String, Object> response = restTemplate.postForObject(url, requestEntity, Map.class);
-      
+
       // Process response
       if (response != null) {
         logger.debug("Received response from RNApolis service for splitting");
-        
+
         // Log stdout and stderr
         if (response.containsKey("stdout")) {
           logger.debug("RNApolis stdout: {}", response.get("stdout"));
         }
-        
+
         if (response.containsKey("stderr")) {
           String stderr = (String) response.get("stderr");
           if (stderr != null && !stderr.isEmpty()) {
             logger.warn("RNApolis stderr: {}", stderr);
           }
         }
-        
+
         // Check exit code
         Integer exitCode = (Integer) response.get("exit_code");
         if (exitCode != null && exitCode != 0) {
           logger.error("RNApolis split command failed with exit code: {}", exitCode);
           return List.of(fileData);
         }
-        
+
         // Process output files
         if (response.containsKey("output_files") && response.get("output_files") != null) {
-          List<Map<String, String>> outputFiles = (List<Map<String, String>>) response.get("output_files");
-          
+          List<Map<String, String>> outputFiles =
+              (List<Map<String, String>>) response.get("output_files");
+
           for (Map<String, String> file : outputFiles) {
             String relativePath = file.get("relative_path");
             if ("output.tar.gz".equals(relativePath) && file.containsKey("content_base64")) {
@@ -115,7 +117,7 @@ public class RnapolisClient {
             }
           }
         }
-        
+
         logger.warn("No output.tar.gz file found in the response for splitting");
       } else {
         logger.error("Received null response from RNApolis service for splitting");
@@ -125,7 +127,7 @@ public class RnapolisClient {
     } catch (Exception e) {
       logger.error("Unexpected error during RNApolis splitting", e);
     }
-    
+
     // Return original file if any error occurred
     return List.of(fileData);
   }

@@ -1,9 +1,14 @@
 package pl.poznan.put.api.controller;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import pl.poznan.put.api.dto.*;
 import pl.poznan.put.api.exception.ResourceNotFoundException;
@@ -50,25 +55,25 @@ public class ComputeController {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
     }
   }
-  
+
   @PostMapping(value = "/split", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public SplitFileResponse splitFile(@RequestParam("file") MultipartFile file) {
     logger.info("Received file splitting request for file: {}", file.getOriginalFilename());
-    
+
     try {
       // Convert MultipartFile to FileData
       String content = new String(file.getBytes(), StandardCharsets.UTF_8);
       String filename = file.getOriginalFilename();
-      
+
       if (filename == null || filename.isEmpty()) {
         filename = "input_file";
       }
-      
+
       FileData fileData = new FileData(filename, content);
-      
+
       // Use RnapolisClient to split the file
       List<FileData> splitFiles = computeService.splitFile(fileData);
-      
+
       return new SplitFileResponse(splitFiles);
     } catch (IOException e) {
       logger.error("Error reading uploaded file", e);

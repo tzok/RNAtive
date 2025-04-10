@@ -75,7 +75,7 @@ public class ComputeService {
 
     return task.getSvg();
   }
-  
+
   /**
    * Splits a file into multiple files using RNApolis service.
    *
