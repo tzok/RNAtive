@@ -460,7 +460,7 @@ function Home() {
       setDotBracket(
         ">strand_A\n" +
           "CCUUCCGGCGUCCCAGGCGGGGCGCCGCGGGACCGCCCUCGUGUCUGUGGCGGUGGGAUCCCGCGGCCGUGUUUUCCUGGUGGCCCGGCC\n" +
-          "	....((((..(((((((.((.(((((((((((((((((........).))))).....))))))))).)).))..))))).)).)))).."
+          "....((((..(((((((.((.(((((((((((((((((........).))))).....))))))))).)).))..))))).)).)))).."
       );
     } catch (error) {
       console.error("Error loading example files:", error);
