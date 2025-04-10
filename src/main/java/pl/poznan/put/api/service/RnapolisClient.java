@@ -50,7 +50,7 @@ public class RnapolisClient {
   public List<FileData> splitFile(FileData fileData) {
     try {
       logger.info("Splitting file: {}", fileData.name());
-      
+
       // Check if the file is an archive
       if (isArchive(fileData.name())) {
         logger.info("File is an archive, extracting and splitting contents");
@@ -65,7 +65,7 @@ public class RnapolisClient {
       return List.of(fileData);
     }
   }
-  
+
   /**
    * Determines if a file is an archive based on its extension.
    *
@@ -74,9 +74,11 @@ public class RnapolisClient {
    */
   private boolean isArchive(String filename) {
     String lowerName = filename.toLowerCase();
-    return lowerName.endsWith(".zip") || lowerName.endsWith(".tar.gz") || lowerName.endsWith(".tgz");
+    return lowerName.endsWith(".zip")
+        || lowerName.endsWith(".tar.gz")
+        || lowerName.endsWith(".tgz");
   }
-  
+
   /**
    * Extracts files from an archive and splits each PDB/CIF file.
    *
@@ -86,7 +88,7 @@ public class RnapolisClient {
   private List<FileData> splitArchive(FileData archiveData) throws IOException {
     List<FileData> extractedFiles;
     String filename = archiveData.name().toLowerCase();
-    
+
     // Extract files from the archive
     if (filename.endsWith(".zip")) {
       extractedFiles = extractZipArchive(archiveData.content().getBytes(StandardCharsets.UTF_8));
@@ -96,34 +98,36 @@ public class RnapolisClient {
       logger.warn("Unsupported archive format: {}", filename);
       return List.of(archiveData);
     }
-    
+
     logger.info("Extracted {} files from archive", extractedFiles.size());
-    
+
     // Filter for PDB and CIF files
-    List<FileData> pdbCifFiles = extractedFiles.stream()
-        .filter(file -> {
-          String name = file.name().toLowerCase();
-          return name.endsWith(".pdb") || name.endsWith(".cif");
-        })
-        .toList();
-    
+    List<FileData> pdbCifFiles =
+        extractedFiles.stream()
+            .filter(
+                file -> {
+                  String name = file.name().toLowerCase();
+                  return name.endsWith(".pdb") || name.endsWith(".cif");
+                })
+            .toList();
+
     if (pdbCifFiles.isEmpty()) {
       logger.warn("No PDB or CIF files found in archive");
       return List.of(archiveData);
     }
-    
+
     logger.info("Found {} PDB/CIF files in archive", pdbCifFiles.size());
-    
+
     // Split each PDB/CIF file and collect all results
     List<FileData> allSplitFiles = new ArrayList<>();
     for (FileData pdbFile : pdbCifFiles) {
       List<FileData> splitFiles = splitSingleFile(pdbFile);
       allSplitFiles.addAll(splitFiles);
     }
-    
+
     return allSplitFiles.isEmpty() ? List.of(archiveData) : allSplitFiles;
   }
-  
+
   /**
    * Extracts files from a ZIP archive.
    *
@@ -132,30 +136,30 @@ public class RnapolisClient {
    */
   private List<FileData> extractZipArchive(byte[] data) throws IOException {
     List<FileData> extractedFiles = new ArrayList<>();
-    
+
     try (ByteArrayInputStream bais = new ByteArrayInputStream(data);
-         java.util.zip.ZipInputStream zipIn = new java.util.zip.ZipInputStream(bais)) {
-      
+        java.util.zip.ZipInputStream zipIn = new java.util.zip.ZipInputStream(bais)) {
+
       java.util.zip.ZipEntry entry;
       while ((entry = zipIn.getNextEntry()) != null) {
         if (!entry.isDirectory()) {
           ByteArrayOutputStream fileContent = new ByteArrayOutputStream();
           byte[] buffer = new byte[1024];
           int len;
-          
+
           while ((len = zipIn.read(buffer)) != -1) {
             fileContent.write(buffer, 0, len);
           }
-          
+
           String content = fileContent.toString(StandardCharsets.UTF_8);
           String filename = entry.getName();
-          
+
           // Extract just the filename without path
           int lastSlash = Math.max(filename.lastIndexOf('/'), filename.lastIndexOf('\\'));
           if (lastSlash >= 0) {
             filename = filename.substring(lastSlash + 1);
           }
-          
+
           if (!filename.isEmpty()) {
             extractedFiles.add(new FileData(filename, content));
           }
@@ -163,10 +167,10 @@ public class RnapolisClient {
         zipIn.closeEntry();
       }
     }
-    
+
     return extractedFiles;
   }
-  
+
   /**
    * Splits a single file using RNApolis splitter-wrapper.py.
    *

@@ -70,12 +70,12 @@ public class ComputeController {
       }
 
       FileData fileData = new FileData(filename, content);
-      
+
       // Log file type information
       logger.info("Processing file: {}, size: {} bytes", filename, file.getSize());
-      if (filename.toLowerCase().endsWith(".zip") || 
-          filename.toLowerCase().endsWith(".tar.gz") || 
-          filename.toLowerCase().endsWith(".tgz")) {
+      if (filename.toLowerCase().endsWith(".zip")
+          || filename.toLowerCase().endsWith(".tar.gz")
+          || filename.toLowerCase().endsWith(".tgz")) {
         logger.info("Detected archive file: {}", filename);
       }
 
