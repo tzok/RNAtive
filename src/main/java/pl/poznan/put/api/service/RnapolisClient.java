@@ -170,7 +170,14 @@ public class RnapolisClient {
           }
 
           String content = fileContent.toString(StandardCharsets.UTF_8);
-          extractedFiles.add(new FileData(entry.getName(), content));
+          
+          // Remove leading "./" from filename if present
+          String filename = entry.getName();
+          if (filename.startsWith("./")) {
+            filename = filename.substring(2);
+          }
+          
+          extractedFiles.add(new FileData(filename, content));
         }
       }
     }
