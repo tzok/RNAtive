@@ -171,7 +171,7 @@ function Home() {
           const splitFiles = result.files.map((fileData, index) => {
             const newFile = new File(
               [fileData.content], 
-              fileData.file || `split_${index}_${file.name}`, 
+              fileData.name || `split_${index}_${file.name}`, 
               { type: file.type }
             );
             newFile.url = URL.createObjectURL(newFile);
