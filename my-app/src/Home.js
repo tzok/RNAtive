@@ -142,9 +142,69 @@ function Home() {
       setConfidenceLevel(value);
     }
   };
-  const beforeUpload = (file) => {
+  const beforeUpload = async (file) => {
     file.url = URL.createObjectURL(file);
     file.obj = new File([file], file.name, { type: file.type });
+    
+    try {
+      // Create a FormData object to send the file
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Call the split endpoint
+      const response = await fetch(`${serverAddress}/split`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with status ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      // If we got split files back
+      if (result.files && result.files.length > 0) {
+        // If there's more than one file returned, it means the file was split
+        if (result.files.length > 1) {
+          // Create File objects for each split file
+          const splitFiles = result.files.map((fileData, index) => {
+            const newFile = new File(
+              [fileData.content], 
+              fileData.file || `split_${index}_${file.name}`, 
+              { type: file.type }
+            );
+            newFile.url = URL.createObjectURL(newFile);
+            newFile.obj = newFile;
+            return {
+              uid: `${Date.now()}_${index}`,
+              name: newFile.name,
+              status: 'done',
+              url: newFile.url,
+              obj: newFile
+            };
+          });
+          
+          // Update the file list with the split files
+          setFileList(prevFileList => {
+            // Remove the original file
+            const filteredList = prevFileList.filter(f => f.uid !== file.uid);
+            // Add the split files
+            return [...filteredList, ...splitFiles];
+          });
+          
+          // Clean up the original file URL
+          URL.revokeObjectURL(file.url);
+          
+          // Return true to prevent the original file from being added
+          return true;
+        }
+      }
+    } catch (error) {
+      console.error("Error splitting file:", error);
+      // If there's an error, continue with the original file
+    }
+    
     return false;
   };
 
@@ -164,7 +224,13 @@ function Home() {
         URL.revokeObjectURL(file.url);
       }
     });
-    setFileList(newFileList);
+    
+    // Only update the file list if it's not being handled by the beforeUpload function
+    // (when a file is being split)
+    const isBeingProcessed = newFileList.some(file => file.status === 'uploading');
+    if (!isBeingProcessed) {
+      setFileList(newFileList);
+    }
   };
 
   // Clean up on unmount
@@ -819,6 +885,12 @@ function Home() {
                     showUploadList={{
                       showDownloadIcon: true,
                       downloadIcon: "Download",
+                    }}
+                    customRequest={({ onSuccess }) => {
+                      // This is needed to handle the async beforeUpload
+                      setTimeout(() => {
+                        onSuccess("ok");
+                      }, 0);
                     }}
                   >
                     <Button icon={<UploadOutlined />}>Upload</Button>
