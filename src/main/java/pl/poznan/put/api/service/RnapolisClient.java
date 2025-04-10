@@ -108,7 +108,9 @@ public class RnapolisClient {
             if ("output.tar.gz".equals(relativePath) && file.containsKey("content_base64")) {
               // Decode and extract the tar.gz file
               byte[] decodedData = Base64.getDecoder().decode(file.get("content_base64"));
-              return extractTarGzArchive(decodedData);
+              List<FileData> extractedFiles = extractTarGzArchive(decodedData);
+              // Return original files if no files were extracted
+              return extractedFiles.isEmpty() ? files : extractedFiles;
             }
           }
         }
@@ -170,13 +172,13 @@ public class RnapolisClient {
           }
 
           String content = fileContent.toString(StandardCharsets.UTF_8);
-          
+
           // Remove leading "./" from filename if present
           String filename = entry.getName();
           if (filename.startsWith("./")) {
             filename = filename.substring(2);
           }
-          
+
           extractedFiles.add(new FileData(filename, content));
         }
       }
