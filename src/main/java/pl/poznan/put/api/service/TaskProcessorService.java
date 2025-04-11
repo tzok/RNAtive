@@ -2,6 +2,11 @@ package pl.poznan.put.api.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -500,9 +505,30 @@ public class TaskProcessorService {
                             .parse(fileData.content()).stream()
                                 .findFirst()
                                 .orElseThrow(
-                                    () ->
-                                        new RuntimeException(
-                                            "No structure found in file " + fileData.name()))))
+                                    () -> {
+                                      String errorFileName = "error-" + fileData.name();
+                                      Path tempFilePath = Paths.get("/tmp", errorFileName);
+                                      try {
+                                        logger.warn(
+                                            "No structure found in file {}, saving content to {}",
+                                            fileData.name(),
+                                            tempFilePath);
+                                        Files.writeString(
+                                            tempFilePath,
+                                            fileData.content(),
+                                            StandardOpenOption.CREATE,
+                                            StandardOpenOption.WRITE,
+                                            StandardOpenOption.TRUNCATE_EXISTING);
+                                      } catch (IOException e) {
+                                        logger.error(
+                                            "Failed to save content of {} to {}",
+                                            fileData.name(),
+                                            tempFilePath,
+                                            e);
+                                      }
+                                      return new RuntimeException(
+                                          "No structure found in file " + fileData.name());
+                                    })))
             .toList();
     var identifiersToModels =
         models.stream()
