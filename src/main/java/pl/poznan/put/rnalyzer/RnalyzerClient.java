@@ -54,7 +54,8 @@ public class RnalyzerClient implements AutoCloseable {
     LOGGER.info("Analyzing PDB content with MolProbity: {}", filename);
     LOGGER.trace("Filtering PDB content to keep only ATOM/HETATM lines");
     String filteredPdbContent =
-        pdbContent.lines()
+        pdbContent
+            .lines()
             .filter(line -> line.startsWith("ATOM") || line.startsWith("HETATM"))
             .collect(java.util.stream.Collectors.joining("\n"));
 
