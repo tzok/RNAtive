@@ -1,5 +1,6 @@
 package pl.poznan.put.api.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.Base64;
 
 public record FileData(String name, String content, boolean isBinary) {
@@ -9,6 +10,7 @@ public record FileData(String name, String content, boolean isBinary) {
   }
 
   // Helper method to get content as bytes
+  @JsonIgnore
   public byte[] getContentBytes() {
     if (isBinary) {
       return Base64.getDecoder().decode(content);
