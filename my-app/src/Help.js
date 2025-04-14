@@ -233,7 +233,8 @@ const Help = () => {
             <Paragraph>
               To evaluate your own files, please drop them in "Upload" button or
               click on the "Upload" button and select the .pdb/.mmCIF files from
-              your computer.
+              your computer. You can also upload .zip, .tar.gz, or .tgz
+              archives.
             </Paragraph>
             <img
               src={uploadScreen}

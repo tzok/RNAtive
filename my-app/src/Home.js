@@ -906,7 +906,7 @@ function Home() {
               label={
                 <span>
                   Example datasets{" "}
-                  <Tooltip title="Click a button to load a demo dataset.">
+                  <Tooltip title="Click the button to load a demo dataset for testing and exploration.">
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
@@ -965,7 +965,7 @@ function Home() {
               label={
                 <span>
                   RNA 3D models{" "}
-                  <Tooltip title="Upload a minimum of two structural files in PDB or PDBx/mmCIF format for analysis. You can also upload .zip, .tar.gz, or .tgz archives containing multiple structure files. The combined size of files cannot exceed 100MB.">
+                  <Tooltip title="Upload at least two RNA structure files in PDB or mmCIF format. You can also upload .zip, .tar.gz, or .tgz archives. Keep total file size under 100 MB">
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
@@ -1004,7 +1004,7 @@ function Home() {
               label={
                 <span>
                   Model quality filter{" "}
-                  <Tooltip title="MolProbity evaluates structural quality by analyzing atomic clashes, bond lengths, and angles. The filter options determine which models are included in the consensus analysis: 'No filter' accepts all models, 'Clashscore filter' requires good clash scores, and 'Strict filter' requires good scores for clashes, bonds, and angles.">
+                  <Tooltip title="Filter input models based on structural quality assessed by MolProbity. Choose ‘No filtering’ to include all models, ‘Clashscore only’ to exclude models with poor clash scores, or ‘Strict’ to accept only models with good scores for clashes, bonds, and angles.">
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
@@ -1041,7 +1041,7 @@ function Home() {
               label={
                 <span>
                   Base pair analyzer{" "}
-                  <Tooltip title="Select one of the integrated tools for extracting nucleotide interactions.">
+                  <Tooltip title="Pick a tool to annotate nucleotide interactions from input RNA 3D models.">
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
@@ -1058,7 +1058,7 @@ function Home() {
               label={
                 <span>
                   Consensus structure based on{" "}
-                  <Tooltip title="Specify which categories of nucleotide interactions should be included when building the consensus secondary structure and comparing models.">
+                  <Tooltip title="Choose which interaction types to include when comparing models and constructing the consensus secondary structure: canonical base pairs, stacking interactions, non-canonical pairs, or all.">
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
@@ -1076,7 +1076,7 @@ function Home() {
                 <span>
                   Conditionally weighted consensus{" "}
                   {/* Frequency-based scoring{" "} */}
-                  <Tooltip title="Set on to rank models based on how frequently each interaction appears across the input set. When set off, only high-confidence interactions (above the set threshold) are considered in ranking.">
+                  <Tooltip title="Switch on to rank models based on how often each interaction appears across the input set. Switch off to consider only high-confidence interactions above the threshold.">
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
@@ -1155,7 +1155,7 @@ function Home() {
               label={
                 <span>
                   2D structure viewer{" "}
-                  <Tooltip title="Pick the visualization tool for consensus structures. Currently, VARNA is the sole option supporting non-canonical base pair visualization, employing distinct symbols for each Leontis-Westhof classification.">
+                  <Tooltip title="Choose a viewer to display the consensus 2D structure. Currently, only VARNA supports visualizing non-canonical interactions and annotating their Leontis–Westhof classes with dedicated pictograms.">
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
