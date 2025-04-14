@@ -95,17 +95,17 @@ const visualizerOptions = [
 const molProbityOptions = [
   {
     value: "ALL",
-    label: "No filtering - Accept all models regardless of MolProbity scores.",
+    label: "No filter (keep all models).",
   },
   {
     value: "CLASHSCORE",
     label:
-      "Clashscore only - Accept models with a 'good' clashscore rank. Ignore bond/angle issues.",
+      "Clashscore filter (remove models with poor clashscore).",
   },
   {
     value: "CLASHSCORE_BONDS_ANGLES",
     label:
-      "Strict - Accept models with 'good' clashscore, bond, and angle ranks.",
+      "Strict filter (remove models with poor clashscore, bond, or angle geometry).",
   },
 ];
 
@@ -867,7 +867,16 @@ function Home() {
               structure by comparing annotations across all models, providing a reliable representation of the RNA's secondary 
               structure and tertiary interactions.</p> */}
             <p>
-              RNAtive is a consensus-based RNA structure analysis system
+            RNAtive is a consensus-based RNA structure analysis system designed 
+            to process multiple structural models sharing the same sequence and 
+            to identify reliable base pairs and stacking interactions. It supports 
+            model validation, improves structural predictions, and facilitates 
+            studies of RNA structure evolution. The tool accepts a minimum of two 
+            RNA 3D structure models in PDB or mmCIF format (with a total file size limit of 100 MB), 
+            analyzes them using state-of-the-art base-pair annotation tools, <b>and generates a consensus structure </b>
+            by comparing annotations across all input models. It also ranks the input models 
+            based on their consistency with the derived consensus. 
+              {/* RNAtive is a consensus-based RNA structure analysis system
               designed to process multiple structural models to identify
               reliable base pairs and stacking interactions. Tailored for RNA
               structural biologists and bioinformaticians, it aids in validating
@@ -878,7 +887,7 @@ function Home() {
               consensus structure by comparing annotations across all input
               models. The combined size of all PDB/mmCIF files cannot exceed
               100MB. Additionally, it ranks the input models based on their
-              consistency with the derived consensus.
+              consistency with the derived consensus. */}
             </p>
           </div>
 
@@ -909,7 +918,7 @@ function Home() {
                   <Button onClick={loadDecoyExamples}>
                     <Tooltip
                       title={
-                        "9 decoy models of the U2 small nuclear RNA fragment (1A9N)"
+                        "9 decoy models of the U2 small nuclear RNA fragment (1A9N)."
                       }
                     >
                       U2 snRNA decoys
@@ -920,7 +929,7 @@ function Home() {
                   <Button onClick={loadmiRNAExample}>
                     <Tooltip
                       title={
-                        "10 models of miRNA mir-663 from Rfam: RF00957, predicted by RNAComposer from a secondary structure predicted by centroidfold."
+                        "10 models of miRNA miR-663 from Rfam (RF00957), predicted by RNAComposer based on the CentroidFold-generated 2D structure."
                       }
                     >
                       miRNA mir-663
@@ -945,7 +954,7 @@ function Home() {
             <Form.Item
               label={
                 <span>
-                  Files{" "}
+                  RNA 3D models{" "}
                   <Tooltip title="Upload a minimum of two structural files in PDB or PDBx/mmCIF format for analysis. You can also upload .zip, .tar.gz, or .tgz archives containing multiple structure files. The combined size of files cannot exceed 100MB.">
                     <QuestionCircleOutlined />
                   </Tooltip>
@@ -984,7 +993,7 @@ function Home() {
             <Form.Item
               label={
                 <span>
-                  Molprobity filter{" "}
+                  Model quality filter{" "}
                   <Tooltip title="MolProbity evaluates structural quality by analyzing atomic clashes, bond lengths, and angles. The filter options determine which models are included in the consensus analysis: 'No filtering' accepts all models, 'Clashscore only' requires good clash scores, and 'Strict' requires good scores for clashes, bonds, and angles.">
                     <QuestionCircleOutlined />
                   </Tooltip>
@@ -1038,7 +1047,7 @@ function Home() {
             <Form.Item
               label={
                 <span>
-                  Consensus mode{" "}
+                  Consensus structure based on{" "}
                   <Tooltip title="Specify which categories of nucleotide interactions should be included when building the consensus secondary structure and comparing models.">
                     <QuestionCircleOutlined />
                   </Tooltip>
@@ -1055,8 +1064,8 @@ function Home() {
             <Form.Item
               label={
                 <span>
-                  Fuzzy mode{" "}
-                  <Tooltip title="In fuzzy mode, every nucleotide interaction within the specified consensus mode contributes to model ranking calculations based on how frequently it appears across models. When fuzzy mode is disabled, interaction frequency acts as a filtering mechanism, with INF computations only considering interactions that surpass minimum confidence thresholds.">
+                  Frequency-based scoring{" "}
+                  <Tooltip title="Set on to rank models based on how frequently each interaction appears across the input set. When set off, only high-confidence interactions (above the set threshold) are considered in ranking.">
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
@@ -1134,7 +1143,7 @@ function Home() {
             <Form.Item
               label={
                 <span>
-                  Visualizer{" "}
+                  2D structure viewer{" "}
                   <Tooltip title="Pick the visualization tool for consensus structures. Currently, VARNA is the sole option supporting non-canonical base pair visualization, employing distinct symbols for each Leontis-Westhof classification.">
                     <QuestionCircleOutlined />
                   </Tooltip>
