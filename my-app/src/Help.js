@@ -522,8 +522,8 @@ const Help = () => {
                   (doi:10.1093/nar/gkz1108).
                 </li> */}
                 <li>
-                  <b>RNA-Puzzles: </b>M. Magnus et al., 2020{" "}
-                  <i>Nucleic Acids Research</i>, 48(2): 576-588.
+                  <b>RNA-Puzzles: </b>M. Magnus et al.,{" "}
+                  <i>Nucleic Acids Research</i>, 48(2): 576-588 (2020).
                 </li>
                 {/* <li>
                   <b>Decoys: </b>Emidio Capriotti, Tomas Norambuena, Marc A.
@@ -534,7 +534,7 @@ const Help = () => {
                 </li> */}
                 <li>
                   <b>Decoys: </b>Emidio Capriotti et al., <i>Bioinformatics</i>,
-                  Volume 27, Issue 8, April 2011, Pages 1086–1093.
+                  Volume 27, Issue 8, Pages 1086–1093 (April 2011).
                 </li>
 
                 {/* <li>
@@ -559,7 +559,7 @@ const Help = () => {
                 <li>
                   <b>RNAPolis Annotator:</b> Szachniuk, Marta.{" "}
                   <i>Foundations of Computing and Decision Sciences</i>, vol.
-                  44, no. 2, <i>Sciendo</i>, 2019, pp. 241-257.
+                  44, no. 2, <i>Sciendo</i>, pp. 241-257 (2019).
                 </li>
                 {/* <li>
                   <b>BPNet:</b> Roy, P., Bhattacharyya, D. Contact networks in
@@ -583,11 +583,11 @@ const Help = () => {
                 {/* https://www.bgsu.edu/research/rna/software/fr3d.html */}
                 <li>
                   <b>FR3D:</b> Michael Sarver et al.,{" "}
-                  <i>Journal of Mathematical Biology</i> (2008) 56:215–252.{" "}
+                  <i>Journal of Mathematical Biology</i> 56:215–252 (2008).{" "}
                   <br></br>
                   WebFR3D – a server for finding, aligning and analyzing
                   recurrent RNA 3D motifs, Anton I. Petrov et al.,{" "}
-                  <i>Nucleic Acids Research</i>, 2011.
+                  <i>Nucleic Acids Research</i>, (2011).
                 </li>
                 {/* <li>
                   <b>MC-Annotate:</b> Patrick Gendron, Sébastien Lemieux,
@@ -601,7 +601,7 @@ const Help = () => {
                 <li>
                   <b>MC-Annotate:</b> Patrick Gendron et al.,{" "}
                   <i>Journal of Molecular Biology</i>, Volume 308, Issue 5,
-                  2001, Pages 919-936, ISSN 0022-2836.
+                  Pages 919-936, ISSN 0022-2836 (2001).
                 </li>
                 {/* <li>
                   <b>RNAView:</b> Yang, H., Jossinet, F., Leontis, N., Chen, L.,
@@ -610,8 +610,8 @@ const Help = () => {
                   <i>Nucleic Acids Research</i> 31.13: 3450-3460.
                 </li> */}
                 <li>
-                  <b>RNAView:</b> Yang H., et al., 2003
-                  <i>Nucleic Acids Research</i> 31.13: 3450-3460.
+                  <b>RNAView:</b> Yang H., et al.,
+                  <i>Nucleic Acids Research</i> 31.13: 3450-3460 (2003).
                 </li>
                 {/* <li>
                   <b>barnaba:</b> Bottaro S, Bussi G, Pinamonti G, Reißer S,
@@ -621,14 +621,15 @@ const Help = () => {
                   12. PMID: 30420522; PMCID: PMC6348988.
                 </li> */}
                 <li>
-                  <b>barnaba:</b> Bottaro S et al., <i>RNA</i>. 2019
-                  Feb;25(2):219-231.
+                  <b>barnaba:</b> Bottaro S et al., <i>RNA</i>.
+                  Feb;25(2):219-231 (2019).
                 </li>
                 <li>
                   {/* <b>VRNA:</b> VARNA: Interactive drawing and editing of the RNA
                 secondary structure Kévin Darty, Alain Denise and Yann Ponty */}
                   <b>VRNA:</b> Kévin Darty et al.,
-                  <i> Bioinformatics</i>, pp. 1974-1975, Vol. 25, no. 15, 2009.
+                  <i> Bioinformatics</i>, pp. 1974-1975, Vol. 25, no. 15,
+                  (2009).
                 </li>
                 {/* <b>RNApuzzler: </b>Daniel Wiegreffe, Daniel Alexander, Peter F
                   Stadler, Dirk Zeckzer, RNApuzzler: efficient outerplanar
@@ -637,8 +638,8 @@ const Help = () => {
                   https://doi.org/10.1093/bioinformatics/bty817. */}
                 <li>
                   <b>RNApuzzler: </b>Daniel Wiegreffe et al.,{" "}
-                  <i>Bioinformatics</i>, Volume 35, Issue 8, April 2019, Pages
-                  1342–1349.
+                  <i>Bioinformatics</i>, Volume 35, Issue 8, Pages 1342–1349
+                  (April 2019).
                 </li>
                 {/* <b>PseudoViewer:</b> Byun Y, Han K. PseudoViewer: web
                   application and web service for visualizing RNA pseudoknots
@@ -647,7 +648,7 @@ const Help = () => {
                   16845039; PMCID: PMC1538805. */}
                 <li>
                   <b>PseudoViewer:</b> Byun Y et al., <i>Nucleic Acids Res.</i>{" "}
-                  2006 Jul 1;34.
+                  34 (2006 Jul 1).
                 </li>
                 <li>
                   {/* <b>R-Chie: </b>
@@ -664,10 +665,12 @@ const Help = () => {
                   19, 2012. doi:10.1093/nar/gks241. */}
                   <b>R-Chie: </b>
                   Volodymyr Tsybulskyi et al., <i>Nucleic Acids Research</i>,
-                  Volume 48, Issue 18, 09 October 2020, Page e105.
+                  Volume 48, Issue 18, Page e105 (09 October 2020).
                   <br></br>
-                  Daniel Lai et al., <i>Nucleic Acids Research</i>, first
-                  published online March 19, 2012.
+                  Daniel Lai et al., R-chie: a web server and R package for
+                  visualizing RNA secondary structures,{" "}
+                  <i>Nucleic Acids Research</i>, (first published online March
+                  19, 2012).
                 </li>
               </ol>
             </Paragraph>
