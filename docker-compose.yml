@@ -74,7 +74,7 @@ services:
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
   rnapolis:
-    image: ghcr.io/tzok/cli2rest-rnapolis
+    image: ghcr.io/tzok/cli2rest-rnapolis:0.8.1
 
 volumes:
   postgres_data:
