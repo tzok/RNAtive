@@ -246,7 +246,7 @@ const Help = () => {
               }}
             />
             <CustomTitle level={2}>Parameters</CustomTitle>
-            <CustomTitle level={3}>MolProbity filter</CustomTitle>
+            <CustomTitle level={3}>Model quality filter</CustomTitle>
             <Paragraph>
               When enabled, individual models undergo MolProbity evaluation,
               receiving ratings of 'good', 'caution', or 'warning' across four
@@ -255,11 +255,11 @@ const Help = () => {
               standards will be excluded from subsequent evaluation.
             </Paragraph>
             <Paragraph>
-              If the option "Clashscore only" is selected, models that received
-              a clashscore of "good" will be uploaded, but issues with angles
-              and bonds shall be ignored. <br></br> Option "Strict" will only
-              accept files that got a score of "good" in clashscore, bonds, and
-              angles criteria.{" "}
+              If the option "Clashscore filter" is selected, models that
+              received a clashscore of "good" will be uploaded, but issues with
+              angles and bonds shall be ignored. <br></br> Option "Strict
+              filter" will only accept files that got a score of "good" in
+              clashscore, bonds, and angles criteria.{" "}
             </Paragraph>
             <CustomTitle level={3}>Expected 2D structure</CustomTitle>
             <Paragraph>
@@ -308,15 +308,18 @@ const Help = () => {
               interactions available: MC-Annotate, BARNABA, RNAview, FR3D,
               BPnet, RNApolis.
             </Paragraph>
-            <CustomTitle level={3}>Consensus mode</CustomTitle>
+            <CustomTitle level={3}>Consensus structure based on</CustomTitle>
             <Paragraph>
-              Consensus mode specifies which categories of nucleotide
-              interactions should be included when building the consensus
-              secondary structure and comparing models. There are four consensus
-              modes available: canonical, non-canonical, stacking and all.
+              "Consensus structure based on" specifies which categories of
+              nucleotide interactions should be included when building the
+              consensus secondary structure and comparing models. There are four
+              consensus modes available: canonical base pairs, non-canonical
+              base pairs, stacking interactions, and all interactions.
             </Paragraph>
-            <CustomTitle level={3}>Fuzzy Mode and Confidence level</CustomTitle>
-            <Paragraph>
+            <CustomTitle level={3}>
+              Conditionally weighted consensus and Confidence level
+            </CustomTitle>
+            {/* <Paragraph>
               In fuzzy mode, every nucleotide interaction within the specified
               consensus mode contributes to model ranking calculations based on
               how frequently it appears across models. When fuzzy mode is
@@ -324,6 +327,16 @@ const Help = () => {
               with INF computations only considering interactions that surpass
               minimum confidence thresholds. Disabling Fuzzy mode allows setting
               the prefered confidence level.
+            </Paragraph> */}
+            <Paragraph>
+              With conditionally weighted consensus, every nucleotide
+              interaction within the specified consensus mode contributes to
+              model ranking calculations based on how frequently it appears
+              across models. When that mode is disabled, interaction frequency
+              acts as a filtering mechanism, with INF computations only
+              considering interactions that surpass minimum confidence
+              thresholds. Disabling conditionally weighted consensus allows
+              setting the prefered confidence level.
             </Paragraph>
             <img
               src={fuzzyMode}
@@ -335,8 +348,9 @@ const Help = () => {
                 display: "inline-block",
               }}
             />
-            <CustomTitle level={3}>Visualizers</CustomTitle>
+            <CustomTitle level={3}>2D structure viewer</CustomTitle>
             <Paragraph>
+              RNAtive will return a 2D visualization of the consensus structure.
               There are four visualizers available: VARNA, RNApuzzler,
               PseudoViewer and R-Chie.
             </Paragraph>
@@ -498,7 +512,7 @@ const Help = () => {
               integration of state-of-the-art methods and tools. References (in
               order of apperance on the main page):
               <ol>
-                <li>
+                {/* <li>
                   <b>RNA-Puzzles: </b>M. Magnus, M. Antczak, T. Zok, J.
                   Wiedemann, P. Lukasiak, Y. Cao, J. M. Bujnicki, E. Westhof, M.
                   Szachniuk, Z. Miao (2020) RNA-Puzzles toolkit: A computational
@@ -506,36 +520,58 @@ const Help = () => {
                   manipulation, and evaluation tools.{" "}
                   <i>Nucleic Acids Research</i>, 48(2): 576-588
                   (doi:10.1093/nar/gkz1108).
-                </li>
+                </li> */}
                 <li>
+                  <b>RNA-Puzzles: </b>M. Magnus et al., 2020{" "}
+                  <i>Nucleic Acids Research</i>, 48(2): 576-588.
+                </li>
+                {/* <li>
                   <b>Decoys: </b>Emidio Capriotti, Tomas Norambuena, Marc A.
                   Marti-Renom, Francisco Melo, All-atom knowledge-based
                   potential for RNA structure prediction and assessment,
                   <i>Bioinformatics</i>, Volume 27, Issue 8, April 2011, Pages
                   1086–1093, https://doi.org/10.1093/bioinformatics/btr093.
-                </li>
+                </li> */}
                 <li>
+                  <b>Decoys: </b>Emidio Capriotti et al., <i>Bioinformatics</i>,
+                  Volume 27, Issue 8, April 2011, Pages 1086–1093.
+                </li>
+
+                {/* <li>
                   <b>MolProbity:</b> MolProbity: all-atom contacts and structure
                   validation for proteins and nucleic acids I. W. Davis, A.
                   Leaver-Fay, V. B. Chen, J. N. Block, G. J. Kapral, X. Wang, L.
                   W. Murray, W. B. Arendall, III, J. Snoeyink, J. S. Richardson,
                   and D. C. Richardson. <i>Nucl. Acids Res.</i> 35: W375-W383
                   (2007).
-                </li>
+                </li> */}
                 <li>
+                  <b>MolProbity:</b> I. W. Davis et al., <i>Nucl. Acids Res.</i>{" "}
+                  35: W375-W383 (2007).
+                </li>
+                {/* <li>
                   <b>RNAPolis Annotator:</b> Szachniuk, Marta. "RNApolis:
                   Computational Platform for RNA Structure Analysis"{" "}
                   <i>Foundations of Computing and Decision Sciences</i>, vol.
                   44, no. 2, <i>Sciendo</i>, 2019, pp. 241-257.
                   https://doi.org/10.2478/fcds-2019-0012.
-                </li>
+                </li> */}
                 <li>
+                  <b>RNAPolis Annotator:</b> Szachniuk, Marta.{" "}
+                  <i>Foundations of Computing and Decision Sciences</i>, vol.
+                  44, no. 2, <i>Sciendo</i>, 2019, pp. 241-257.
+                </li>
+                {/* <li>
                   <b>BPNet:</b> Roy, P., Bhattacharyya, D. Contact networks in
                   RNA: a structural bioinformatics study with a new tool.{" "}
                   <i>J Comput Aided Mol Des 36</i>, 131–140 (2022).
                   https://doi.org/10.1007/s10822-021-00438-x.
-                </li>
+                </li> */}
                 <li>
+                  <b>BPNet:</b> Roy, P. et al., <i>J Comput Aided Mol Des 36</i>
+                  , 131–140 (2022).
+                </li>
+                {/* <li>
                   <b>FR3D:</b> FR3D: Finding Local and Composite Recurrent
                   Structural Motifs in RNA 3D Structures, Michael Sarver; Craig
                   L. Zirbel; Jesse Stombaugh; Ali Mokdad; Neocles B. Leontis.
@@ -543,10 +579,17 @@ const Help = () => {
                   WebFR3D – a server for finding, aligning and analyzing
                   recurrent RNA 3D motifs, Anton I. Petrov; Craig L. Zirbel;
                   Neocles B. Leontis. <i>Nucleic Acids Research</i>, 2011.
-                </li>
+                </li> */}
                 {/* https://www.bgsu.edu/research/rna/software/fr3d.html */}
-
                 <li>
+                  <b>FR3D:</b> Michael Sarver et al.,{" "}
+                  <i>Journal of Mathematical Biology</i> (2008) 56:215–252.{" "}
+                  <br></br>
+                  WebFR3D – a server for finding, aligning and analyzing
+                  recurrent RNA 3D motifs, Anton I. Petrov et al.,{" "}
+                  <i>Nucleic Acids Research</i>, 2011.
+                </li>
+                {/* <li>
                   <b>MC-Annotate:</b> Patrick Gendron, Sébastien Lemieux,
                   François Major, Quantitative analysis of nucleic acid
                   three-dimensional structures11Edited by I. Tinoco,{" "}
@@ -554,41 +597,60 @@ const Help = () => {
                   2001, Pages 919-936, ISSN 0022-2836,
                   https://doi.org/10.1006/jmbi.2001.4626.
                   (https://www.sciencedirect.com/science/article/pii/S0022283601946261).
-                </li>
+                </li> */}
                 <li>
+                  <b>MC-Annotate:</b> Patrick Gendron et al.,{" "}
+                  <i>Journal of Molecular Biology</i>, Volume 308, Issue 5,
+                  2001, Pages 919-936, ISSN 0022-2836.
+                </li>
+                {/* <li>
                   <b>RNAView:</b> Yang, H., Jossinet, F., Leontis, N., Chen, L.,
                   Westbrook, J., Berman, H.M., Westhof, E. (2003). Tools for the
                   automatic identification and classification of RNA base pairs.
                   <i>Nucleic Acids Research</i> 31.13: 3450-3460.
-                </li>
+                </li> */}
                 <li>
+                  <b>RNAView:</b> Yang H., et al., 2003
+                  <i>Nucleic Acids Research</i> 31.13: 3450-3460.
+                </li>
+                {/* <li>
                   <b>barnaba:</b> Bottaro S, Bussi G, Pinamonti G, Reißer S,
                   Boomsma W, Lindorff-Larsen K. Barnaba: software for analysis
                   of nucleic acid structures and trajectories. <i>RNA</i>. 2019
                   Feb;25(2):219-231. doi: 10.1261/rna.067678.118. Epub 2018 Nov
                   12. PMID: 30420522; PMCID: PMC6348988.
+                </li> */}
+                <li>
+                  <b>barnaba:</b> Bottaro S et al., <i>RNA</i>. 2019
+                  Feb;25(2):219-231.
                 </li>
                 <li>
-                  <b>VRNA:</b> VARNA: Interactive drawing and editing of the RNA
-                  secondary structure Kévin Darty, Alain Denise and Yann Ponty
+                  {/* <b>VRNA:</b> VARNA: Interactive drawing and editing of the RNA
+                secondary structure Kévin Darty, Alain Denise and Yann Ponty */}
+                  <b>VRNA:</b> Kévin Darty et al.,
                   <i> Bioinformatics</i>, pp. 1974-1975, Vol. 25, no. 15, 2009.
                 </li>
-                <li>
-                  <b>RNApuzzler: </b>Daniel Wiegreffe, Daniel Alexander, Peter F
+                {/* <b>RNApuzzler: </b>Daniel Wiegreffe, Daniel Alexander, Peter F
                   Stadler, Dirk Zeckzer, RNApuzzler: efficient outerplanar
                   drawing of RNA-secondary structures, <i>Bioinformatics</i>,
                   Volume 35, Issue 8, April 2019, Pages 1342–1349,
-                  https://doi.org/10.1093/bioinformatics/bty817.
-                </li>
+                  https://doi.org/10.1093/bioinformatics/bty817. */}
                 <li>
-                  <b>PseudoViewer:</b> Byun Y, Han K. PseudoViewer: web
+                  <b>RNApuzzler: </b>Daniel Wiegreffe et al.,{" "}
+                  <i>Bioinformatics</i>, Volume 35, Issue 8, April 2019, Pages
+                  1342–1349.
+                </li>
+                {/* <b>PseudoViewer:</b> Byun Y, Han K. PseudoViewer: web
                   application and web service for visualizing RNA pseudoknots
                   and secondary structures. <i>Nucleic Acids Res.</i> 2006 Jul
                   1;34(Web Server issue):W416-22. doi: 10.1093/nar/gkl210. PMID:
-                  16845039; PMCID: PMC1538805.
+                  16845039; PMCID: PMC1538805. */}
+                <li>
+                  <b>PseudoViewer:</b> Byun Y et al., <i>Nucleic Acids Res.</i>{" "}
+                  2006 Jul 1;34.
                 </li>
                 <li>
-                  <b>R-Chie: </b>
+                  {/* <b>R-Chie: </b>
                   Volodymyr Tsybulskyi, Mohamed Mounir, Irmtraud M Meyer,
                   R-CHIE: a web server and R package for visualizing cis and
                   trans RNA–RNA, RNA–DNA and DNA–DNA interactions,{" "}
@@ -599,14 +661,28 @@ const Help = () => {
                   Meyer (2012) R-chie: a web server and R package for
                   visualizing RNA secondary structures.{" "}
                   <i>Nucleic Acids Research</i>, first published online March
-                  19, 2012. doi:10.1093/nar/gks241.
+                  19, 2012. doi:10.1093/nar/gks241. */}
+                  <b>R-Chie: </b>
+                  Volodymyr Tsybulskyi et al., <i>Nucleic Acids Research</i>,
+                  Volume 48, Issue 18, 09 October 2020, Page e105.
+                  <br></br>
+                  Daniel Lai et al., <i>Nucleic Acids Research</i>, first
+                  published online March 19, 2012.
                 </li>
               </ol>
             </Paragraph>
             <Paragraph>
               Additionally, there are following references used by our team:
               <ol type="a" style={{ listStyleType: "lower-alpha" }}>
-                <li>https://rnajournal.cshlp.org/content/18/4/610.full</li>{" "}
+                <li>
+                  <a
+                    href=" https://rnajournal.cshlp.org/content/18/4/610.full"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    https://rnajournal.cshlp.org/content/18/4/610.full
+                  </a>
+                </li>{" "}
                 {/*cite this correctly*/}
                 <li>
                   <a
@@ -618,18 +694,12 @@ const Help = () => {
                   </a>
                 </li>
                 <li>
-                  Popenda, M., Szachniuk, M., Antczak, M., Purzycka, K. J.,
-                  Lukasiak, P., Bartol, N., Blazewicz, J., & Adamiak, R. W.
-                  (2012). Automated 3D structure composition for large RNAs.
+                  Popenda, M. et al., 2012.
                   <i>Nucleic Acids Research</i>, 40(14), e112–e112.
-                  https://doi.org/10.1093/nar/gks339.
                 </li>
                 <li>
-                  Ontiveros-Palacios, N., Cooke, E., Nawrocki, E. P., Triebel,
-                  S., Marz, M., Rivas, E., Griffiths-Jones, S., Petrov, A. I.,
-                  Bateman, A., & Sweeney, B. (2025). Rfam 15: RNA families
-                  database in 2025. <i>Nucleic Acids Research</i>, 53(D1),
-                  D258–D267. https://doi.org/10.1093/nar/gkae1023.
+                  Ontiveros-Palacios, N. et al., 2025{" "}
+                  <i>Nucleic Acids Research</i>, 53(D1), D258–D267.
                 </li>
               </ol>
             </Paragraph>

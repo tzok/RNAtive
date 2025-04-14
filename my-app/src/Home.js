@@ -99,8 +99,7 @@ const molProbityOptions = [
   },
   {
     value: "CLASHSCORE",
-    label:
-      "Clashscore filter (remove models with poor clashscore).",
+    label: "Clashscore filter (remove models with poor clashscore).",
   },
   {
     value: "CLASHSCORE_BONDS_ANGLES",
@@ -144,53 +143,59 @@ function Home() {
   const beforeUpload = async (file) => {
     file.url = URL.createObjectURL(file);
     file.obj = new File([file], file.name, { type: file.type });
-    
+
     // Check if file is an archive
-    const isArchive = file.name.toLowerCase().endsWith('.zip') || 
-                      file.name.toLowerCase().endsWith('.tar.gz') || 
-                      file.name.toLowerCase().endsWith('.tgz');
-    
+    const isArchive =
+      file.name.toLowerCase().endsWith(".zip") ||
+      file.name.toLowerCase().endsWith(".tar.gz") ||
+      file.name.toLowerCase().endsWith(".tgz");
+
     // Add the file to the list with a processing status
     const fileWithUid = {
       uid: `${Date.now()}_${file.name}`,
       name: file.name,
-      status: 'uploading',
+      status: "uploading",
       percent: 0,
       url: file.url,
       obj: file.obj,
-      isArchive: isArchive
+      isArchive: isArchive,
     };
-    
-    setFileList(prevFileList => [...prevFileList, fileWithUid]);
-    
+
+    setFileList((prevFileList) => [...prevFileList, fileWithUid]);
+
     try {
       // Create a FormData object to send the file
       const formData = new FormData();
-      formData.append('file', file);
-      
+      formData.append("file", file);
+
       // Update the status message for archives
       if (fileWithUid.isArchive) {
-        setFileList(prevFileList => 
-          prevFileList.map(f => 
-            f.uid === fileWithUid.uid 
-              ? { ...f, status: 'uploading', percent: 10, name: `${file.name} (Extracting archive...)` } 
+        setFileList((prevFileList) =>
+          prevFileList.map((f) =>
+            f.uid === fileWithUid.uid
+              ? {
+                  ...f,
+                  status: "uploading",
+                  percent: 10,
+                  name: `${file.name} (Extracting archive...)`,
+                }
               : f
           )
         );
       }
-      
+
       // Call the split endpoint
       const response = await fetch(`${serverAddress}/split`, {
-        method: 'POST',
+        method: "POST",
         body: formData,
       });
-      
+
       if (!response.ok) {
         throw new Error(`Server responded with status ${response.status}`);
       }
-      
+
       const result = await response.json();
-      
+
       // If we got split files back
       if (result.files && result.files.length > 0) {
         // If there's more than one file returned, it means the file was split
@@ -200,18 +205,18 @@ function Home() {
           const sortedFiles = [...result.files].sort((a, b) => {
             const modelNumberA = a.name.match(/_model_(\d+)\./);
             const modelNumberB = b.name.match(/_model_(\d+)\./);
-            
+
             if (modelNumberA && modelNumberB) {
               return parseInt(modelNumberA[1]) - parseInt(modelNumberB[1]);
             }
             return a.name.localeCompare(b.name); // Fallback to alphabetical sort
           });
-          
+
           // Create File objects for each split file
           const splitFiles = sortedFiles.map((fileData, index) => {
             const newFile = new File(
-              [fileData.content], 
-              fileData.name || `split_${index}_${file.name}`, 
+              [fileData.content],
+              fileData.name || `split_${index}_${file.name}`,
               { type: file.type }
             );
             newFile.url = URL.createObjectURL(newFile);
@@ -219,70 +224,72 @@ function Home() {
             return {
               uid: `${Date.now()}_${index}`,
               name: newFile.name,
-              status: 'done',
+              status: "done",
               url: newFile.url,
-              obj: newFile
+              obj: newFile,
             };
           });
-          
+
           // Update the file list with the split files
-          setFileList(prevFileList => {
+          setFileList((prevFileList) => {
             // Remove the original file (the one with uploading status)
-            const filteredList = prevFileList.filter(f => f.uid !== fileWithUid.uid);
+            const filteredList = prevFileList.filter(
+              (f) => f.uid !== fileWithUid.uid
+            );
             // Add the split files
             const newList = [...filteredList, ...splitFiles];
-            
+
             // Log the result for debugging
             if (fileWithUid.isArchive) {
-              console.log(`Archive ${file.name} extracted into ${splitFiles.length} files`);
+              console.log(
+                `Archive ${file.name} extracted into ${splitFiles.length} files`
+              );
             } else {
-              console.log(`File ${file.name} split into ${splitFiles.length} files`);
+              console.log(
+                `File ${file.name} split into ${splitFiles.length} files`
+              );
             }
-            
+
             return newList;
           });
-          
+
           // Clean up the original file URL
           URL.revokeObjectURL(file.url);
-          
+
           // Return false to prevent the default antd upload behavior
           return false;
         } else {
           // Only one file returned, update the status of the existing file
-          setFileList(prevFileList => 
-            prevFileList.map(f => 
-              f.uid === fileWithUid.uid 
-                ? { ...f, status: 'done' } 
-                : f
+          setFileList((prevFileList) =>
+            prevFileList.map((f) =>
+              f.uid === fileWithUid.uid ? { ...f, status: "done" } : f
             )
           );
         }
       } else {
         // No files returned, update the status of the existing file
-        setFileList(prevFileList => 
-          prevFileList.map(f => 
-            f.uid === fileWithUid.uid 
-              ? { ...f, status: 'done' } 
-              : f
+        setFileList((prevFileList) =>
+          prevFileList.map((f) =>
+            f.uid === fileWithUid.uid ? { ...f, status: "done" } : f
           )
         );
       }
     } catch (error) {
       console.error("Error processing file:", error);
       // If there's an error, update the file status to error with appropriate message
-      const errorMessage = fileWithUid.isArchive 
-        ? `Error extracting archive: ${error.message}` 
+      const errorMessage = fileWithUid.isArchive
+        ? `Error extracting archive: ${error.message}`
         : `Error splitting file: ${error.message}`;
-      
-      setFileList(prevFileList => 
-        prevFileList.map(f => 
-          f.uid === fileWithUid.uid 
-            ? { ...f, status: 'error', error: errorMessage, name: file.name } 
+
+      setFileList((prevFileList) =>
+        prevFileList.map((f) =>
+          f.uid === fileWithUid.uid
+            ? { ...f, status: "error", error: errorMessage, name: file.name }
             : f
         )
       );
     }
-    
+
     // Return false to prevent the default antd upload behavior in all cases
     return false;
   };
@@ -303,7 +310,7 @@ function Home() {
         URL.revokeObjectURL(file.url);
       }
     });
-    
+
     // We'll let the beforeUpload function handle the file list updates
     // This is mainly for handling file removals
     const hasRemovals = fileList.length > newFileList.length;
@@ -867,15 +874,18 @@ function Home() {
               structure by comparing annotations across all models, providing a reliable representation of the RNA's secondary 
               structure and tertiary interactions.</p> */}
             <p>
-            RNAtive is a consensus-based RNA structure analysis system designed 
-            to process multiple structural models sharing the same sequence and 
-            to identify reliable base pairs and stacking interactions. It supports 
-            model validation, improves structural predictions, and facilitates 
-            studies of RNA structure evolution. The tool accepts a minimum of two 
-            RNA 3D structure models in PDB or mmCIF format (with a total file size limit of 100 MB), 
-            analyzes them using state-of-the-art base-pair annotation tools, <b>and generates a consensus structure </b>
-            by comparing annotations across all input models. It also ranks the input models 
-            based on their consistency with the derived consensus. 
+              RNAtive is a consensus-based RNA structure analysis system
+              designed to process multiple structural models sharing the same
+              sequence and to identify reliable base pairs and stacking
+              interactions. It supports model validation, improves structural
+              predictions, and facilitates studies of RNA structure evolution.
+              The tool accepts a minimum of two RNA 3D structure models in PDB
+              or mmCIF format (with a total file size limit of 100 MB), analyzes
+              them using state-of-the-art base-pair annotation tools, and{" "}
+              <b> generates a consensus structure </b>
+              by comparing annotations across all input models. It also ranks
+              the input models based on their consistency with the derived
+              consensus.
               {/* RNAtive is a consensus-based RNA structure analysis system
               designed to process multiple structural models to identify
               reliable base pairs and stacking interactions. Tailored for RNA
@@ -994,7 +1004,7 @@ function Home() {
               label={
                 <span>
                   Model quality filter{" "}
-                  <Tooltip title="MolProbity evaluates structural quality by analyzing atomic clashes, bond lengths, and angles. The filter options determine which models are included in the consensus analysis: 'No filtering' accepts all models, 'Clashscore only' requires good clash scores, and 'Strict' requires good scores for clashes, bonds, and angles.">
+                  <Tooltip title="MolProbity evaluates structural quality by analyzing atomic clashes, bond lengths, and angles. The filter options determine which models are included in the consensus analysis: 'No filter' accepts all models, 'Clashscore filter' requires good clash scores, and 'Strict filter' requires good scores for clashes, bonds, and angles.">
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
@@ -1064,7 +1074,8 @@ function Home() {
             <Form.Item
               label={
                 <span>
-                  Frequency-based scoring{" "}
+                  Conditionally weighted consensus{" "}
+                  {/* Frequency-based scoring{" "} */}
                   <Tooltip title="Set on to rank models based on how frequently each interaction appears across the input set. When set off, only high-confidence interactions (above the set threshold) are considered in ranking.">
                     <QuestionCircleOutlined />
                   </Tooltip>
