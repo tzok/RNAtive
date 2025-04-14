@@ -1020,8 +1020,8 @@ function Home() {
             <Form.Item
               label={
                 <span>
-                  Expected 2D structure{" "}
-                  <Tooltip title="Optionally, provide the expected 2D structure in dot-bracket notation. Use brackets like '()' or '[]' to indicate required base pairs. Mark residues that must be unpaired with 'x'. Use '.' for positions with no constraints.">
+                  2D structure constraints{" "}
+                  <Tooltip title="Optionally, provide structural constraints using dot-bracket notation. Use brackets (e.g., '()' or '[]') to enforce base pairs, 'x' to enforce unpaired nucleotides, and '.' for positions without constraints. The consensus will follow these user-defined constraints.">
                     <QuestionCircleOutlined />
                   </Tooltip>
                 </span>
@@ -1090,7 +1090,7 @@ function Home() {
                 label={
                   <span style={{ opacity: fileList.length < 2 ? 0.5 : 1 }}>
                     Confidence level{" "}
-                    <Tooltip title="The minimum percentage threshold determining whether a nucleotide interaction becomes part of the consensus secondary structure. For instance, setting a 50 threshold requires an interaction to appear in at least half of the analyzed models to be included in the consensus structure.">
+                    <Tooltip title="Set the minimum number (percentage) of models in which an interaction must appear to be included in the consensus 2D structure. The corresponding percentage is displayed based on the total number of uploaded models. For example, a threshold of 5 models out of 10, corresponding to 50%, means the interaction is added to the consensus only if it occurs in at least half of the models.">
                       <QuestionCircleOutlined />
                     </Tooltip>
                   </span>

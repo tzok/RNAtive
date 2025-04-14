@@ -262,7 +262,7 @@ const Help = () => {
               filter" will only accept files that got a score of "good" in
               clashscore, bonds, and angles criteria.{" "}
             </Paragraph>
-            <CustomTitle level={3}>Expected 2D structure</CustomTitle>
+            <CustomTitle level={3}>2D structure constraints</CustomTitle>
             <Paragraph>
               If desired, a dot-bracket form of the molecule can be given to the
               RNAtive to be treated as a reference for evaluation. The specified
