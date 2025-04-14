@@ -585,8 +585,8 @@ const Help = () => {
                   <b>FR3D:</b> Michael Sarver et al.,{" "}
                   <i>Journal of Mathematical Biology</i> 56:215–252 (2008).{" "}
                   <br></br>
-                  WebFR3D – a server for finding, aligning and analyzing
-                  recurrent RNA 3D motifs, Anton I. Petrov et al.,{" "}
+                  Anton I. Petrov et al., WebFR3D – a server for finding,
+                  aligning and analyzing recurrent RNA 3D motifs,{" "}
                   <i>Nucleic Acids Research</i>, (2011).
                 </li>
                 {/* <li>
