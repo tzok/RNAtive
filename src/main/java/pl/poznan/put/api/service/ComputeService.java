@@ -174,7 +174,7 @@ public class ComputeService {
         List.of(
             "Nt1",
             "Nt2",
-            "Leontis-Westhof classification",
+            "LW class",
             "Confidence",
             "Paired in reference",
             "Unpaired in reference");
