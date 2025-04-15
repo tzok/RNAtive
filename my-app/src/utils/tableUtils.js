@@ -57,7 +57,12 @@ export const getTableColumns = (headers, rows, fileCount = 100) => {
               return Number(text);
             }
             if (header === "Confidence") {
-              return decimalToFraction(Number(text), fileCount);
+              return (
+                decimalToFraction(Number(text), fileCount) +
+                " (" +
+                String((Number(text) * 100).toFixed(2)) +
+                "%)"
+              );
             }
             return Number(text).toFixed(3);
           }
