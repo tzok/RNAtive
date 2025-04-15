@@ -8,6 +8,9 @@ import results2 from "./assets/results2a.png";
 import results2b from "./assets/results2b.png";
 import puzzles1 from "./assets/F1large.jpg";
 
+import task_id1 from "./assets/task_id1.png";
+import task_id2 from "./assets/task_id2.png";
+
 import A1 from "./assets/a1.png";
 import A2 from "./assets/a2.png";
 import A3 from "./assets/a3.png";
@@ -365,6 +368,31 @@ const Help = () => {
               and paste it later/elsewhere.
             </Paragraph>
             <CustomTitle level={2}>Results</CustomTitle>
+            <Paragraph>
+              Results are accessible under an unique url that contains the task
+              id displayed after sending the files for evaluation: <br></br>
+              https://rnative.cs.put.poznan.pl/[task id]{" "}
+            </Paragraph>
+            <img
+              src={task_id1}
+              alt="task  id example"
+              style={{
+                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                maxWidth: "800px", // Prevents overflow
+                height: "auto",
+                display: "inline-block",
+              }}
+            />
+            <img
+              src={task_id2}
+              alt="task id example 2"
+              style={{
+                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                maxWidth: "800px", // Prevents overflow
+                height: "auto",
+                display: "inline-block",
+              }}
+            />
             <Paragraph>RNAtive returns the following:</Paragraph>
             <img
               src={results1}
