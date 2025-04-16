@@ -537,6 +537,19 @@ const Help = () => {
                 display: "inline-block",
               }}
             />
+            <CustomTitle level={2}>System requirements</CustomTitle>
+            <Paragraph>
+              RNAtive works with the following browsers:
+              <ul>
+                <li>Chrome</li>
+                <li>Firefox</li>
+                <li>Edge</li>
+                <li>Safari</li>
+                <li>Opera</li>
+                <li>Mobile Safari</li>
+                <li>Chrome Mobile</li>
+              </ul>
+            </Paragraph>
             <CustomTitle level={2}>References</CustomTitle>
             <Paragraph>
               RNAtive's functioning would not be possible without the
