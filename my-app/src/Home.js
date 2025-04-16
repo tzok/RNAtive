@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
@@ -18,6 +19,8 @@ import {
   Tabs,
   Tooltip,
   Upload,
+  Typography,
+  message,
 } from "antd";
 import { getTableColumns, getTableRows } from "./utils/tableUtils";
 import { QuestionCircleOutlined, UploadOutlined } from "@ant-design/icons";
@@ -28,6 +31,7 @@ import * as configs from "./config";
 import DownloadButton from "./DownloadButton";
 import "./customTextInput.css";
 
+const { Text } = Typography;
 const { TextArea } = Input;
 
 const consensusOptions = [
@@ -643,20 +647,61 @@ function Home() {
     return [columns, rows];
   };
 
+  // Inside your component:
+  const copyToClipboard = useCallback(() => {
+    navigator.clipboard
+      .writeText(id)
+      .then(() => message.success("ID copied to clipboard!"))
+      .catch(() => message.error("Failed to copy ID."));
+  }, [id]);
+
   const renderContent = () => {
     if (isLoading) {
       if (id) {
         return (
-          <Row justify={"center"}>
-            <Spin tip={"Waiting for completion of task: " + id} size="large">
-              <div style={{ width: "100vw", padding: 24 }} />
+          <Row
+            justify="center"
+            style={{
+              minHeight: "50vh",
+              alignItems: "center",
+              flexDirection: "column",
+              display: "flex",
+              padding: 15,
+            }}
+          >
+            <div style={{ marginBottom: 14, textAlign: "center" }}>
+              <Text>
+                Your task is being processed:{" "}
+                <Text
+                  underline
+                  style={{ color: "#1890ff", cursor: "pointer" }}
+                  onClick={copyToClipboard}
+                >
+                  {id}
+                </Text>
+                <br />
+                Processing time may vary depending on dataset size.
+              </Text>
+            </div>
+            <div style={{ marginBottom: 24, textAlign: "center" }}></div>
+            <Spin
+              size="large"
+              spinning={true}
+              style={{ transform: "scale(1.5)" }} // Increase spinner size
+            >
+              <div style={{ width: "100vw", height: 1 }} />
             </Spin>
           </Row>
         );
       }
       return (
         <Row justify={"center"}>
-          <Spin tip={"Sending data to the server"} size="large">
+          <Spin
+            spinning={true}
+            style={{ transform: "scale(1.5)" }} // Increase spinner size
+            tip={"Sending data to the server"}
+            size="large"
+          >
             <div style={{ width: "100vw", padding: 24 }} />
           </Spin>
         </Row>
@@ -822,6 +867,13 @@ function Home() {
       return (
         <Row justify={"center"}>
           <Col span={20}>
+            <Card
+              title={"Consensus structure"}
+              style={{ marginBottom: "24px" }}
+            >
+              <Collapse items={consensusDetails} />
+            </Card>
+
             <Card title={"Ranking"} style={{ marginBottom: "24px" }}>
               <Table dataSource={rankingRows} columns={rankingColumns} />
               <DownloadButton
@@ -829,13 +881,6 @@ function Home() {
                 columns={rankingColumns}
                 fileName={`ranking.txt`}
               />
-            </Card>
-
-            <Card
-              title={"Consensus structure"}
-              style={{ marginBottom: "24px" }}
-            >
-              <Collapse items={consensusDetails} />
             </Card>
 
             <Card

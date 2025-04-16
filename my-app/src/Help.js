@@ -395,23 +395,6 @@ const Help = () => {
             />
             <Paragraph>RNAtive returns the following:</Paragraph>
             <img
-              src={results1}
-              alt="Results"
-              style={{
-                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
-                maxWidth: "800px", // Prevents overflow
-                height: "auto",
-                display: "inline-block",
-              }}
-            />
-            <Paragraph>
-              Ranking of sent files (as seen in an image above. Note a
-              "download" button in the left bottom corner (marked in red in the
-              image), that allows to download the entirety of the table as a txt
-              file, as well as, visible in the bottom right of the image, a set
-              of buttons allowing to scroll through the table, if it is longer)
-            </Paragraph>
-            <img
               src={results2}
               alt="Results"
               style={{
@@ -431,6 +414,23 @@ const Help = () => {
               <li>Non-canonical base pairs (A3)</li>
               <li>Stackings for the consensus molecule(A4)</li>
             </ol>
+            <img
+              src={results1}
+              alt="Results"
+              style={{
+                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                maxWidth: "800px", // Prevents overflow
+                height: "auto",
+                display: "inline-block",
+              }}
+            />
+            <Paragraph>
+              Ranking of sent files (as seen in an image above. Note a
+              "download" button in the left bottom corner (marked in red in the
+              image), that allows to download the entirety of the table as a txt
+              file, as well as, visible in the bottom right of the image, a set
+              of buttons allowing to scroll through the table, if it is longer)
+            </Paragraph>
             <img
               src={results2b}
               alt="Results"
@@ -539,7 +539,7 @@ const Help = () => {
             <Paragraph>
               RNAtive's functioning would not be possible without the
               integration of state-of-the-art methods and tools. References (in
-              order of apperance on the main page):
+              order of apperance, starting from the main page):
               <ol>
                 {/* <li>
                   <b>RNA-Puzzles: </b>M. Magnus, M. Antczak, T. Zok, J.
@@ -551,8 +551,8 @@ const Help = () => {
                   (doi:10.1093/nar/gkz1108).
                 </li> */}
                 <li>
-                  <b>RNA-Puzzles: </b>M. Magnus et al.,{" "}
-                  <i>Nucleic Acids Research</i>, 48(2): 576-588 (2020).
+                  <b>RNA-Puzzles toolkit: </b>Magnus <i>et al.</i>, Nucleic
+                  Acids Research 48(2): 576–588 (2020).
                 </li>
                 {/* <li>
                   <b>Decoys: </b>Emidio Capriotti, Tomas Norambuena, Marc A.
@@ -562,8 +562,8 @@ const Help = () => {
                   1086–1093, https://doi.org/10.1093/bioinformatics/btr093.
                 </li> */}
                 <li>
-                  <b>Decoys: </b>Emidio Capriotti et al., <i>Bioinformatics</i>,
-                  Volume 27, Issue 8, Pages 1086–1093 (April 2011).
+                  <b>U2 snRNA decoys: </b> Capriotti <i>et al.</i>,
+                  Bioinformatics 27(8): 1086–1093 (2011).
                 </li>
 
                 {/* <li>
@@ -575,8 +575,8 @@ const Help = () => {
                   (2007).
                 </li> */}
                 <li>
-                  <b>MolProbity:</b> I. W. Davis et al., <i>Nucl. Acids Res.</i>{" "}
-                  35: W375-W383 (2007).
+                  <b>MolProbity:</b> Davis <i>et al.</i>, Nucleic Acids Research
+                  35(W1): W375–W383 (2007).
                 </li>
                 {/* <li>
                   <b>RNAPolis Annotator:</b> Szachniuk, Marta. "RNApolis:
@@ -586,9 +586,8 @@ const Help = () => {
                   https://doi.org/10.2478/fcds-2019-0012.
                 </li> */}
                 <li>
-                  <b>RNAPolis Annotator:</b> Szachniuk, Marta.{" "}
-                  <i>Foundations of Computing and Decision Sciences</i>, vol.
-                  44, no. 2, <i>Sciendo</i>, pp. 241-257 (2019).
+                  <b>RNApolis Annotator:</b> Szachniuk, Foundations of Computing
+                  and Decision Sciences 44(2): 241–257 (2019).
                 </li>
                 {/* <li>
                   <b>BPNet:</b> Roy, P., Bhattacharyya, D. Contact networks in
@@ -597,8 +596,8 @@ const Help = () => {
                   https://doi.org/10.1007/s10822-021-00438-x.
                 </li> */}
                 <li>
-                  <b>BPNet:</b> Roy, P. et al., <i>J Comput Aided Mol Des 36</i>
-                  , 131–140 (2022).
+                  <b>BPNet:</b> Roy <i>et al.</i>, Journal of Computer-Aided
+                  Molecular Design 36: 131–140 (2022).
                 </li>
                 {/* <li>
                   <b>FR3D:</b> FR3D: Finding Local and Composite Recurrent
@@ -611,12 +610,8 @@ const Help = () => {
                 </li> */}
                 {/* https://www.bgsu.edu/research/rna/software/fr3d.html */}
                 <li>
-                  <b>FR3D:</b> Michael Sarver et al.,{" "}
-                  <i>Journal of Mathematical Biology</i> 56:215–252 (2008).{" "}
-                  <br></br>
-                  Anton I. Petrov et al., WebFR3D – a server for finding,
-                  aligning and analyzing recurrent RNA 3D motifs,{" "}
-                  <i>Nucleic Acids Research</i>, (2011).
+                  <b>FR3D:</b> Sarver <i>et al.</i>, Journal of Mathematical
+                  Biology 56:215–252 (2008).
                 </li>
                 {/* <li>
                   <b>MC-Annotate:</b> Patrick Gendron, Sébastien Lemieux,
@@ -628,9 +623,8 @@ const Help = () => {
                   (https://www.sciencedirect.com/science/article/pii/S0022283601946261).
                 </li> */}
                 <li>
-                  <b>MC-Annotate:</b> Patrick Gendron et al.,{" "}
-                  <i>Journal of Molecular Biology</i>, Volume 308, Issue 5,
-                  Pages 919-936, ISSN 0022-2836 (2001).
+                  <b>MC-Annotate: </b>Gendron <i>et al.</i>, Journal of
+                  Molecular Biology 308(5): 919–936 (2001).
                 </li>
                 {/* <li>
                   <b>RNAView:</b> Yang, H., Jossinet, F., Leontis, N., Chen, L.,
@@ -639,8 +633,8 @@ const Help = () => {
                   <i>Nucleic Acids Research</i> 31.13: 3450-3460.
                 </li> */}
                 <li>
-                  <b>RNAView:</b> Yang H., et al.,
-                  <i>Nucleic Acids Research</i> 31.13: 3450-3460 (2003).
+                  <b>RNAView:</b> Yang <i>et al.</i>, Nucleic Acids Research
+                  31(13): 3450–3460 (2003).
                 </li>
                 {/* <li>
                   <b>barnaba:</b> Bottaro S, Bussi G, Pinamonti G, Reißer S,
@@ -650,15 +644,14 @@ const Help = () => {
                   12. PMID: 30420522; PMCID: PMC6348988.
                 </li> */}
                 <li>
-                  <b>barnaba:</b> Bottaro S et al., <i>RNA</i>.
-                  Feb;25(2):219-231 (2019).
+                  <b>Barnaba:</b> Bottaro <i>et al.</i>, RNA 25(2): 219–231
+                  (2019).
                 </li>
                 <li>
                   {/* <b>VRNA:</b> VARNA: Interactive drawing and editing of the RNA
                 secondary structure Kévin Darty, Alain Denise and Yann Ponty */}
-                  <b>VRNA:</b> Kévin Darty et al.,
-                  <i> Bioinformatics</i>, pp. 1974-1975, Vol. 25, no. 15,
-                  (2009).
+                  <b>VARNA:</b> Darty <i>et al.</i>, Bioinformatics 25(15):
+                  1974-1975 (2009).
                 </li>
                 {/* <b>RNApuzzler: </b>Daniel Wiegreffe, Daniel Alexander, Peter F
                   Stadler, Dirk Zeckzer, RNApuzzler: efficient outerplanar
@@ -666,9 +659,8 @@ const Help = () => {
                   Volume 35, Issue 8, April 2019, Pages 1342–1349,
                   https://doi.org/10.1093/bioinformatics/bty817. */}
                 <li>
-                  <b>RNApuzzler: </b>Daniel Wiegreffe et al.,{" "}
-                  <i>Bioinformatics</i>, Volume 35, Issue 8, Pages 1342–1349
-                  (April 2019).
+                  <b>RNApuzzler: </b>Wiegreffe <i>et al.</i>, Bioinformatics
+                  35(8): 1342–1349 (2019).
                 </li>
                 {/* <b>PseudoViewer:</b> Byun Y, Han K. PseudoViewer: web
                   application and web service for visualizing RNA pseudoknots
@@ -676,8 +668,8 @@ const Help = () => {
                   1;34(Web Server issue):W416-22. doi: 10.1093/nar/gkl210. PMID:
                   16845039; PMCID: PMC1538805. */}
                 <li>
-                  <b>PseudoViewer:</b> Byun Y et al., <i>Nucleic Acids Res.</i>{" "}
-                  34 (2006 Jul 1).
+                  <b>PseudoViewer:</b> Byun <i>et al.</i>, Nucleic Acids
+                  Research 34(W1): W416–W422 (2006).
                 </li>
                 <li>
                   {/* <b>R-Chie: </b>
@@ -693,48 +685,36 @@ const Help = () => {
                   <i>Nucleic Acids Research</i>, first published online March
                   19, 2012. doi:10.1093/nar/gks241. */}
                   <b>R-Chie: </b>
-                  Volodymyr Tsybulskyi et al., <i>Nucleic Acids Research</i>,
-                  Volume 48, Issue 18, Page e105 (09 October 2020).
-                  <br></br>
-                  Daniel Lai et al., R-chie: a web server and R package for
-                  visualizing RNA secondary structures,{" "}
-                  <i>Nucleic Acids Research</i>, (first published online March
-                  19, 2012).
+                  Lai <i>et al.</i>, Nucleic Acids Research 40(12): e95 (2012).
+                </li>
+                <li>
+                  <b>RNA-Puzzles: </b> Cruz <i>et al.</i>, RNA 18(4):610–625
+                  (2012).
+                </li>
+                <li>
+                  <b>RNAComposer: </b> Popenda <i>et al.</i>, Nucleic Acids
+                  Research 40(14): e112–e112 (2012).
+                </li>
+                <li>
+                  <b>Rfam: </b>Ontiveros-Palacios <i>et al.</i>, Nucleic Acids
+                  Research 53(D1): D258–D267 (2025).
                 </li>
               </ol>
             </Paragraph>
-            <Paragraph>
+            {/* <Paragraph>
               Additionally, there are following references used by our team:
               <ol type="a" style={{ listStyleType: "lower-alpha" }}>
                 <li>
-                  <a
-                    href=" https://rnajournal.cshlp.org/content/18/4/610.full"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    https://rnajournal.cshlp.org/content/18/4/610.full
-                  </a>
-                </li>{" "}
-                {/*cite this correctly*/}
-                <li>
-                  <a
-                    href="https://rnajournal.cshlp.org/content/18/4/610/F1.expansion.html"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    https://rnajournal.cshlp.org/content/18/4/610/F1.expansion.html
-                  </a>
+                <b>RNA-Puzzles: </b> Cruz <i>et al.</i>, RNA 18(4):610–625 (2012).
                 </li>
                 <li>
-                  Popenda, M. et al., 2012.
-                  <i>Nucleic Acids Research</i>, 40(14), e112–e112.
+                <b>RNAComposer: </b> Popenda <i>et al.</i>, Nucleic Acids Research 40(14): e112–e112 (2012).
                 </li>
                 <li>
-                  Ontiveros-Palacios, N. et al., 2025{" "}
-                  <i>Nucleic Acids Research</i>, 53(D1), D258–D267.
+                <b>Rfam: </b>Ontiveros-Palacios <i>et al.</i>, Nucleic Acids Research 53(D1): D258–D267 (2025).
                 </li>
               </ol>
-            </Paragraph>
+            </Paragraph> */}
           </Typography>
         </div>
       </Col>

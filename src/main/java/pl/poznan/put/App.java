@@ -308,10 +308,7 @@ public class App {
                       referenceStructure.contains(classifiedBasePair)
                     })
             .toArray(Object[][]::new);
-    Object[] columnNames =
-        new String[] {
-          "Nt1", "Nt2", "LW class", "Confidence", "Is reference?"
-        };
+    Object[] columnNames = new String[] {"Nt1", "Nt2", "LW class", "Confidence", "Is reference?"};
     return new DefaultTableModel(data, columnNames);
   }
 

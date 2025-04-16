@@ -172,12 +172,7 @@ public class ComputeService {
       ReferenceStructureUtil.ReferenceParseResult referenceStructure) {
     var headers =
         List.of(
-            "Nt1",
-            "Nt2",
-            "LW class",
-            "Confidence",
-            "Paired in reference",
-            "Unpaired in reference");
+            "Nt1", "Nt2", "LW class", "Confidence", "Paired in reference", "Unpaired in reference");
     var rows =
         pairs.stream()
             .distinct()
