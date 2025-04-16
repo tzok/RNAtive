@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { Alert, Collapse, Spin, Table } from "antd";
+import { Alert, Collapse, Spin, Table, Row, Tooltip } from "antd";
 import { getTableColumns, getTableRows } from "./utils/tableUtils";
 import DownloadButton from "./DownloadButton";
-
+import { QuestionCircleOutlined } from "@ant-design/icons";
 const FileDetails = ({ taskId, serverAddress, filename, fileCount }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -69,6 +69,32 @@ const FileDetails = ({ taskId, serverAddress, filename, fileCount }) => {
       label: "Canonical base pairs",
       children: (
         <>
+          <Row
+            align="right"
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              width: "100%",
+            }}
+          >
+            <div></div>
+            <Tooltip
+              title={
+                <div>
+                  Constraint match conveys if the given pair:
+                  <br />
+                  '+': was explicitly designated to exist in the 2D structure
+                  constraints section,
+                  <br />
+                  '-': was designated not to exist in the constraints,
+                  <br />
+                  'n/a': was not specified within the constraints.
+                </div>
+              }
+            >
+              <QuestionCircleOutlined />
+            </Tooltip>
+          </Row>
           <Table dataSource={canonicalRows} columns={canonicalColumns} />
           <DownloadButton
             dataSource={canonicalRows}
@@ -83,6 +109,32 @@ const FileDetails = ({ taskId, serverAddress, filename, fileCount }) => {
       label: "Non-canonical base pairs",
       children: (
         <>
+          <Row
+            align="right"
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              width: "100%",
+            }}
+          >
+            <div></div>
+            <Tooltip
+              title={
+                <div>
+                  Constraint match conveys if the given pair:
+                  <br />
+                  '+': was explicitly designated to exist in the 2D structure
+                  constraints section,
+                  <br />
+                  '-': was designated not to exist in the constraints,
+                  <br />
+                  'n/a': was not specified within the constraints.
+                </div>
+              }
+            >
+              <QuestionCircleOutlined />
+            </Tooltip>
+          </Row>
           <Table dataSource={nonCanonicalRows} columns={nonCanonicalColumns} />
           <DownloadButton
             dataSource={nonCanonicalRows}
