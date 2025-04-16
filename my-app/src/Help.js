@@ -405,7 +405,7 @@ const Help = () => {
               }}
             />
             <Paragraph>
-              Consensus structure: (section A in the image above)
+              <b>Consensus 2D structure:</b> (section A in the image above)
             </Paragraph>
             <ol>
               <li>Visualization by the selected visualizer (A1)</li>
@@ -425,11 +425,12 @@ const Help = () => {
               }}
             />
             <Paragraph>
-              Ranking of sent files (as seen in an image above. Note a
-              "download" button in the left bottom corner (marked in red in the
-              image), that allows to download the entirety of the table as a txt
-              file, as well as, visible in the bottom right of the image, a set
-              of buttons allowing to scroll through the table, if it is longer)
+              <b>Model ranking by similarity to the consensus</b> (as seen in an
+              image above. Note a "download" button in the left bottom corner
+              (marked in red in the image), that allows to download the entirety
+              of the table as a txt file, as well as, visible in the bottom
+              right of the image, a set of buttons allowing to scroll through
+              the table, if it is longer)
             </Paragraph>
             <img
               src={results2b}
@@ -442,7 +443,8 @@ const Help = () => {
               }}
             />
             <Paragraph>
-              Results for each sent file: (section B in the image above)
+              <b>Model-specific 2D structure analysis results</b> contains, for
+              each file sent, the following: (section B in the image above)
             </Paragraph>
             <ol>
               <li>Dot bracket (B1)</li>

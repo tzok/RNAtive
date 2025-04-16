@@ -868,13 +868,16 @@ function Home() {
         <Row justify={"center"}>
           <Col span={20}>
             <Card
-              title={"Consensus structure"}
+              title={"Consensus 2D structure"}
               style={{ marginBottom: "24px" }}
             >
               <Collapse items={consensusDetails} />
             </Card>
 
-            <Card title={"Ranking"} style={{ marginBottom: "24px" }}>
+            <Card
+              title={"Model ranking by similarity to the consensus"}
+              style={{ marginBottom: "24px" }}
+            >
               <Table dataSource={rankingRows} columns={rankingColumns} />
               <DownloadButton
                 dataSource={rankingRows}
@@ -884,7 +887,7 @@ function Home() {
             </Card>
 
             <Card
-              title={"Results for each file"}
+              title={"Model-specific 2D structure analysis results"}
               style={{ marginBottom: "24px" }}
             >
               <Tabs items={perFileDetails} tabPosition={"left"} />
