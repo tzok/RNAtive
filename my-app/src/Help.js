@@ -224,11 +224,12 @@ const Help = () => {
             <CustomTitle level={3}>Files provided by user</CustomTitle>
             <Paragraph>
               RNAtive accepts both <b>.pdb </b>and <b>.mmCIF</b> files. For a
-              file to be evaluated, it must contain at least one RNA chain. It
-              is important to note, that from a single .pdb/.mmCIF file
-              containing multiple RNA chains, only the first chain shall be
-              processed. Proteins, ligands, ions and water will be completely
-              ignored during the analysis.<br></br>
+              file to be evaluated, it must contain at least one RNA chain.
+              There is no chain-length limit. It is important to note, that from
+              a single .pdb/.mmCIF file containing multiple RNA structures, only
+              the first structure shall be processed. Structures consisting of
+              multiple chains will also be evaluated. Proteins, ligands, ions,
+              and water will be completely ignored during the analysis.<br></br>
               The minimum number of uploaded files for the evaluation to be
               performed is two. The maximum combined size of all provided files
               is 100MB.
@@ -319,6 +320,10 @@ const Help = () => {
               consensus secondary structure and comparing models. There are four
               consensus modes available: canonical base pairs, non-canonical
               base pairs, stacking interactions, and all interactions.
+            </Paragraph>
+            <Paragraph>
+              It is worth noting that RNAtive considers both Watson-Crick and
+              U-G wobble to be canonical base pairs.
             </Paragraph>
             <CustomTitle level={3}>
               Conditionally weighted consensus and Confidence level
