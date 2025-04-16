@@ -172,21 +172,44 @@ public class ComputeService {
       ReferenceStructureUtil.ReferenceParseResult referenceStructure) {
     var headers =
         List.of(
-            "Nt1", "Nt2", "LW class", "Confidence", "Paired in reference", "Unpaired in reference");
+            "Nt1",
+            "Nt2",
+            "LW class",
+            "Confidence",
+            "Constraint match"); // "Paired in reference", "Unpaired in reference");
     var rows =
         pairs.stream()
             .distinct()
             .map(
                 pair -> {
                   var confidence = allInteractions.getCount(pair) / (double) totalModelCount;
+                  String constraint_match =
+                      "n/a"; // if the pair existence was not stated within the reference structure
+                  if (referenceStructure
+                      .basePairs()
+                      .contains(pair.basePair())) { // pair was in ref struct and is here too
+                    constraint_match = "+";
+                  }
+                  if (referenceStructure.markedResidues().contains(pair.basePair().left())
+                      || referenceStructure
+                          .markedResidues()
+                          .contains(
+                              pair.basePair()
+                                  .right())) { // pair exists here, but was forbidden in ref
+                    // structure
+                    constraint_match = "-";
+                  }
                   return List.<Object>of(
                       pair.basePair().left().toString(),
                       pair.basePair().right().toString(),
                       pair.leontisWesthof().toString(),
                       confidence,
-                      referenceStructure.basePairs().contains(pair.basePair()),
-                      referenceStructure.markedResidues().contains(pair.basePair().left())
-                          || referenceStructure.markedResidues().contains(pair.basePair().right()));
+                      constraint_match
+                      // referenceStructure.basePairs().contains(pair.basePair()),
+                      // referenceStructure.markedResidues().contains(pair.basePair().left())
+                      //     ||
+                      // referenceStructure.markedResidues().contains(pair.basePair().right())
+                      );
                 })
             .collect(Collectors.toList());
     return new TableData(headers, rows);
