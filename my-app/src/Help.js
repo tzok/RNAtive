@@ -83,7 +83,7 @@ const Help = () => {
           </div>
 
           <Typography>
-            <CustomTitle level={2}>What is RNAtive</CustomTitle>
+            <CustomTitle level={1}>1. What is RNAtive</CustomTitle>
             {/* <Paragraph>RNAtive is a system that allows its users to rank a set of different models of the same RNA structure to determine which ones are the most realistic. RNAtive will return both the evaluation of individual pdb files provided, and its proposition of the most realistic actual looks of the molecule.</Paragraph> */}
             <Paragraph>
               The discovery of RNA 3D structures contributes to the explanation
@@ -144,8 +144,8 @@ const Help = () => {
                 display: "inline-block",
               }}
             />
-            <CustomTitle level={2}>How to use RNAtive</CustomTitle>
-            <CustomTitle level={3}>Example mode</CustomTitle>
+            {/* <CustomTitle level={2}>How to use RNAtive</CustomTitle> */}
+            <CustomTitle level={1}>2. Example mode</CustomTitle>
             <Paragraph>
               To test out the system without using any pdb files of your own,
               you can pick one of the options visible next to the "Load Example"
@@ -157,7 +157,7 @@ const Help = () => {
               bottom of the form.{" "}
             </Paragraph>
             <CustomTitle level={3}>
-              What files are used in the example mode
+              2.1 What files are used in the example mode
             </CustomTitle>
             <Paragraph>
               The <b>RNA-Puzzles 1</b> will use 13 pdb files provided by the
@@ -221,7 +221,7 @@ const Help = () => {
               be beneficial, for it may help with accustoming oneself to modes
               and parameters available, and with results generated that way.
             </Paragraph>
-            <CustomTitle level={3}>Files provided by user</CustomTitle>
+            <CustomTitle level={1}>3. Input data specification</CustomTitle>
             <Paragraph>
               RNAtive accepts both <b>.pdb </b>and <b>.mmCIF</b> files. For a
               file to be evaluated, it must contain at least one RNA chain.
@@ -248,8 +248,8 @@ const Help = () => {
                 display: "inline-block",
               }}
             />
-            <CustomTitle level={2}>Parameters</CustomTitle>
-            <CustomTitle level={3}>Model quality filter</CustomTitle>
+            <CustomTitle level={2}>3.1 Parameters</CustomTitle>
+            <CustomTitle level={3}>3.1.1 Model quality filter</CustomTitle>
             <Paragraph>
               When enabled, individual models undergo MolProbity evaluation,
               receiving ratings of 'good', 'caution', or 'warning' across four
@@ -264,7 +264,7 @@ const Help = () => {
               filter" will only accept files that got a score of "good" in
               clashscore, bonds, and angles criteria.{" "}
             </Paragraph>
-            <CustomTitle level={3}>2D structure constraints</CustomTitle>
+            <CustomTitle level={3}>3.1.2 2D structure constraints</CustomTitle>
             <Paragraph>
               If desired, a dot-bracket form of the molecule can be given to the
               RNAtive to be treated as a reference for evaluation. The specified
@@ -305,7 +305,16 @@ const Help = () => {
               <i>.</i> - represents a lack of any restrictions for the given
               nucleotide.<br></br>
             </Paragraph>
-            <CustomTitle level={5}>Constraint match</CustomTitle>
+            <p
+              style={{
+                fontSize: "1.25em",
+                fontWeight: "bold",
+                margin: "1.5em 0",
+              }}
+            >
+              Constraint match
+            </p>
+            {/* <CustomTitle level={5}>Constraint match</CustomTitle> */}
             <Paragraph>
               Later on, all pairs within the files provided by the user shall be
               displayed in tables, with "Constraint match" as one of columns.
@@ -320,13 +329,15 @@ const Help = () => {
               <br />
               'n/a': means no constraint was provided for this base pair.
             </Paragraph>
-            <CustomTitle level={3}>Base pair analyzer</CustomTitle>
+            <CustomTitle level={3}>3.1.3 Base pair analyzer</CustomTitle>
             <Paragraph>
               There are six built-in annotators for extracting nucleotide
               interactions available: MC-Annotate, BARNABA, RNAview, FR3D,
               BPnet, RNApolis.
             </Paragraph>
-            <CustomTitle level={3}>Consensus structure based on</CustomTitle>
+            <CustomTitle level={3}>
+              3.1.4 Consensus structure based on
+            </CustomTitle>
             <Paragraph>
               "Consensus structure based on" specifies which categories of
               nucleotide interactions should be included when building the
@@ -339,7 +350,7 @@ const Help = () => {
               U-G wobble to be canonical base pairs.
             </Paragraph>
             <CustomTitle level={3}>
-              Conditionally weighted consensus and Confidence level
+              3.1.5 Conditionally weighted consensus and Confidence level
             </CustomTitle>
             {/* <Paragraph>
               In fuzzy mode, every nucleotide interaction within the specified
@@ -370,13 +381,13 @@ const Help = () => {
                 display: "inline-block",
               }}
             />
-            <CustomTitle level={3}>2D structure viewer</CustomTitle>
+            <CustomTitle level={3}>3.1.6 2D structure viewer</CustomTitle>
             <Paragraph>
               RNAtive will return a 2D visualization of the consensus structure.
               There are four visualizers available: VARNA, RNApuzzler,
               PseudoViewer and R-Chie.
             </Paragraph>
-            <CustomTitle level={2}>
+            {/* <CustomTitle level={2}>
               Getting already submitted results
             </CustomTitle>
             <Paragraph>
@@ -384,8 +395,8 @@ const Help = () => {
               request id is added to it. To access answers from a different
               device, or to return to them later, one can simply copy that url
               and paste it later/elsewhere.
-            </Paragraph>
-            <CustomTitle level={2}>Results</CustomTitle>
+            </Paragraph> */}
+            <CustomTitle level={1}>4. Results</CustomTitle>
             <Paragraph>
               Results are accessible under an unique url that contains the task
               id displayed after sending the files for evaluation: <br></br>
@@ -411,7 +422,7 @@ const Help = () => {
                 display: "inline-block",
               }}
             />
-            <Paragraph>RNAtive returns the following:</Paragraph>
+            <Paragraph>4.1 RNAtive returns the following:</Paragraph>
             <img
               src={results2}
               alt="Results"
@@ -555,7 +566,7 @@ const Help = () => {
                 display: "inline-block",
               }}
             />
-            <CustomTitle level={2}>System requirements</CustomTitle>
+            <CustomTitle level={1}>5. System requirements</CustomTitle>
             <Paragraph>
               RNAtive works with the following browsers:
               <ul>
@@ -568,7 +579,7 @@ const Help = () => {
                 <li>Chrome Mobile</li>
               </ul>
             </Paragraph>
-            <CustomTitle level={2}>References</CustomTitle>
+            <CustomTitle level={1}>6. References</CustomTitle>
             <Paragraph>
               RNAtive's functioning would not be possible without the
               integration of state-of-the-art methods and tools. References (in
