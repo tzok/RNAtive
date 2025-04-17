@@ -21,9 +21,10 @@ import {
   Upload,
   Typography,
   message,
+
 } from "antd";
 import { getTableColumns, getTableRows } from "./utils/tableUtils";
-import { QuestionCircleOutlined, UploadOutlined } from "@ant-design/icons";
+import { QuestionCircleOutlined,CloseOutlined,UploadOutlined } from "@ant-design/icons";
 
 import SvgImg from "./SvgImg";
 import FileDetails from "./FileDetails";
@@ -132,8 +133,12 @@ function Home() {
   const [isFuzzy, setIsFuzzy] = useState(true);
   const [confidenceLevel, setConfidenceLevel] = useState(fileList.length);
   const [dotBracket, setDotBracket] = useState(null);
-  const resetFileList = (file) => {
+  const resetFileList = (file) => { //resets both file list and dotBracket textview
+    setDotBracket("");
     setFileList([]);
+  };
+  const resetDotBracket = (file) => { //resets the dotBracket textview
+    setDotBracket("");
   };
   // Ensure confidenceLevel is within valid range when fileList updates
   useEffect(() => {
@@ -1082,14 +1087,30 @@ function Home() {
                 </span></div>
               }
             >
-              <TextArea
-                rows={6}
-                variant={"filled"}
-                placeholder={"Optional"}
-                value={dotBracket}
-                onChange={handleDotBracket}
-                style={{ fontFamily: "monospace" }}
-              />
+               <div style={{ position: "relative" }}>
+    <TextArea
+      rows={6}
+      variant="filled"
+      placeholder="Optional"
+      value={dotBracket}
+      onChange={handleDotBracket}
+      style={{ fontFamily: "monospace", paddingRight: "30px" }} // Make space for the "x"
+    />
+    {dotBracket && (
+      <CloseOutlined
+        onClick={resetDotBracket}
+        style={{
+          position: "absolute",
+          top: 8,
+          right: 8,
+          fontSize: "16px",
+          color: "#000",
+          cursor: "pointer",
+          zIndex: 1000,
+        }}
+      />
+    )}
+  </div>
             </Form.Item>
 
             <Form.Item
