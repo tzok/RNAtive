@@ -225,9 +225,7 @@ const Help = () => {
             <Paragraph>
               RNAtive accepts both <b>.pdb </b>and <b>.mmCIF</b> files. For a
               file to be evaluated, it must contain at least one RNA chain.
-              There is no chain-length limit. It is important to note, that from
-              a single .pdb/.mmCIF file containing multiple RNA structures, only
-              the first structure shall be processed. Structures consisting of
+              There is no chain-length limit. Structures consisting of
               multiple chains will also be evaluated. Proteins, ligands, ions,
               and water will be completely ignored during the analysis.<br></br>
               The minimum number of uploaded files for the evaluation to be
