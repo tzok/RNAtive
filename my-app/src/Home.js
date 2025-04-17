@@ -953,9 +953,11 @@ function Home() {
             <Form.Item
               label={
                 <span>
+                  <div style={{ display: 'inline-block', whiteSpace: 'normal', maxWidth: '100%' ,lineHeight: '1.7', paddingBottom: '6px',}}></div>
                   Example datasets{" "}
-                  <Tooltip title="Click the button to load a demo dataset for testing and exploration.">
-                    <QuestionCircleOutlined />
+                  <Tooltip title="Click the button to load a demo dataset for testing and exploration."
+                  >
+                    <QuestionCircleOutlined  style={{ position: 'relative', zIndex: 999 }} />
                   </Tooltip>
                 </span>
               }
@@ -1011,12 +1013,13 @@ function Home() {
             </Form.Item>
             <Form.Item
               label={
+                <div style={{ display: 'inline-block', whiteSpace: 'normal', maxWidth: '100%' ,lineHeight: '1.5', paddingBottom: '4px',}}>
                 <span>
                   RNA 3D models{" "}
                   <Tooltip title="Upload at least two RNA structure files in PDB or mmCIF format. You can also upload .zip, .tar.gz, or .tgz archives. Keep total file size under 100 MB">
-                    <QuestionCircleOutlined />
+                    <QuestionCircleOutlined style={{ position: 'relative', zIndex: 999 }}/>
                   </Tooltip>
-                </span>
+                </span></div>
               }
             >
               <Row gutter={8}>
@@ -1049,13 +1052,16 @@ function Home() {
             </Form.Item>
 
             <Form.Item
+            
               label={
+                <div style={{ display: 'inline-block', whiteSpace: 'normal', maxWidth: '100%',lineHeight: '1.5', paddingBottom: '4px', }}>
                 <span>
                   Model quality filter{" "}
                   <Tooltip title="Filter input models based on structural quality assessed by MolProbity. Choose ‘No filtering’ to include all models, ‘Clashscore only’ to exclude models with poor clash scores, or ‘Strict’ to accept only models with good scores for clashes, bonds, and angles.">
-                    <QuestionCircleOutlined />
+                    <QuestionCircleOutlined style={{ position: 'relative', zIndex: 999 }}/>
                   </Tooltip>
                 </span>
+                </div>
               }
             >
               <Select
@@ -1067,12 +1073,13 @@ function Home() {
 
             <Form.Item
               label={
+                <div style={{ display: 'inline-block', whiteSpace: 'normal', maxWidth: '100%',lineHeight: '1.5', paddingBottom: '4px', }}>
                 <span>
                   2D structure constraints{" "}
                   <Tooltip title="Optionally, provide structural constraints using dot-bracket notation. Use brackets (e.g., '()' or '[]') to enforce base pairs, 'x' to enforce unpaired nucleotides, and '.' for positions without constraints. The consensus will follow these user-defined constraints.">
-                    <QuestionCircleOutlined />
+                    <QuestionCircleOutlined style={{ position: 'relative', zIndex: 999 }}/>
                   </Tooltip>
-                </span>
+                </span></div>
               }
             >
               <TextArea
@@ -1087,12 +1094,13 @@ function Home() {
 
             <Form.Item
               label={
+                <div style={{ display: 'inline-block', whiteSpace: 'normal', maxWidth: '100%',lineHeight: '1.5', paddingBottom: '4px', }}>
                 <span>
                   Base pair analyzer{" "}
                   <Tooltip title="Pick a tool to annotate nucleotide interactions from input RNA 3D models.">
-                    <QuestionCircleOutlined />
+                    <QuestionCircleOutlined style={{ position: 'relative', zIndex: 999 }}/>
                   </Tooltip>
-                </span>
+                </span></div>
               }
             >
               <Select
@@ -1104,12 +1112,13 @@ function Home() {
 
             <Form.Item
               label={
+                <div style={{ display: 'inline-block', whiteSpace: 'normal', maxWidth: '100%' ,lineHeight: '1.5', paddingBottom: '4px',}}>
                 <span>
                   Consensus structure based on{" "}
                   <Tooltip title="Choose which interaction types to include when comparing models and constructing the consensus secondary structure: canonical base pairs, stacking interactions, non-canonical pairs, or all.">
-                    <QuestionCircleOutlined />
+                    <QuestionCircleOutlined style={{ position: 'relative', zIndex: 999 }}/>
                   </Tooltip>
-                </span>
+                </span></div>
               }
             >
               <Select
@@ -1121,13 +1130,14 @@ function Home() {
 
             <Form.Item
               label={
+                <div style={{ display: 'inline-block', whiteSpace: 'normal', maxWidth: '100%',lineHeight: '1.5', paddingBottom: '4px', }}>
                 <span>
                   Conditionally weighted consensus{" "}
                   {/* Frequency-based scoring{" "} */}
                   <Tooltip title="Switch on to rank models based on how often each interaction appears across the input set. Switch off to consider only high-confidence interactions above the threshold.">
-                    <QuestionCircleOutlined />
+                    <QuestionCircleOutlined style={{ position: 'relative', zIndex: 999 }}/>
                   </Tooltip>
-                </span>
+                </span></div>
               }
             >
               <Switch checked={isFuzzy} onChange={setIsFuzzy} />
@@ -1136,12 +1146,13 @@ function Home() {
             {!isFuzzy && (
               <Form.Item
                 label={
+                  <div style={{ display: 'inline-block', whiteSpace: 'normal', maxWidth: '100%' ,lineHeight: '1.5', paddingBottom: '4px',}}>
                   <span style={{ opacity: fileList.length < 2 ? 0.5 : 1 }}>
                     Confidence level{" "}
                     <Tooltip title="Set the minimum number (percentage) of models in which an interaction must appear to be included in the consensus 2D structure. The corresponding percentage is displayed based on the total number of uploaded models. For example, a threshold of 5 models out of 10, corresponding to 50%, means the interaction is added to the consensus only if it occurs in at least half of the models.">
-                      <QuestionCircleOutlined />
+                      <QuestionCircleOutlined style={{ position: 'relative', zIndex: 999 }}/>
                     </Tooltip>
-                  </span>
+                  </span></div>
                 }
               >
                 <Row gutter={8} style={{ display: "flex" }}>
@@ -1201,12 +1212,14 @@ function Home() {
 
             <Form.Item
               label={
+                <div style={{ display: 'inline-block', whiteSpace: 'normal', maxWidth: '100%' ,lineHeight: '1.5', paddingBottom: '4px',}}>
                 <span>
                   2D structure viewer{" "}
                   <Tooltip title="Choose a viewer to display the consensus 2D structure. Currently, only VARNA supports visualizing non-canonical interactions and annotating their Leontis–Westhof classes with dedicated pictograms.">
-                    <QuestionCircleOutlined />
+                    <QuestionCircleOutlined style={{ position: 'relative', zIndex: 999 }}/>
                   </Tooltip>
                 </span>
+                </div>
               }
             >
               <Select
