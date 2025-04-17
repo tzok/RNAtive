@@ -807,7 +807,7 @@ function Home() {
               serverAddress={serverAddress}
               taskId={taskIdComplete}
             />,
-            <pre key="dotbracket">{response.dotBracket}</pre>,
+            <pre key="dotbracket" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{response.dotBracket}</pre>,
           ],
         },
         {
