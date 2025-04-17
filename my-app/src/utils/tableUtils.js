@@ -60,7 +60,7 @@ export const getTableColumns = (headers, rows, fileCount = 100) => {
               return (
                 decimalToFraction(Number(text), fileCount) +
                 " (" +
-                String((Number(text) * 100).toFixed(2)) +
+                String((Number(text) * 100).toFixed(0)) +
                 "%)"
               );
             }

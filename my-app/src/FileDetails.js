@@ -62,7 +62,11 @@ const FileDetails = ({ taskId, serverAddress, filename, fileCount }) => {
     {
       key: filename + "-2d-structure",
       label: "Secondary structure",
-      children: <pre>{data.dotBracket}</pre>,
+      children: (
+        <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+          {data.dotBracket}
+        </pre>
+      ),
     },
     {
       key: filename + "-base-pairs",
