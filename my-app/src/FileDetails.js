@@ -81,14 +81,16 @@ const FileDetails = ({ taskId, serverAddress, filename, fileCount }) => {
             <Tooltip
               title={
                 <div>
-                  Constraint match conveys if the given pair:
+                  Constraint match indicates whether a base pair complies with
+                  the secondary structure constraints defined at input:
                   <br />
-                  '+': was explicitly designated to exist in the 2D structure
-                  constraints section,
+                  '+': means the base pair was explicitly required in the input
+                  constraints,
                   <br />
-                  '-': was designated not to exist in the constraints,
+                  '-': indicates that at least one nucleotide in the pair was
+                  specified as unpaired
                   <br />
-                  'n/a': was not specified within the constraints.
+                  'n/a': means no constraint was provided for this base pair.
                 </div>
               }
             >
@@ -121,14 +123,16 @@ const FileDetails = ({ taskId, serverAddress, filename, fileCount }) => {
             <Tooltip
               title={
                 <div>
-                  Constraint match conveys if the given pair:
+                  Constraint match indicates whether a base pair complies with
+                  the secondary structure constraints defined at input:
                   <br />
-                  '+': was explicitly designated to exist in the 2D structure
-                  constraints section,
+                  '+': means the base pair was explicitly required in the input
+                  constraints,
                   <br />
-                  '-': was designated not to exist in the constraints,
+                  '-': indicates that at least one nucleotide in the pair was
+                  specified as unpaired
                   <br />
-                  'n/a': was not specified within the constraints.
+                  'n/a': means no constraint was provided for this base pair.
                 </div>
               }
             >

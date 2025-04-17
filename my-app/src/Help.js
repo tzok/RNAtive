@@ -225,9 +225,9 @@ const Help = () => {
             <Paragraph>
               RNAtive accepts both <b>.pdb </b>and <b>.mmCIF</b> files. For a
               file to be evaluated, it must contain at least one RNA chain.
-              There is no chain-length limit. Structures consisting of
-              multiple chains will also be evaluated. Proteins, ligands, ions,
-              and water will be completely ignored during the analysis.<br></br>
+              There is no chain-length limit. Structures consisting of multiple
+              chains will also be evaluated. Proteins, ligands, ions, and water
+              will be completely ignored during the analysis.<br></br>
               The minimum number of uploaded files for the evaluation to be
               performed is two. The maximum combined size of all provided files
               is 100MB.
@@ -304,6 +304,21 @@ const Help = () => {
               unpaired.<br></br>
               <i>.</i> - represents a lack of any restrictions for the given
               nucleotide.<br></br>
+            </Paragraph>
+            <CustomTitle level={5}>Constraint match</CustomTitle>
+            <Paragraph>
+              Later on, all pairs within the files provided by the user shall be
+              displayed in tables, with "Constraint match" as one of columns.
+              Constraint match indicates whether a base pair complies with the
+              secondary structure constraints defined at input:
+              <br />
+              '+': means the base pair was explicitly required in the input
+              constraints,
+              <br />
+              '-': indicates that at least one nucleotide in the pair was
+              specified as unpaired
+              <br />
+              'n/a': means no constraint was provided for this base pair.
             </Paragraph>
             <CustomTitle level={3}>Base pair analyzer</CustomTitle>
             <Paragraph>
