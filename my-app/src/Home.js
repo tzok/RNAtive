@@ -1008,7 +1008,7 @@ function Home() {
             >
               <span>
                 {" "}
-                Please only provide files that all have the same sequence.
+                All uploaded RNA 3D structures must share the <b>exact same nucleotide sequence</b>.
               </span>
             </Form.Item>
             <Form.Item
