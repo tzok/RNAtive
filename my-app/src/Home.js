@@ -895,7 +895,7 @@ function Home() {
           ],
         },
         {
-          key: "otehr-options",
+          key: "other-options",
           label: "Other options",
           children: (
             <>
@@ -955,7 +955,10 @@ function Home() {
       return (
         <Row justify={"center"}>
           <Col span={20}>
-            <Card title={"Task's settings"} style={{ marginBottom: "24px" }}>
+            <Card
+              title={"Overview of input parameters and constraints"}
+              style={{ marginBottom: "24px" }}
+            >
               <Collapse items={usersRequestDotBracket} />
             </Card>
             <Card
