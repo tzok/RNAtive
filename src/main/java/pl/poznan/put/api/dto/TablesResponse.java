@@ -9,4 +9,4 @@ public record TablesResponse(
     TableData stackings,
     List<String> fileNames,
     String dotBracket,
-    String request) {}
+    String userRequest) {}

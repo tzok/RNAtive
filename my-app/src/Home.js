@@ -21,10 +21,13 @@ import {
   Upload,
   Typography,
   message,
-
 } from "antd";
 import { getTableColumns, getTableRows } from "./utils/tableUtils";
-import { QuestionCircleOutlined,CloseOutlined,UploadOutlined } from "@ant-design/icons";
+import {
+  QuestionCircleOutlined,
+  CloseOutlined,
+  UploadOutlined,
+} from "@ant-design/icons";
 
 import SvgImg from "./SvgImg";
 import FileDetails from "./FileDetails";
@@ -133,11 +136,13 @@ function Home() {
   const [isFuzzy, setIsFuzzy] = useState(true);
   const [confidenceLevel, setConfidenceLevel] = useState(fileList.length);
   const [dotBracket, setDotBracket] = useState(null);
-  const resetFileList = (file) => { //resets both file list and dotBracket textview
+  const resetFileList = (file) => {
+    //resets both file list and dotBracket textview
     setDotBracket("");
     setFileList([]);
   };
-  const resetDotBracket = (file) => { //resets the dotBracket textview
+  const resetDotBracket = (file) => {
+    //resets the dotBracket textview
     setDotBracket("");
   };
   // Ensure confidenceLevel is within valid range when fileList updates
@@ -473,7 +478,22 @@ function Home() {
       }
 
       const resultData = await resultResponse.json();
+      //console.log(resultData.request);
+      // Parse the string into an actual JSON object and assign it to `response`
+      // If it's a string, parse it:
+      if (typeof resultData.userRequest === "string") {
+        try {
+          resultData.userRequest = JSON.parse(resultData.userRequest);
+        } catch (e) {
+          console.error("Failed to parse JSON:", e);
+        }
+      } else {
+        // If already an object, just copy it
+        resultData.userRequest = resultData.userRequest;
+      }
 
+      console.log(resultData.userRequest);
+      console.log(resultData.userRequest.dotBracket);
       // Set the response state to trigger UI update
       setResponse(resultData);
     } catch (error) {
@@ -807,7 +827,12 @@ function Home() {
               serverAddress={serverAddress}
               taskId={taskIdComplete}
             />,
-            <pre key="dotbracket" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{response.dotBracket}</pre>,
+            <pre
+              key="dotbracket"
+              style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+            >
+              {response.dotBracket}
+            </pre>,
           ],
         },
         {
@@ -856,6 +881,64 @@ function Home() {
           ),
         },
       ];
+      const usersRequestDotBracket = [
+        {
+          key: "2D structure constraints",
+          label: "2D structure constraints",
+          children: [
+            <pre
+              key="dotbracket"
+              style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+            >
+              {response.userRequest.dotBracket}
+            </pre>,
+          ],
+        },
+        {
+          key: "otehr-options",
+          label: "Other options",
+          children: (
+            <>
+              {/* confidenceLevel, analyzer, consensusMode, dotBracket, molProbityFilter, visualizationTool} */}
+              <div>
+                <b>Model quality filter:</b>{" "}
+                {molProbityOptions.find(
+                  (option) =>
+                    option.value === response.userRequest?.molProbityFilter
+                )?.label || "Unknown"}
+              </div>
+              <div>
+                <b>
+                  {response.userRequest?.confidenceLevel != null
+                    ? `confidence level: ${response.userRequest.confidenceLevel}`
+                    : "Conditionally weighted consensus"}
+                </b>
+              </div>
+              <div>
+                <b>Base pair analyzer:</b>{" "}
+                {analyzerOptions.find(
+                  (option) => option.value === response.userRequest?.analyzer
+                )?.label || "Unknown"}
+              </div>
+              <div>
+                <b>Consensus structure based on:</b>{" "}
+                {consensusOptions.find(
+                  (option) =>
+                    option.value === response.userRequest?.consensusMode
+                )?.label || "Unknown"}
+              </div>
+
+              <div>
+                <b>2D structure viewer:</b>{" "}
+                {visualizerOptions.find(
+                  (option) =>
+                    option.value === response.userRequest?.visualizationTool
+                )?.label || "Unknown"}
+              </div>
+            </>
+          ),
+        },
+      ];
       const perFileDetails = response.fileNames.map((filename, index) => ({
         key: index,
         label: filename,
@@ -872,6 +955,9 @@ function Home() {
       return (
         <Row justify={"center"}>
           <Col span={20}>
+            <Card title={"Task's settings"} style={{ marginBottom: "24px" }}>
+              <Collapse items={usersRequestDotBracket} />
+            </Card>
             <Card
               title={"Consensus 2D structure"}
               style={{ marginBottom: "24px" }}
@@ -958,11 +1044,20 @@ function Home() {
             <Form.Item
               label={
                 <span>
-                  <div style={{ display: 'inline-block', whiteSpace: 'normal', maxWidth: '100%' ,lineHeight: '1.7', paddingBottom: '6px',}}></div>
+                  <div
+                    style={{
+                      display: "inline-block",
+                      whiteSpace: "normal",
+                      maxWidth: "100%",
+                      lineHeight: "1.7",
+                      paddingBottom: "6px",
+                    }}
+                  ></div>
                   Example datasets{" "}
-                  <Tooltip title="Click the button to load a demo dataset for testing and exploration."
-                  >
-                    <QuestionCircleOutlined  style={{ position: 'relative', zIndex: 999 }} />
+                  <Tooltip title="Click the button to load a demo dataset for testing and exploration.">
+                    <QuestionCircleOutlined
+                      style={{ position: "relative", zIndex: 999 }}
+                    />
                   </Tooltip>
                 </span>
               }
@@ -1013,18 +1108,30 @@ function Home() {
             >
               <span>
                 {" "}
-                All uploaded RNA 3D structures must share the <b>exact same nucleotide sequence</b>.
+                All uploaded RNA 3D structures must share the{" "}
+                <b>exact same nucleotide sequence</b>.
               </span>
             </Form.Item>
             <Form.Item
               label={
-                <div style={{ display: 'inline-block', whiteSpace: 'normal', maxWidth: '100%' ,lineHeight: '1.5', paddingBottom: '4px',}}>
-                <span>
-                  RNA 3D models{" "}
-                  <Tooltip title="Upload at least two RNA structure files in PDB or mmCIF format. You can also upload .zip, .tar.gz, or .tgz archives. Keep total file size under 100 MB">
-                    <QuestionCircleOutlined style={{ position: 'relative', zIndex: 999 }}/>
-                  </Tooltip>
-                </span></div>
+                <div
+                  style={{
+                    display: "inline-block",
+                    whiteSpace: "normal",
+                    maxWidth: "100%",
+                    lineHeight: "1.5",
+                    paddingBottom: "4px",
+                  }}
+                >
+                  <span>
+                    RNA 3D models{" "}
+                    <Tooltip title="Upload at least two RNA structure files in PDB or mmCIF format. You can also upload .zip, .tar.gz, or .tgz archives. Keep total file size under 100 MB">
+                      <QuestionCircleOutlined
+                        style={{ position: "relative", zIndex: 999 }}
+                      />
+                    </Tooltip>
+                  </span>
+                </div>
               }
             >
               <Row gutter={8}>
@@ -1057,15 +1164,24 @@ function Home() {
             </Form.Item>
 
             <Form.Item
-            
               label={
-                <div style={{ display: 'inline-block', whiteSpace: 'normal', maxWidth: '100%',lineHeight: '1.5', paddingBottom: '4px', }}>
-                <span>
-                  Model quality filter{" "}
-                  <Tooltip title="Filter input models based on structural quality assessed by MolProbity. Choose ‘No filtering’ to include all models, ‘Clashscore only’ to exclude models with poor clash scores, or ‘Strict’ to accept only models with good scores for clashes, bonds, and angles.">
-                    <QuestionCircleOutlined style={{ position: 'relative', zIndex: 999 }}/>
-                  </Tooltip>
-                </span>
+                <div
+                  style={{
+                    display: "inline-block",
+                    whiteSpace: "normal",
+                    maxWidth: "100%",
+                    lineHeight: "1.5",
+                    paddingBottom: "4px",
+                  }}
+                >
+                  <span>
+                    Model quality filter{" "}
+                    <Tooltip title="Filter input models based on structural quality assessed by MolProbity. Choose ‘No filtering’ to include all models, ‘Clashscore only’ to exclude models with poor clash scores, or ‘Strict’ to accept only models with good scores for clashes, bonds, and angles.">
+                      <QuestionCircleOutlined
+                        style={{ position: "relative", zIndex: 999 }}
+                      />
+                    </Tooltip>
+                  </span>
                 </div>
               }
             >
@@ -1078,50 +1194,72 @@ function Home() {
 
             <Form.Item
               label={
-                <div style={{ display: 'inline-block', whiteSpace: 'normal', maxWidth: '100%',lineHeight: '1.5', paddingBottom: '4px', }}>
-                <span>
-                  2D structure constraints{" "}
-                  <Tooltip title="Optionally, provide structural constraints using dot-bracket notation. Use brackets (e.g., '()' or '[]') to enforce base pairs, 'x' to enforce unpaired nucleotides, and '.' for positions without constraints. The consensus will follow these user-defined constraints.">
-                    <QuestionCircleOutlined style={{ position: 'relative', zIndex: 999 }}/>
-                  </Tooltip>
-                </span></div>
+                <div
+                  style={{
+                    display: "inline-block",
+                    whiteSpace: "normal",
+                    maxWidth: "100%",
+                    lineHeight: "1.5",
+                    paddingBottom: "4px",
+                  }}
+                >
+                  <span>
+                    2D structure constraints{" "}
+                    <Tooltip title="Optionally, provide structural constraints using dot-bracket notation. Use brackets (e.g., '()' or '[]') to enforce base pairs, 'x' to enforce unpaired nucleotides, and '.' for positions without constraints. The consensus will follow these user-defined constraints.">
+                      <QuestionCircleOutlined
+                        style={{ position: "relative", zIndex: 999 }}
+                      />
+                    </Tooltip>
+                  </span>
+                </div>
               }
             >
-               <div style={{ position: "relative" }}>
-    <TextArea
-      rows={6}
-      variant="filled"
-      placeholder="Optional"
-      value={dotBracket}
-      onChange={handleDotBracket}
-      style={{ fontFamily: "monospace", paddingRight: "30px" }} // Make space for the "x"
-    />
-    {dotBracket && (
-      <CloseOutlined
-        onClick={resetDotBracket}
-        style={{
-          position: "absolute",
-          top: 8,
-          right: 8,
-          fontSize: "16px",
-          color: "#000",
-          cursor: "pointer",
-          zIndex: 1000,
-        }}
-      />
-    )}
-  </div>
+              <div style={{ position: "relative" }}>
+                <TextArea
+                  rows={6}
+                  variant="filled"
+                  placeholder="Optional"
+                  value={dotBracket}
+                  onChange={handleDotBracket}
+                  style={{ fontFamily: "monospace", paddingRight: "30px" }} // Make space for the "x"
+                />
+                {dotBracket && (
+                  <CloseOutlined
+                    onClick={resetDotBracket}
+                    style={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      fontSize: "16px",
+                      color: "#000",
+                      cursor: "pointer",
+                      zIndex: 1000,
+                    }}
+                  />
+                )}
+              </div>
             </Form.Item>
 
             <Form.Item
               label={
-                <div style={{ display: 'inline-block', whiteSpace: 'normal', maxWidth: '100%',lineHeight: '1.5', paddingBottom: '4px', }}>
-                <span>
-                  Base pair analyzer{" "}
-                  <Tooltip title="Pick a tool to annotate nucleotide interactions from input RNA 3D models.">
-                    <QuestionCircleOutlined style={{ position: 'relative', zIndex: 999 }}/>
-                  </Tooltip>
-                </span></div>
+                <div
+                  style={{
+                    display: "inline-block",
+                    whiteSpace: "normal",
+                    maxWidth: "100%",
+                    lineHeight: "1.5",
+                    paddingBottom: "4px",
+                  }}
+                >
+                  <span>
+                    Base pair analyzer{" "}
+                    <Tooltip title="Pick a tool to annotate nucleotide interactions from input RNA 3D models.">
+                      <QuestionCircleOutlined
+                        style={{ position: "relative", zIndex: 999 }}
+                      />
+                    </Tooltip>
+                  </span>
+                </div>
               }
             >
               <Select
@@ -1133,13 +1271,24 @@ function Home() {
 
             <Form.Item
               label={
-                <div style={{ display: 'inline-block', whiteSpace: 'normal', maxWidth: '100%' ,lineHeight: '1.5', paddingBottom: '4px',}}>
-                <span>
-                  Consensus structure based on{" "}
-                  <Tooltip title="Choose which interaction types to include when comparing models and constructing the consensus secondary structure: canonical base pairs, stacking interactions, non-canonical pairs, or all.">
-                    <QuestionCircleOutlined style={{ position: 'relative', zIndex: 999 }}/>
-                  </Tooltip>
-                </span></div>
+                <div
+                  style={{
+                    display: "inline-block",
+                    whiteSpace: "normal",
+                    maxWidth: "100%",
+                    lineHeight: "1.5",
+                    paddingBottom: "4px",
+                  }}
+                >
+                  <span>
+                    Consensus structure based on{" "}
+                    <Tooltip title="Choose which interaction types to include when comparing models and constructing the consensus secondary structure: canonical base pairs, stacking interactions, non-canonical pairs, or all.">
+                      <QuestionCircleOutlined
+                        style={{ position: "relative", zIndex: 999 }}
+                      />
+                    </Tooltip>
+                  </span>
+                </div>
               }
             >
               <Select
@@ -1151,14 +1300,25 @@ function Home() {
 
             <Form.Item
               label={
-                <div style={{ display: 'inline-block', whiteSpace: 'normal', maxWidth: '100%',lineHeight: '1.5', paddingBottom: '4px', }}>
-                <span>
-                  Conditionally weighted consensus{" "}
-                  {/* Frequency-based scoring{" "} */}
-                  <Tooltip title="Switch on to rank models based on how often each interaction appears across the input set. Switch off to consider only high-confidence interactions above the threshold.">
-                    <QuestionCircleOutlined style={{ position: 'relative', zIndex: 999 }}/>
-                  </Tooltip>
-                </span></div>
+                <div
+                  style={{
+                    display: "inline-block",
+                    whiteSpace: "normal",
+                    maxWidth: "100%",
+                    lineHeight: "1.5",
+                    paddingBottom: "4px",
+                  }}
+                >
+                  <span>
+                    Conditionally weighted consensus{" "}
+                    {/* Frequency-based scoring{" "} */}
+                    <Tooltip title="Switch on to rank models based on how often each interaction appears across the input set. Switch off to consider only high-confidence interactions above the threshold.">
+                      <QuestionCircleOutlined
+                        style={{ position: "relative", zIndex: 999 }}
+                      />
+                    </Tooltip>
+                  </span>
+                </div>
               }
             >
               <Switch checked={isFuzzy} onChange={setIsFuzzy} />
@@ -1167,13 +1327,24 @@ function Home() {
             {!isFuzzy && (
               <Form.Item
                 label={
-                  <div style={{ display: 'inline-block', whiteSpace: 'normal', maxWidth: '100%' ,lineHeight: '1.5', paddingBottom: '4px',}}>
-                  <span style={{ opacity: fileList.length < 2 ? 0.5 : 1 }}>
-                    Confidence level{" "}
-                    <Tooltip title="Set the minimum number (percentage) of models in which an interaction must appear to be included in the consensus 2D structure. The corresponding percentage is displayed based on the total number of uploaded models. For example, a threshold of 5 models out of 10, corresponding to 50%, means the interaction is added to the consensus only if it occurs in at least half of the models.">
-                      <QuestionCircleOutlined style={{ position: 'relative', zIndex: 999 }}/>
-                    </Tooltip>
-                  </span></div>
+                  <div
+                    style={{
+                      display: "inline-block",
+                      whiteSpace: "normal",
+                      maxWidth: "100%",
+                      lineHeight: "1.5",
+                      paddingBottom: "4px",
+                    }}
+                  >
+                    <span style={{ opacity: fileList.length < 2 ? 0.5 : 1 }}>
+                      Confidence level{" "}
+                      <Tooltip title="Set the minimum number (percentage) of models in which an interaction must appear to be included in the consensus 2D structure. The corresponding percentage is displayed based on the total number of uploaded models. For example, a threshold of 5 models out of 10, corresponding to 50%, means the interaction is added to the consensus only if it occurs in at least half of the models.">
+                        <QuestionCircleOutlined
+                          style={{ position: "relative", zIndex: 999 }}
+                        />
+                      </Tooltip>
+                    </span>
+                  </div>
                 }
               >
                 <Row gutter={8} style={{ display: "flex" }}>
@@ -1233,13 +1404,23 @@ function Home() {
 
             <Form.Item
               label={
-                <div style={{ display: 'inline-block', whiteSpace: 'normal', maxWidth: '100%' ,lineHeight: '1.5', paddingBottom: '4px',}}>
-                <span>
-                  2D structure viewer{" "}
-                  <Tooltip title="Choose a viewer to display the consensus 2D structure. Currently, only VARNA supports visualizing non-canonical interactions and annotating their Leontis–Westhof classes with dedicated pictograms.">
-                    <QuestionCircleOutlined style={{ position: 'relative', zIndex: 999 }}/>
-                  </Tooltip>
-                </span>
+                <div
+                  style={{
+                    display: "inline-block",
+                    whiteSpace: "normal",
+                    maxWidth: "100%",
+                    lineHeight: "1.5",
+                    paddingBottom: "4px",
+                  }}
+                >
+                  <span>
+                    2D structure viewer{" "}
+                    <Tooltip title="Choose a viewer to display the consensus 2D structure. Currently, only VARNA supports visualizing non-canonical interactions and annotating their Leontis–Westhof classes with dedicated pictograms.">
+                      <QuestionCircleOutlined
+                        style={{ position: "relative", zIndex: 999 }}
+                      />
+                    </Tooltip>
+                  </span>
                 </div>
               }
             >
