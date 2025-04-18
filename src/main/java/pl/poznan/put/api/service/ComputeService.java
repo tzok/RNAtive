@@ -1,6 +1,8 @@
 package pl.poznan.put.api.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.commons.collections4.bag.HashBag;
@@ -92,7 +94,20 @@ public class ComputeService {
     if (task.getStatus() != TaskStatus.COMPLETED) {
       throw new IllegalStateException("Task is not completed yet");
     }
+    // logger.debug("TASK REQUEST: {}", task.getRequest());
+    var requestJson = task.getRequest();
 
+    ObjectMapper mapper = new ObjectMapper();
+    // Parse the JSON string into a JsonNode tree
+    JsonNode rootNode = mapper.readTree(requestJson);
+    // Cast to ObjectNode so we can remove fields
+    if (rootNode.isObject()) {
+      ObjectNode objectNode = (ObjectNode) rootNode;
+      objectNode.remove("files");
+    }
+    // Convert the modified JsonNode back to string
+    String requestParsed = mapper.writeValueAsString(rootNode);
+    logger.debug("TASK REQUEST: {}", requestParsed);
     var resultJson = task.getResult();
     var taskResult = objectMapper.readValue(resultJson, TaskResult.class);
     var results = taskResult.rankedModels();
@@ -147,7 +162,8 @@ public class ComputeService {
         nonCanonicalTable,
         stackingsTable,
         fileNames,
-        taskResult.dotBracket());
+        taskResult.dotBracket(),
+        requestParsed);
   }
 
   private TableData generateRankingTable(List<RankedModel> models) {

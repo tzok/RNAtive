@@ -8,4 +8,5 @@ public record TablesResponse(
     TableData nonCanonicalPairs,
     TableData stackings,
     List<String> fileNames,
-    String dotBracket) {}
+    String dotBracket,
+    String request) {}
