@@ -11,3 +11,11 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+.ant-image-preview-img-wrapper {
+  background-color: white !important;
+}
+.ant-image-preview-img {
+  width: 80vw !important;
+  max-height: 75vh !important;
+  max-width: 80vw !important;
+}
