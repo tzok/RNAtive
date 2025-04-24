@@ -1025,9 +1025,9 @@ function Home() {
               or mmCIF format (with a total file size limit of 100 MB), analyzes
               them using state-of-the-art base-pair annotation tools, and{" "}
               <b> generates a consensus structure </b>
-              by comparing annotations across all input models. It also ranks
-              the input models based on their consistency with the derived
-              consensus.
+              by comparing annotations across all input models. It also{" "}
+              <b>ranks the input models</b> based on their consistency with the
+              derived consensus.
               {/* RNAtive is a consensus-based RNA structure analysis system
               designed to process multiple structural models to identify
               reliable base pairs and stacking interactions. Tailored for RNA
