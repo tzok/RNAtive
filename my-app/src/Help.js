@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import flowDiff from "./assets/rnative-flow-diff.png";
 import uploadScreen from "./assets/upload.png";
 import fuzzyMode from "./assets/fuzzy-mode.png";
+import results0 from "./assets/results0.png";
 import results1 from "./assets/results1.png";
 import results2 from "./assets/results2a.png";
 import results2b from "./assets/results2b.png";
@@ -243,7 +244,7 @@ const Help = () => {
               alt="Uploading example"
               style={{
                 width: imgWidth > 0 ? `${imgWidth}px` : "auto",
-                maxWidth: "300px", // Prevents overflow
+                maxWidth: "600px", // Prevents overflow
                 height: "auto",
                 display: "inline-block",
               }}
@@ -423,6 +424,21 @@ const Help = () => {
               }}
             />
             <Paragraph>4.1 RNAtive returns the following:</Paragraph>
+            <img
+              src={results0}
+              alt="Results"
+              style={{
+                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                maxWidth: "800px", // Prevents overflow
+                height: "auto",
+                display: "inline-block",
+              }}
+            />
+            <Paragraph>
+              <b>Overview of input parameters and constraints:</b> (seen in the
+              image above) containing the parameters chosen by the user when
+              sending the request.
+            </Paragraph>
             <img
               src={results2}
               alt="Results"
