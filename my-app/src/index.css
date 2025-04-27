@@ -19,3 +19,8 @@ code {
   max-height: 75vh !important;
   max-width: 80vw !important;
 }
+.ant-typography {
+  max-width: 600px !important;;
+  margin-left: auto;
+  margin-right: auto;
+}

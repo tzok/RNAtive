@@ -1015,19 +1015,21 @@ function Home() {
               RNAtive will analyze them using state-of-the-art base pair annotation tools. The system generates a consensus 
               structure by comparing annotations across all models, providing a reliable representation of the RNA's secondary 
               structure and tertiary interactions.</p> */}
-            <p>
+            <p style={{ maxWidth: "600px", margin: "0 auto" }}>
               RNAtive is a consensus-based RNA structure analysis system{" "}
               designed to process multiple structural models sharing the same{" "}
               sequence and to identify reliable base pairs and stacking{" "}
               interactions. It supports model validation, improves structural{" "}
               predictions, and facilitates studies of RNA structure evolution.
               The tool accepts a minimum of two RNA 3D structure models in PDB{" "}
-              or mmCIF format (with a total file size limit of 100 MB), and analyzes{" "}
-              them using state-of-the-art base-pair annotation tools. Comparing{" "}
-              annotations across all input models, it <b> generates a consensus structure </b>
-              that highlights recurrent interactions, which are more likely to reflect stable, native-like folds. It then {" "}
-              <b>evaluates and ranks the input models</b> based on their consistency with the{" "}
-              derived consensus.
+              or mmCIF format (with a total file size limit of 100 MB), and
+              analyzes them using state-of-the-art base-pair annotation tools.
+              Comparing annotations across all input models, it{" "}
+              <b> generates a consensus structure </b>
+              that highlights recurrent interactions, which are more likely to
+              reflect stable, native-like folds. It then{" "}
+              <b>evaluates and ranks the input models</b> based on their
+              consistency with the derived consensus.
               {/* RNAtive is a consensus-based RNA structure analysis system
               designed to process multiple structural models to identify
               reliable base pairs and stacking interactions. Tailored for RNA
