@@ -495,9 +495,6 @@ function Home() {
         userRequest: requestData, // Add the fetched request data
       };
 
-      console.log("Combined Data:", combinedData);
-      console.log("User Request Dot Bracket:", combinedData.userRequest?.dotBracket);
-
       // Set the response state with combined data
       setResponse(combinedData);
     } catch (error) {
