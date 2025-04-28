@@ -199,6 +199,8 @@ public class RnapolisClient {
 
       MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
       body.add("arguments", "splitter-wrapper.py");
+      body.add("arguments", "--format");
+      body.add("arguments", "PDB");
       body.add("arguments", fileData.name());
       body.add("output_files", "output.tar.gz");
 
