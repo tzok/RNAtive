@@ -331,9 +331,23 @@ public class ComputeService {
         canonicalTable, nonCanonicalTable, stackingsTable, targetModel.getDotBracket());
   }
 
-  public String getTaskRequest(String taskId) {
+  public JsonNode getTaskRequest(String taskId) throws IOException {
     var task = taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
-    return task.getRequest();
+    var requestJson = task.getRequest();
+    if (requestJson == null || requestJson.isBlank()) {
+      return objectMapper.createObjectNode(); // Return empty JSON object if no request stored
+    }
+
+    // Parse the JSON string into a JsonNode tree
+    JsonNode rootNode = objectMapper.readTree(requestJson);
+
+    // Remove the "files" field if the root is an object
+    if (rootNode.isObject()) {
+      ObjectNode objectNode = (ObjectNode) rootNode;
+      objectNode.remove("files");
+    }
+
+    return rootNode; // Return the modified JsonNode
   }
 
   public java.util.Map<String, String> getTaskMolProbityResponses(String taskId) {

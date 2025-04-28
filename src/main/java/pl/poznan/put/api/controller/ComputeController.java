@@ -58,8 +58,14 @@ public class ComputeController {
   }
 
   @GetMapping("/{taskId}/request")
-  public String getRequest(@PathVariable String taskId) {
-    return computeService.getTaskRequest(taskId);
+  public Object getRequest(@PathVariable String taskId) {
+    try {
+      return computeService.getTaskRequest(taskId);
+    } catch (IOException e) {
+      logger.error("Failed to parse task request JSON for task {}", taskId, e);
+      throw new ResponseStatusException(
+          HttpStatus.INTERNAL_SERVER_ERROR, "Failed to parse task request JSON", e);
+    }
   }
 
   @GetMapping("/{taskId}/molprobity")
