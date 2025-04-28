@@ -467,38 +467,42 @@ function Home() {
 
   const fetchTaskResult = async (taskId, setResponse) => {
     try {
+      // Fetch main results
       const resultResponse = await fetch(`${serverAddress}/${taskId}/result`, {
         method: "GET",
       });
-
       if (!resultResponse.ok) {
         throw new Error(
           `Failed to get result. Status: ${resultResponse.status}`
         );
       }
-
       const resultData = await resultResponse.json();
-      //console.log(resultData.request);
-      // Parse the string into an actual JSON object and assign it to `response`
-      // If it's a string, parse it:
-      if (typeof resultData.userRequest === "string") {
-        try {
-          resultData.userRequest = JSON.parse(resultData.userRequest);
-        } catch (e) {
-          console.error("Failed to parse JSON:", e);
-        }
-      } else {
-        // If already an object, just copy it
-        resultData.userRequest = resultData.userRequest;
-      }
 
-      console.log(resultData.userRequest);
-      console.log(resultData.userRequest.dotBracket);
-      // Set the response state to trigger UI update
-      setResponse(resultData);
+      // Fetch user request parameters
+      const requestResponse = await fetch(`${serverAddress}/${taskId}/request`, {
+        method: "GET",
+      });
+      if (!requestResponse.ok) {
+        throw new Error(
+          `Failed to get request parameters. Status: ${requestResponse.status}`
+        );
+      }
+      const requestData = await requestResponse.json();
+
+      // Combine results and request parameters
+      const combinedData = {
+        ...resultData,
+        userRequest: requestData, // Add the fetched request data
+      };
+
+      console.log("Combined Data:", combinedData);
+      console.log("User Request Dot Bracket:", combinedData.userRequest?.dotBracket);
+
+      // Set the response state with combined data
+      setResponse(combinedData);
     } catch (error) {
-      console.error("Error fetching task result:", error.message);
-      setResponse({ error: error.message });
+      console.error("Error fetching task data:", error.message);
+      setResponse({ error: error.message }); // Set error state
     } finally {
       setIsLoading(false);
       setTaskIdComplete(taskId);
