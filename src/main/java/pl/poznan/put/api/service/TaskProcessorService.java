@@ -504,6 +504,7 @@ public class TaskProcessorService {
                         new PdbParser()
                             .parse(fileData.content()).stream()
                                 .findFirst()
+                                .map(model -> model.filteredNewInstance(MoleculeType.RNA))
                                 .orElseThrow(
                                     () -> {
                                       String errorFileName = "error-" + fileData.name();

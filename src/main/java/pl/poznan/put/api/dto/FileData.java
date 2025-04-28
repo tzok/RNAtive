@@ -6,8 +6,7 @@ import java.util.Base64;
 import java.util.Optional;
 
 @JsonInclude(JsonInclude.Include.NON_ABSENT)
-public record FileData(
-    String name, String content, boolean isBinary, Optional<String> sequence) {
+public record FileData(String name, String content, boolean isBinary, Optional<String> sequence) {
   // Constructor with default isBinary=false and no sequence
   public FileData(String name, String content) {
     this(name, content, false, Optional.empty());

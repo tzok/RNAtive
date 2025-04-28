@@ -19,8 +19,8 @@ import pl.poznan.put.api.model.TaskStatus;
 import pl.poznan.put.api.repository.TaskRepository;
 import pl.poznan.put.api.util.ReferenceStructureUtil;
 import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
-import pl.poznan.put.pdb.PdbParser;
 import pl.poznan.put.pdb.analysis.MoleculeType;
+import pl.poznan.put.pdb.analysis.PdbParser;
 import pl.poznan.put.structure.AnalyzedBasePair;
 
 @Service
