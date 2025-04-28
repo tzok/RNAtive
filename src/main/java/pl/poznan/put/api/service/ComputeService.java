@@ -330,4 +330,15 @@ public class ComputeService {
     return new ModelTablesResponse(
         canonicalTable, nonCanonicalTable, stackingsTable, targetModel.getDotBracket());
   }
+
+  public String getTaskRequest(String taskId) {
+    var task = taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
+    return task.getRequest();
+  }
+
+  public java.util.Map<String, String> getTaskMolProbityResponses(String taskId) {
+    var task = taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
+    // Accessing the map should trigger lazy loading if necessary within the transaction context
+    return task.getMolprobityResponses();
+  }
 }

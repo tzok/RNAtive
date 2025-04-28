@@ -57,6 +57,16 @@ public class ComputeController {
     }
   }
 
+  @GetMapping("/{taskId}/request")
+  public String getRequest(@PathVariable String taskId) {
+    return computeService.getTaskRequest(taskId);
+  }
+
+  @GetMapping("/{taskId}/molprobity")
+  public java.util.Map<String, String> getMolProbityResponses(@PathVariable String taskId) {
+    return computeService.getTaskMolProbityResponses(taskId);
+  }
+
   @PostMapping(value = "/split", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public SplitFileResponse splitFile(@RequestParam("file") MultipartFile file) {
     logger.info("Received file splitting request for file: {}", file.getOriginalFilename());
