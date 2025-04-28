@@ -18,6 +18,9 @@ import pl.poznan.put.api.model.Task;
 import pl.poznan.put.api.model.TaskStatus;
 import pl.poznan.put.api.repository.TaskRepository;
 import pl.poznan.put.api.util.ReferenceStructureUtil;
+import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
+import pl.poznan.put.pdb.PdbParser;
+import pl.poznan.put.pdb.analysis.MoleculeType;
 import pl.poznan.put.structure.AnalyzedBasePair;
 
 @Service
@@ -82,10 +85,40 @@ public class ComputeService {
    * Splits a file into multiple files using RNApolis service.
    *
    * @param fileData The file to split
-   * @return List of split files
+   * @return List of split files, each potentially including its RNA sequence.
    */
   public List<FileData> splitFile(FileData fileData) {
-    return rnapolisClient.splitFile(fileData);
+    List<FileData> splitFiles = rnapolisClient.splitFile(fileData);
+
+    // Process split files in parallel to extract sequence
+    return splitFiles.parallelStream()
+        .map(
+            split -> {
+              try {
+                var parser = new PdbParser();
+                var sequence =
+                    parser.parse(split.content()).stream()
+                        .findFirst()
+                        .map(model -> model.filteredNewInstance(MoleculeType.RNA))
+                        .map(
+                            rnaModel ->
+                                rnaModel.namedResidueIdentifiers().stream()
+                                    .map(PdbNamedResidueIdentifier::oneLetterName)
+                                    .map(String::valueOf)
+                                    .map(String::toUpperCase)
+                                    .collect(Collectors.joining()))
+                        .orElse(null); // Return null if parsing or sequence extraction fails
+                return split.withSequence(sequence);
+              } catch (Exception e) {
+                logger.warn(
+                    "Failed to parse or extract sequence for split file: {}. Error: {}",
+                    split.name(),
+                    e.getMessage());
+                return split.withSequence(
+                    null); // Return original FileData without sequence on error
+              }
+            })
+        .collect(Collectors.toList());
   }
 
   public TablesResponse getTables(String taskId) throws Exception {
