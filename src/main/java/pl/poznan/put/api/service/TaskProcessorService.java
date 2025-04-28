@@ -658,12 +658,28 @@ public class TaskProcessorService {
             models.stream()
                 .map(
                     model -> {
+                      MolProbityResponse response = null;
                       try {
-                        var response =
-                            rnalyzerClient.analyzePdbContent(model.content(), model.name());
+                        response = rnalyzerClient.analyzePdbContent(model.content(), model.name());
+
+                        // Store the MolProbity response JSON in the task
+                        try {
+                          String responseJson = objectMapper.writeValueAsString(response);
+                          task.addMolProbityResponse(model.name(), responseJson);
+                        } catch (JsonProcessingException e) {
+                          logger.error(
+                              "Failed to serialize MolProbityResponse for model {}",
+                              model.name(),
+                              e);
+                          // Optionally store an error message instead of JSON
+                          task.addMolProbityResponse(
+                              model.name(), "{\"error\": \"Serialization failed\"}");
+                        }
+
+                        // Now check validity using the obtained response
                         return isModelValid(
                                 model.name(),
-                                response.structure(),
+                                response.structure(), // Use the response object directly
                                 request.molProbityFilter(),
                                 task)
                             ? model
@@ -673,6 +689,14 @@ public class TaskProcessorService {
                             "MolProbity analysis failed for model {}: {}. Model will be included.",
                             model.name(),
                             e.getMessage());
+                        // Store an error indication if analysis failed before validity check
+                        if (response == null) {
+                          task.addMolProbityResponse(
+                              model.name(),
+                              String.format(
+                                  "{\"error\": \"MolProbity analysis failed: %s\"}",
+                                  e.getMessage()));
+                        }
                         return model; // Include model if analysis fails
                       }
                     })

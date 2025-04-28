@@ -27,6 +27,12 @@ public class Task {
   @Column(name = "reason", length = 1000)
   private Map<String, List<String>> removalReasons = new HashMap<>();
 
+  @ElementCollection(fetch = FetchType.LAZY)
+  @CollectionTable(name = "molprobity_responses", joinColumns = @JoinColumn(name = "task_id"))
+  @MapKeyColumn(name = "model_name")
+  @Column(name = "response_json", columnDefinition = "TEXT")
+  private Map<String, String> molprobityResponses = new HashMap<>();
+
   public Task() {
     this.id = UUID.randomUUID().toString();
     this.status = TaskStatus.PENDING;
@@ -88,5 +94,13 @@ public class Task {
 
   public void addRemovalReason(String modelName, String reason) {
     removalReasons.computeIfAbsent(modelName, k -> new ArrayList<>()).add(reason);
+  }
+
+  public Map<String, String> getMolprobityResponses() {
+    return molprobityResponses;
+  }
+
+  public void addMolProbityResponse(String modelName, String responseJson) {
+    molprobityResponses.put(modelName, responseJson);
   }
 }
