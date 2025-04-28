@@ -3,6 +3,7 @@ package pl.poznan.put.api.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.commons.collections4.bag.HashBag;
@@ -350,9 +351,29 @@ public class ComputeService {
     return rootNode; // Return the modified JsonNode
   }
 
-  public java.util.Map<String, String> getTaskMolProbityResponses(String taskId) {
+  public java.util.Map<String, JsonNode> getTaskMolProbityResponses(String taskId) {
     var task = taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
-    // Accessing the map should trigger lazy loading if necessary within the transaction context
-    return task.getMolprobityResponses();
+    var stringMap = task.getMolprobityResponses();
+    var jsonNodeMap = new java.util.HashMap<String, JsonNode>();
+
+    for (var entry : stringMap.entrySet()) {
+      try {
+        JsonNode node = objectMapper.readTree(entry.getValue());
+        jsonNodeMap.put(entry.getKey(), node);
+      } catch (JsonProcessingException e) {
+        logger.error(
+            "Failed to parse MolProbity JSON string for model {} in task {}: {}",
+            entry.getKey(),
+            taskId,
+            entry.getValue(),
+            e);
+        // Optionally put an error node or skip the entry
+        ObjectNode errorNode = objectMapper.createObjectNode();
+        errorNode.put("error", "Failed to parse stored JSON");
+        errorNode.put("originalValue", entry.getValue());
+        jsonNodeMap.put(entry.getKey(), errorNode);
+      }
+    }
+    return jsonNodeMap;
   }
 }

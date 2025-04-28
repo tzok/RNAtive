@@ -69,7 +69,7 @@ public class ComputeController {
   }
 
   @GetMapping("/{taskId}/molprobity")
-  public java.util.Map<String, String> getMolProbityResponses(@PathVariable String taskId) {
+  public java.util.Map<String, JsonNode> getMolProbityResponses(@PathVariable String taskId) {
     return computeService.getTaskMolProbityResponses(taskId);
   }
 
