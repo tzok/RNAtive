@@ -182,6 +182,7 @@ public class TaskProcessorService {
       logger.info("Collecting and sorting all interactions");
       var fullInteractionResult = collectInteractions(analyzedModels, referenceStructure);
       var aggregatedInteractionResult = fullInteractionResult.aggregatedResult();
+
       // Access per-model results via fullInteractionResult.perModelResults() if needed later
 
       // Access bags via aggregatedInteractionResult.canonicalPairsBag(), etc.
@@ -397,6 +398,10 @@ public class TaskProcessorService {
                           (category == InteractionCategory.BASE_PAIR)
                               ? Optional.of(analyzedPair.leontisWesthof())
                               : Optional.<LeontisWesthof>empty();
+                      boolean isCanonical =
+                          category == InteractionCategory.BASE_PAIR
+                              && lw.isPresent()
+                              && lw.get().isCanonical();
                       int count =
                           combinedAllBag.getCount(analyzedPair); // Use combined bag for count
                       boolean presentInRef =
@@ -421,7 +426,15 @@ public class TaskProcessorService {
                       }
 
                       return new ConsensusInteraction(
-                          p1, p2, category, lw, count, probability, presentInRef, forbiddenInRef);
+                          p1,
+                          p2,
+                          category,
+                          lw,
+                          count,
+                          probability,
+                          presentInRef,
+                          forbiddenInRef,
+                          isCanonical);
                     }));
 
     logger.debug(
@@ -964,17 +977,11 @@ public class TaskProcessorService {
     if (mode != ConsensusMode.STACKING) {
       logger.debug("Resolving base-base conflicts");
 
-      // Define the comparator based on the mode (threshold vs fuzzy)
+      // Define the comparator
       Comparator<ConsensusInteraction> conflictComparator =
-          (confidenceLevel != null)
-              ? Comparator.<ConsensusInteraction, Integer>comparing(
-                      ConsensusInteraction::modelCount) // Threshold: Higher count wins
-                  .thenComparing(ConsensusInteraction::partner1) // Tie-breaker 1
-                  .thenComparing(ConsensusInteraction::partner2) // Tie-breaker 2
-              : Comparator.<ConsensusInteraction, Double>comparing(
-                      ConsensusInteraction::probability) // Fuzzy: Higher probability wins
-                  .thenComparing(ConsensusInteraction::partner1) // Tie-breaker 1
-                  .thenComparing(ConsensusInteraction::partner2); // Tie-breaker 2
+          Comparator.comparing(ConsensusInteraction::modelCount) // Threshold: Higher count wins
+              .thenComparing(ConsensusInteraction::partner1) // Tie-breaker 1
+              .thenComparing(ConsensusInteraction::partner2); // Tie-breaker 2
 
       for (var leontisWesthof : LeontisWesthof.values()) {
         while (true) {
@@ -982,7 +989,8 @@ public class TaskProcessorService {
               new ArrayListValuedHashMap<>();
           resolvedInteractions.stream() // Operate on the mutable set
               .filter(
-                  candidate -> candidate.category() == ConsensusInteraction.InteractionCategory.BASE_PAIR)
+                  candidate ->
+                      candidate.category() == ConsensusInteraction.InteractionCategory.BASE_PAIR)
               .filter(
                   candidate ->
                       candidate.leontisWesthof().isPresent()
@@ -995,8 +1003,10 @@ public class TaskProcessorService {
 
           var conflicting =
               map.keySet().stream()
-                  .filter(key -> map.get(key).size() > 1) // Find residues involved in >1 interaction
-                  .flatMap(key -> map.get(key).stream()) // Get all interactions involving these residues
+                  .filter(
+                      key -> map.get(key).size() > 1) // Find residues involved in >1 interaction
+                  .flatMap(
+                      key -> map.get(key).stream()) // Get all interactions involving these residues
                   .distinct() // Unique interactions
                   .sorted(conflictComparator) // Sort by count/probability (lowest first)
                   .toList();
@@ -1146,16 +1156,13 @@ public class TaskProcessorService {
    *
    * @param allConsensusInteractions The full list of aggregated ConsensusInteraction objects.
    * @param confidenceLevel The confidence threshold (null for fuzzy mode).
-   * @param referenceStructure The parsed reference structure.
    * @param consensusMode The type of interactions to consider (ALL, CANONICAL, etc.).
    * @return A set of ConsensusInteraction objects representing the final consensus.
    */
   private Set<ConsensusInteraction> determineConsensusSet(
       List<ConsensusInteraction> allConsensusInteractions,
       Integer confidenceLevel,
-      ReferenceStructureUtil.ReferenceParseResult referenceStructure,
       ConsensusMode consensusMode) {
-
     logger.info(
         "Determining consensus set for mode: {}, confidenceLevel: {}",
         consensusMode,
@@ -1172,19 +1179,16 @@ public class TaskProcessorService {
                       switch (consensusMode) {
                         case CANONICAL -> interaction.category()
                                 == ConsensusInteraction.InteractionCategory.BASE_PAIR
-                            && interaction.leontisWesthof().isPresent() // Must have LW
-                            && interaction.leontisWesthof().get().isCanonical();
+                            && interaction.isCanonical();
                         case NON_CANONICAL -> interaction.category()
                                 == ConsensusInteraction.InteractionCategory.BASE_PAIR
-                            && interaction.leontisWesthof().isPresent() // Must have LW
-                            && !interaction.leontisWesthof().get().isCanonical();
+                            && !interaction.isCanonical();
                         case STACKING -> interaction.category()
                             == ConsensusInteraction.InteractionCategory.STACKING;
                         case ALL -> true; // Include all categories
                       };
                   // Also check if it passes the basic fuzzy/threshold/reference filter
-                  return categoryMatch
-                      && isInteractionConsidered(interaction, confidenceLevel, referenceStructure);
+                  return categoryMatch && isInteractionConsidered(interaction, confidenceLevel);
                 })
             .toList(); // Collect to list first for logging/debugging if needed
 
@@ -1221,7 +1225,6 @@ public class TaskProcessorService {
       FullInteractionCollectionResult fullInteractionResult,
       ComputeRequest request,
       ReferenceStructureUtil.ReferenceParseResult referenceStructure) {
-
     logger.info("Starting generation of ranked models (unified logic)");
     Integer confidenceLevel = request.confidenceLevel();
     ConsensusMode consensusMode = request.consensusMode();
@@ -1231,7 +1234,6 @@ public class TaskProcessorService {
         determineConsensusSet(
             fullInteractionResult.aggregatedResult().sortedInteractions(),
             confidenceLevel,
-            referenceStructure,
             consensusMode);
 
     // Prepare data structures needed for scoring based on mode
@@ -1250,10 +1252,12 @@ public class TaskProcessorService {
     var rankedModelsList = new ArrayList<RankedModel>();
     for (AnalyzedModel model : analyzedModels) {
       logger.debug("Processing model for ranking: {}", model.name());
-      InteractionCollectionResult modelResult = fullInteractionResult.perModelResults().get(model.name());
+      InteractionCollectionResult modelResult =
+          fullInteractionResult.perModelResults().get(model.name());
       if (modelResult == null) {
-          logger.warn("Could not find per-model interaction results for {}. Skipping ranking.", model.name());
-          continue; // Should not happen ideally
+        logger.warn(
+            "Could not find per-model interaction results for {}. Skipping ranking.", model.name());
+        continue; // Should not happen ideally
       }
 
       // Get the model's interactions matching the consensus mode
@@ -1262,8 +1266,11 @@ public class TaskProcessorService {
       // We just need the AnalyzedBasePair representation of the model's interactions.
       Set<AnalyzedBasePair> modelInteractionsAnalyzed =
           model.streamBasePairs(consensusMode).collect(Collectors.toSet());
-      logger.trace("Model {} has {} interactions of type {}", model.name(), modelInteractionsAnalyzed.size(), consensusMode);
-
+      logger.trace(
+          "Model {} has {} interactions of type {}",
+          model.name(),
+          modelInteractionsAnalyzed.size(),
+          consensusMode);
 
       // Calculate INF and F1 scores based on mode
       double inf;
@@ -1574,13 +1581,10 @@ public class TaskProcessorService {
    *
    * @param interaction The consensus interaction to check.
    * @param confidenceLevel The confidence level threshold (null for fuzzy mode).
-   * @param referenceStructure The parsed reference structure.
    * @return True if the interaction should be considered, false otherwise.
    */
   private boolean isInteractionConsidered(
-      ConsensusInteraction interaction,
-      Integer confidenceLevel,
-      ReferenceStructureUtil.ReferenceParseResult referenceStructure) {
+      ConsensusInteraction interaction, Integer confidenceLevel) {
     // Never consider interactions involving residues marked as unpaired in the reference
     if (interaction.forbiddenInReference()) {
       return false;

@@ -26,7 +26,8 @@ public record ConsensusInteraction(
     int modelCount,
     double probability,
     boolean presentInReference,
-    boolean forbiddenInReference) {
+    boolean forbiddenInReference,
+    boolean isCanonical) {
 
   /** Defines the main categories of interactions considered. */
   public enum InteractionCategory {
