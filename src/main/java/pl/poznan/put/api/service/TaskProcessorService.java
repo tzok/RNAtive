@@ -717,7 +717,6 @@ public class TaskProcessorService {
         .map(
             model -> {
               try {
-                logger.debug("Analyzing model: {}", model.name());
                 var jsonResult = analysisClient.analyze(model.name, model.content, analyzer);
                 var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
                 logger.debug("Successfully analyzed model: {}", model.name());
@@ -1259,6 +1258,7 @@ public class TaskProcessorService {
     }
 
     // Create BasePairs using the mapped IDs and calculate confidence color
+    // Remove skipped pairs
     var basePairs =
         interactionsToVisualize.stream()
             .filter(
@@ -1328,13 +1328,11 @@ public class TaskProcessorService {
                       varnaBp.color);
                   return varnaBp;
                 })
-            .filter(Objects::nonNull) // Remove skipped pairs
+            .filter(Objects::nonNull)
+            .sorted(
+                Comparator.comparingInt((pl.poznan.put.varna.model.BasePair bp) -> bp.id1)
+                    .thenComparingInt(bp -> bp.id2))
             .collect(Collectors.toList());
-
-    // Sort base pairs by id1, then id2
-    basePairs.sort(
-        Comparator.comparingInt((pl.poznan.put.varna.model.BasePair bp) -> bp.id1)
-            .thenComparingInt(bp -> bp.id2));
 
     structureData.basePairs = basePairs;
     logger.debug("Generated and sorted {} base pairs for Varna", basePairs.size());
