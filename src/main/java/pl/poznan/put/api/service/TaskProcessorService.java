@@ -134,7 +134,7 @@ public class TaskProcessorService {
       var request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
 
       // Process files through RNApolis to unify their format
-      logger.info("Processing files with RNApolis service");
+      logger.info("Unifying format RNApolis unifier service");
       List<FileData> processedFiles = processFilesWithRnapolis(request.files());
 
       // Create a new request with the processed files
@@ -208,7 +208,7 @@ public class TaskProcessorService {
 
       List<RankedModel> rankedModels;
       DefaultDotBracketFromPdb dotBracket;
-      Set<AnalyzedBasePair> correctConsideredInteractions;
+      Collection<AnalyzedBasePair> nonConflictingInteractions;
 
       Map<AnalyzedBasePair, Double> fuzzyConsideredInteractions = null;
       if (request.confidenceLevel() == null) {
@@ -237,27 +237,22 @@ public class TaskProcessorService {
         dotBracket = generateFuzzyDotBracket(firstModel, fuzzyCanonicalPairs, canonicalPairsBag);
 
         logger.info("Compute correct fuzzy interaction (for visualization)");
-        correctConsideredInteractions =
-            new HashSet<>(
-                switch (request.consensusMode()) {
-                  case CANONICAL -> correctFuzzyCanonicalPairs(
-                      fuzzyCanonicalPairs, canonicalPairsBag); // Pass bag
-                  case NON_CANONICAL -> correctFuzzyNonCanonicalPairs(
-                      fuzzyNonCanonicalPairs, nonCanonicalPairsBag); // Pass bag
-                  case STACKING -> correctFuzzyStackings(fuzzyStackings); // No change needed here
-                  case ALL -> correctFuzzyAllInteraction(
-                      fuzzyCanonicalPairs,
-                      fuzzyNonCanonicalPairs,
-                      fuzzyStackings,
-                      allInteractionsBag, // Pass bag
-                      stackingsBag); // Pass bag
-                });
+        nonConflictingInteractions =
+            nonConflictingFuzzyInteractions(
+                fuzzyCanonicalPairs,
+                fuzzyNonCanonicalPairs,
+                fuzzyStackings,
+                allInteractionsBag // Pass bag
+                ); // Pass bag
       } else {
         logger.info("Computing correct interactions");
         int threshold = request.confidenceLevel();
-        correctConsideredInteractions =
+        Set<AnalyzedBasePair> correctConsideredInteractions =
             computeCorrectInteractions(
                 request.consensusMode(), consideredInteractionsBag, referenceStructure, threshold);
+        nonConflictingInteractions =
+            computeCorrectInteractions(
+                ConsensusMode.ALL, allInteractionsBag, referenceStructure, threshold);
 
         logger.info("Generating ranked models");
         rankedModels =
@@ -298,7 +293,7 @@ public class TaskProcessorService {
           generateVisualization(
               request.visualizationTool(),
               firstModel,
-              correctConsideredInteractions,
+              nonConflictingInteractions,
               dotBracket,
               consideredInteractionsBag, // Pass the bag
               modelCount, // Pass the model count
@@ -551,254 +546,6 @@ public class TaskProcessorService {
                   }
                   // Otherwise, score is the confidence level (frequency)
                   return (double) (consideredInteractionsBag.getCount(v)) / modelCount;
-                }));
-  }
-
-  private record ParsedModel(String name, String content, PdbModel structure3D) {}
-
-  private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request, Task task) {
-    // Parse all files in parallel
-    var models =
-        request.files().parallelStream()
-            .map(
-                fileData ->
-                    new ParsedModel(
-                        fileData.name(),
-                        fileData.content(),
-                        new PdbParser()
-                            .parse(fileData.content()).stream()
-                                .findFirst()
-                                .map(model -> model.filteredNewInstance(MoleculeType.RNA))
-                                .orElseThrow(
-                                    () -> {
-                                      String errorFileName = "error-" + fileData.name();
-                                      Path tempFilePath = Paths.get("/tmp", errorFileName);
-                                      try {
-                                        logger.warn(
-                                            "No structure found in file {}, saving content to {}",
-                                            fileData.name(),
-                                            tempFilePath);
-                                        Files.writeString(
-                                            tempFilePath,
-                                            fileData.content(),
-                                            StandardOpenOption.CREATE,
-                                            StandardOpenOption.WRITE,
-                                            StandardOpenOption.TRUNCATE_EXISTING);
-                                      } catch (IOException e) {
-                                        logger.error(
-                                            "Failed to save content of {} to {}",
-                                            fileData.name(),
-                                            tempFilePath,
-                                            e);
-                                      }
-                                      return new RuntimeException(
-                                          "No structure found in file " + fileData.name());
-                                    })))
-            .toList();
-    var identifiersToModels =
-        models.stream()
-            .collect(Collectors.groupingBy(model -> model.structure3D.namedResidueIdentifiers()));
-
-    // Check if all models have the same sequence of PdbNamedResidueIdentifiers
-    if (identifiersToModels.size() > 1) {
-      // Even if models have different sequences, they may still be saved
-      var sequences =
-          identifiersToModels.keySet().stream()
-              .map(
-                  list ->
-                      list.stream()
-                          .map(PdbNamedResidueIdentifier::oneLetterName)
-                          .map(String::valueOf)
-                          .map(String::toUpperCase)
-                          .collect(Collectors.joining()))
-              .collect(Collectors.toSet());
-
-      // This error is not recoverable
-      if (sequences.size() > 1) {
-        throw new RuntimeException(formatNucleotideCompositionError(identifiersToModels));
-      }
-
-      // Find indices of modified residues in at least one model
-      var modified =
-          models.stream()
-              .map(ParsedModel::structure3D)
-              .map(ResidueCollection::residues)
-              .map(
-                  residues ->
-                      IntStream.range(0, residues.size())
-                          .boxed()
-                          .filter(i -> residues.get(i).isModified())
-                          .toList())
-              .flatMap(Collection::stream)
-              .collect(Collectors.toSet());
-
-      // Regenerate models with unified naming and numbering scheme
-      models =
-          models.stream()
-              .map(
-                  model -> {
-                    // Always chain A, no insertion codes and increasing number
-                    var mapping =
-                        IntStream.range(0, model.structure3D.residues().size())
-                            .boxed()
-                            .collect(
-                                Collectors.toMap(
-                                    i -> model.structure3D.residues().get(i).identifier(),
-                                    i ->
-                                        ImmutablePdbResidueIdentifier.of(
-                                            "A", i + 1, Optional.empty())));
-                    // Force modification detection where other models have it
-                    var modresLines =
-                        IntStream.range(0, model.structure3D.residues().size())
-                            .boxed()
-                            .filter(modified::contains)
-                            .map(
-                                i -> {
-                                  var name =
-                                      model.structure3D.residues().get(i).standardResidueName();
-                                  return ImmutablePdbModresLine.of(
-                                      "",
-                                      name,
-                                      "A",
-                                      i + 1,
-                                      Optional.empty(),
-                                      name.toLowerCase(),
-                                      "");
-                                })
-                            .toList();
-                    // Regenerate atoms with new chain and residue numbers
-                    var atoms =
-                        model.structure3D.atoms().stream()
-                            .map(
-                                atom -> {
-                                  var identifier = PdbResidueIdentifier.from(atom);
-                                  if (!mapping.containsKey(identifier)) {
-                                    throw new RuntimeException(
-                                        "No mapping for residue " + identifier);
-                                  }
-                                  var mapped = mapping.get(identifier);
-                                  return (PdbAtomLine)
-                                      ImmutablePdbAtomLine.copyOf(atom)
-                                          .withChainIdentifier(mapped.chainIdentifier())
-                                          .withResidueNumber(mapped.residueNumber())
-                                          .withInsertionCode(Optional.empty());
-                                })
-                            .toList();
-                    // Finally rebuild the PdbModel
-                    var regenerated =
-                        ImmutableDefaultPdbModel.of(
-                            ImmutablePdbHeaderLine.of("", new Date(0L), ""),
-                            ImmutablePdbExpdtaLine.of(Collections.emptyList()),
-                            ImmutablePdbRemark2Line.of(Double.NaN),
-                            1,
-                            atoms,
-                            modresLines,
-                            Collections.emptyList(),
-                            "",
-                            Collections.emptyList());
-                    return new ParsedModel(model.name, regenerated.toPdb(), regenerated);
-                  })
-              .toList();
-
-      // Perform the check again
-      identifiersToModels =
-          models.stream()
-              .collect(Collectors.groupingBy(model -> model.structure3D.namedResidueIdentifiers()));
-      if (identifiersToModels.size() > 1) {
-        throw new RuntimeException(formatNucleotideCompositionError(identifiersToModels));
-      }
-    }
-
-    // Optionally apply MolProbity filtering
-    List<ParsedModel> validModels;
-    if (request.molProbityFilter() == MolProbityFilter.ALL) {
-      logger.info("MolProbity filtering is set to ALL, skipping filtering.");
-      validModels = new ArrayList<>(models);
-    } else {
-      logger.info("Attempting MolProbity filtering with level: {}", request.molProbityFilter());
-      try (var rnalyzerClient = new RnalyzerClient()) {
-        rnalyzerClient.initializeSession();
-        validModels =
-            models.stream()
-                .map(
-                    model -> {
-                      MolProbityResponse response = null;
-                      try {
-                        response = rnalyzerClient.analyzePdbContent(model.content(), model.name());
-
-                        // Store the MolProbity response JSON in the task
-                        try {
-                          String responseJson = objectMapper.writeValueAsString(response);
-                          task.addMolProbityResponse(model.name(), responseJson);
-                        } catch (JsonProcessingException e) {
-                          logger.error(
-                              "Failed to serialize MolProbityResponse for model {}",
-                              model.name(),
-                              e);
-                          // Optionally store an error message instead of JSON
-                          task.addMolProbityResponse(
-                              model.name(), "{\"error\": \"Serialization failed\"}");
-                        }
-
-                        // Now check validity using the obtained response
-                        return isModelValid(
-                                model.name(),
-                                response.structure(), // Use the response object directly
-                                request.molProbityFilter(),
-                                task)
-                            ? model
-                            : null; // Filtered out
-                      } catch (Exception e) {
-                        logger.warn(
-                            "MolProbity analysis failed for model {}: {}. Model will be included.",
-                            model.name(),
-                            e.getMessage());
-                        // Store an error indication if analysis failed before validity check
-                        if (response == null) {
-                          task.addMolProbityResponse(
-                              model.name(),
-                              String.format(
-                                  "{\"error\": \"MolProbity analysis failed: %s\"}",
-                                  e.getMessage()));
-                        }
-                        return model; // Include model if analysis fails
-                      }
-                    })
-                .filter(Objects::nonNull) // Remove nulls (filtered models)
-                .toList();
-        logger.info(
-            "MolProbity filtering completed. {} models passed out of {}.",
-            validModels.size(),
-            models.size());
-      } catch (Exception e) {
-        logger.warn(
-            "MolProbity filtering failed due to an error with the RNAlyzer service: {}. Proceeding"
-                + " without MolProbity filtering.",
-            e.getMessage());
-        // If the RNAlyzer service fails entirely, proceed with all models
-        validModels = new ArrayList<>(models);
-      }
-    }
-
-    // Analyze valid models (now contains either filtered or all models)
-    return validModels.parallelStream()
-        .filter(Objects::nonNull)
-        .map(
-            model -> {
-              try {
-                var jsonResult =
-                    analysisClient.analyze(model.name, model.content, request.analyzer());
-                var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
-                return new AnalyzedModel(model.name, model.structure3D, structure2D);
-              } catch (JsonProcessingException e) {
-                throw new RuntimeException(
-                    "Failed to parse analysis result for file: " + model.name, e);
-              }
-            })
-        .toList();
-  }
-
-  private boolean isModelValid(
       String modelName,
       MolProbityResponse.Structure structure,
       MolProbityFilter filter,
@@ -884,7 +631,7 @@ public class TaskProcessorService {
   private List<RankedModel> generateRankedModels(
       ConsensusMode consensusMode,
       List<AnalyzedModel> analyzedModels,
-      Set<AnalyzedBasePair> correctConsideredInteractions) {
+      Collection<AnalyzedBasePair> correctConsideredInteractions) {
     logger.info("Starting to generate ranked models");
     var rankedModels =
         analyzedModels.stream()
@@ -932,7 +679,7 @@ public class TaskProcessorService {
   private String generateVisualization(
       VisualizationTool visualizationTool,
       AnalyzedModel firstModel,
-      Set<AnalyzedBasePair> correctConsideredInteractions,
+      Collection<AnalyzedBasePair> correctConsideredInteractions,
       DotBracketFromPdb dotBracket,
       // Context for confidence coloring
       HashBag<AnalyzedBasePair> consideredInteractionsBag,
@@ -978,46 +725,11 @@ public class TaskProcessorService {
     }
   }
 
-  private List<AnalyzedBasePair> correctFuzzyNonCanonicalPairs(
-      Map<AnalyzedBasePair, Double> fuzzyNonCanonicalPairs,
-      HashBag<AnalyzedBasePair> nonCanonicalPairsBag) { // Add bag parameter
-
-    // Filter out pairs with probability 0 before conflict resolution
-    var positiveProbabilityPairs =
-        sortFuzzySet(fuzzyNonCanonicalPairs).stream()
-            .filter(pair -> pair.getRight() > 0.0)
-            .map(Pair::getKey) // Get the AnalyzedBasePair
-            .collect(Collectors.toSet()); // Collect into a Set
-    logger.trace(
-        "Found {} fuzzy non-canonical pairs with probability > 0 before conflict resolution",
-        positiveProbabilityPairs.size());
-
-    // Resolve conflicts using the helper method
-    var resolvedPairs =
-        resolveInteractionConflicts(
-            positiveProbabilityPairs, nonCanonicalPairsBag, ConsensusMode.NON_CANONICAL);
-    logger.trace(
-        "{} fuzzy non-canonical pairs remaining after conflict resolution", resolvedPairs.size());
-
-    return new ArrayList<>(resolvedPairs); // Return as list
-  }
-
-  private List<AnalyzedBasePair> correctFuzzyStackings(
-      Map<AnalyzedBasePair, Double> fuzzyStackings) {
-    // Filter out pairs with probability 0
-    return sortFuzzySet(fuzzyStackings).stream()
-        .filter(pair -> pair.getRight() > 0.0)
-        .map(Pair::getLeft)
-        .toList();
-  }
-
-  private List<AnalyzedBasePair> correctFuzzyAllInteraction(
+  private List<AnalyzedBasePair> nonConflictingFuzzyInteractions(
       Map<AnalyzedBasePair, Double> fuzzyCanonicalPairs,
       Map<AnalyzedBasePair, Double> fuzzyNonCanonicalPairs,
       Map<AnalyzedBasePair, Double> fuzzyStackings,
-      HashBag<AnalyzedBasePair> allInteractionsBag, // Add bag parameter
-      HashBag<AnalyzedBasePair> stackingsBag) { // Add bag parameter (optional for now)
-
+      HashBag<AnalyzedBasePair> allInteractionsBag) {
     // Combine positive-probability canonical and non-canonical pairs
     var positiveBasePairs = new HashSet<AnalyzedBasePair>();
     fuzzyCanonicalPairs.entrySet().stream()
@@ -1043,7 +755,11 @@ public class TaskProcessorService {
     var filtered = new ArrayList<>(resolvedBasePairs);
 
     // Add stackings with positive probability (no conflict resolution needed for them here)
-    var positiveStackings = correctFuzzyStackings(fuzzyStackings);
+    var positiveStackings =
+        sortFuzzySet(fuzzyStackings).stream()
+            .filter(pair -> pair.getRight() > 0.0)
+            .map(Pair::getLeft)
+            .toList();
     logger.trace("Adding {} fuzzy stackings with probability > 0", positiveStackings.size());
     filtered.addAll(positiveStackings);
 
@@ -1053,7 +769,7 @@ public class TaskProcessorService {
 
   private StructureData createStructureData(
       AnalyzedModel model,
-      Set<AnalyzedBasePair> interactionsToVisualize,
+      Collection<AnalyzedBasePair> interactionsToVisualize,
       HashBag<AnalyzedBasePair> consideredInteractionsBag,
       int modelCount,
       Map<AnalyzedBasePair, Double> fuzzyConsideredInteractions) {
