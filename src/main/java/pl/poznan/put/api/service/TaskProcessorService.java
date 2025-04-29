@@ -445,12 +445,15 @@ public class TaskProcessorService {
       sortedInteractions.forEach(interaction -> logger.trace("  {}", interaction));
     }
 
-    return new InteractionCollectionResult(
-        sortedInteractions, // Include the sorted consensus list
-        combinedCanonicalBag,
-        combinedNonCanonicalBag,
-        combinedStackingBag,
-        combinedAllBag);
+    var aggregatedResult =
+        new InteractionCollectionResult(
+            sortedInteractions, // Include the sorted consensus list
+            combinedCanonicalBag,
+            combinedNonCanonicalBag,
+            combinedStackingBag,
+            combinedAllBag);
+
+    return new FullInteractionCollectionResult(aggregatedResult, perModelResults);
   }
 
   /**
