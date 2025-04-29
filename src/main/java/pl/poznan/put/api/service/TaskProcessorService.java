@@ -432,6 +432,10 @@ public class TaskProcessorService {
                     referenceStructure.basePairs().contains(classifiedBasePair.basePair())
                         || consideredInteractionsBag.getCount(classifiedBasePair) >= threshold)
             .collect(Collectors.toSet());
+    logger.debug(
+        "Number of interactions after initial filtering (threshold {}, reference): {}",
+        threshold,
+        correctConsideredInteractions.size());
 
     if (consensusMode != ConsensusMode.STACKING) {
       logger.debug("Resolving conflicts in base pairs for consensus mode: {}", consensusMode);
