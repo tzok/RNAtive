@@ -180,15 +180,18 @@ public class TaskProcessorService {
           ReferenceStructureUtil.readReferenceStructure(request.dotBracket(), firstModel);
 
       logger.info("Collecting and sorting all interactions");
-      var interactionResult = collectInteractions(analyzedModels, referenceStructure);
-      // Access bags via interactionResult.canonicalPairsBag(), etc.
-      // Access sorted list via interactionResult.sortedInteractions()
+      var fullInteractionResult = collectInteractions(analyzedModels, referenceStructure);
+      var aggregatedInteractionResult = fullInteractionResult.aggregatedResult();
+      // Access per-model results via fullInteractionResult.perModelResults() if needed later
+
+      // Access bags via aggregatedInteractionResult.canonicalPairsBag(), etc.
+      // Access sorted list via aggregatedInteractionResult.sortedInteractions()
       var consideredInteractionsBag =
           switch (request.consensusMode()) {
-            case CANONICAL -> interactionResult.canonicalPairsBag();
-            case NON_CANONICAL -> interactionResult.nonCanonicalPairsBag();
-            case STACKING -> interactionResult.stackingsBag();
-            case ALL -> interactionResult.allInteractionsBag();
+            case CANONICAL -> aggregatedInteractionResult.canonicalPairsBag();
+            case NON_CANONICAL -> aggregatedInteractionResult.nonCanonicalPairsBag();
+            case STACKING -> aggregatedInteractionResult.stackingsBag();
+            case ALL -> aggregatedInteractionResult.allInteractionsBag();
           };
 
       List<RankedModel> rankedModels;
@@ -200,16 +203,16 @@ public class TaskProcessorService {
         logger.info("Computing fuzzy interactions");
         var fuzzyCanonicalPairs =
             computeFuzzyInteractions(
-                interactionResult.canonicalPairsBag(), referenceStructure, modelCount);
+                aggregatedInteractionResult.canonicalPairsBag(), referenceStructure, modelCount);
         var fuzzyNonCanonicalPairs =
             computeFuzzyInteractions(
-                interactionResult.nonCanonicalPairsBag(), referenceStructure, modelCount);
+                aggregatedInteractionResult.nonCanonicalPairsBag(), referenceStructure, modelCount);
         var fuzzyStackings =
             computeFuzzyInteractions(
-                interactionResult.stackingsBag(), referenceStructure, modelCount);
+                aggregatedInteractionResult.stackingsBag(), referenceStructure, modelCount);
         var fuzzyAllInteractions =
             computeFuzzyInteractions(
-                interactionResult.allInteractionsBag(), referenceStructure, modelCount);
+                aggregatedInteractionResult.allInteractionsBag(), referenceStructure, modelCount);
         fuzzyConsideredInteractions =
             switch (request.consensusMode()) {
               case CANONICAL -> fuzzyCanonicalPairs;
@@ -226,7 +229,9 @@ public class TaskProcessorService {
         logger.info("Generating fuzzy dot bracket notation");
         dotBracket =
             generateFuzzyDotBracket(
-                firstModel, fuzzyCanonicalPairs, interactionResult.canonicalPairsBag());
+                firstModel,
+                fuzzyCanonicalPairs,
+                aggregatedInteractionResult.canonicalPairsBag()); // Pass aggregated bag
 
         logger.info("Compute correct fuzzy interaction (for visualization)");
         nonConflictingInteractions =
@@ -234,8 +239,8 @@ public class TaskProcessorService {
                 fuzzyCanonicalPairs,
                 fuzzyNonCanonicalPairs,
                 fuzzyStackings,
-                interactionResult.allInteractionsBag() // Pass bag
-                ); // Pass bag
+                aggregatedInteractionResult.allInteractionsBag() // Pass aggregated bag
+                );
       } else {
         logger.info("Computing correct interactions");
         int threshold = request.confidenceLevel();
@@ -245,7 +250,7 @@ public class TaskProcessorService {
         nonConflictingInteractions =
             computeCorrectInteractions(
                 ConsensusMode.ALL,
-                interactionResult.allInteractionsBag(),
+                aggregatedInteractionResult.allInteractionsBag(), // Use aggregated bag
                 referenceStructure,
                 threshold);
 
@@ -260,7 +265,7 @@ public class TaskProcessorService {
                 firstModel,
                 computeCorrectInteractions(
                     ConsensusMode.CANONICAL,
-                    interactionResult.canonicalPairsBag(),
+                    aggregatedInteractionResult.canonicalPairsBag(), // Use aggregated bag
                     referenceStructure,
                     threshold));
 
@@ -293,10 +298,10 @@ public class TaskProcessorService {
               firstModel,
               nonConflictingInteractions,
               dotBracket,
-              interactionResult.allInteractionsBag(), // Pass the bag
+              aggregatedInteractionResult.allInteractionsBag(), // Pass the aggregated bag
               modelCount, // Pass the model count
               (request.confidenceLevel() == null)
-                  ? fuzzyConsideredInteractions
+                  ? fuzzyConsideredInteractions // Pass fuzzy map
                   : null // Pass fuzzy map only if in fuzzy mode
               );
       task.setSvg(svg);
@@ -317,17 +322,39 @@ public class TaskProcessorService {
     return CompletableFuture.completedFuture(null);
   }
 
-  /** Internal record to hold the results of interaction collection and processing. */
+  /**
+   * Internal record to hold the results of interaction collection for a single model or aggregated
+   * across models.
+   */
   private record InteractionCollectionResult(
-      List<ConsensusInteraction> sortedInteractions,
+      List<ConsensusInteraction> sortedInteractions, // Populated only in the aggregated result
       HashBag<AnalyzedBasePair> canonicalPairsBag,
       HashBag<AnalyzedBasePair> nonCanonicalPairsBag,
       HashBag<AnalyzedBasePair> stackingsBag,
       HashBag<AnalyzedBasePair> allInteractionsBag) {}
 
   /**
+   * Internal record to hold the complete results of interaction collection, including both the
+   * aggregated results and the per-model results.
+   */
+  private record FullInteractionCollectionResult(
+      InteractionCollectionResult aggregatedResult,
+      Map<String, InteractionCollectionResult> perModelResults) {}
+
+  /**
    * Collects all interactions (canonical, non-canonical, stacking) from the analyzed models,
-   * calculates their frequency, determines if they are part of the reference structure, and returns
+   * calculates their frequency, determines if they are part of the reference structure, stores
+   * per-model results, and returns the aggregated results along with the per-model map.
+   *
+   * @param analyzedModels The list of models analyzed by a secondary structure tool.
+   * @param referenceStructure The parsed reference structure (dot-bracket).
+   * @return A {@link FullInteractionCollectionResult} containing the aggregated results (bags and
+   *     sorted consensus list) and a map of per-model interaction results (bags only).
+   */
+  private FullInteractionCollectionResult collectInteractions(
+      List<AnalyzedModel> analyzedModels,
+      ReferenceStructureUtil.ReferenceParseResult referenceStructure) {
+    var combinedCanonicalBag = new HashBag<AnalyzedBasePair>();
    * them as a sorted list of {@link ConsensusInteraction} objects along with the intermediate bags.
    *
    * @param analyzedModels The list of models analyzed by a secondary structure tool.
@@ -342,10 +369,12 @@ public class TaskProcessorService {
     var combinedNonCanonicalBag = new HashBag<AnalyzedBasePair>();
     var combinedStackingBag = new HashBag<AnalyzedBasePair>();
     var combinedAllBag = new HashBag<AnalyzedBasePair>();
+    var perModelResults = new HashMap<String, InteractionCollectionResult>();
 
     logger.debug("Collecting interactions for each of the {} models", analyzedModels.size());
     for (AnalyzedModel model : analyzedModels) {
       var modelResult = collectInteractionsForModel(model);
+      perModelResults.put(model.name(), modelResult); // Store per-model result
       if (logger.isTraceEnabled()) {
         logger.trace("Interactions collected for model {}: {}", model.name(), modelResult);
       }
