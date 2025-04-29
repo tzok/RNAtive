@@ -12,7 +12,11 @@ import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
  * @param category The main category of the interaction (BASE_PAIR or STACKING).
  * @param leontisWesthof Optional detailed classification (Leontis-Westhof) for base pairs.
  * @param modelCount The number of models in which this interaction was observed.
- * @param isReference Whether this interaction is part of the provided reference structure.
+ * @param probability The probability of this interaction (modelCount / total models).
+ * @param presentInReference Whether this interaction is explicitly present in the provided
+ *     reference structure.
+ * @param forbiddenInReference Whether this interaction involves a residue marked as unpaired in the
+ *     reference structure.
  */
 public record ConsensusInteraction(
     PdbNamedResidueIdentifier partner1,
@@ -20,7 +24,9 @@ public record ConsensusInteraction(
     InteractionCategory category,
     Optional<LeontisWesthof> leontisWesthof,
     int modelCount,
-    boolean isReference) {
+    double probability,
+    boolean presentInReference,
+    boolean forbiddenInReference) {
 
   /** Defines the main categories of interactions considered. */
   public enum InteractionCategory {
