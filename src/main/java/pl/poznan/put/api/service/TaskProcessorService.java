@@ -324,10 +324,10 @@ public class TaskProcessorService {
 
   /**
    * Internal record to hold the results of interaction collection for a single model or aggregated
-   * across models.
+   * across models. Holds either the aggregated results or per-model results.
    */
   private record InteractionCollectionResult(
-      List<?> sortedInteractions, // Can be List<ConsensusInteraction> or List<AnalyzedBasePair>
+      List<ConsensusInteraction> sortedInteractions, // List of ConsensusInteraction objects
       HashBag<AnalyzedBasePair> canonicalPairsBag,
       HashBag<AnalyzedBasePair> nonCanonicalPairsBag,
       HashBag<AnalyzedBasePair> stackingsBag,
@@ -358,34 +358,28 @@ public class TaskProcessorService {
     var combinedNonCanonicalBag = new HashBag<AnalyzedBasePair>();
     var combinedStackingBag = new HashBag<AnalyzedBasePair>();
     var combinedAllBag = new HashBag<AnalyzedBasePair>();
-    var perModelResults = new HashMap<String, InteractionCollectionResult>();
 
-    logger.debug("Collecting interactions for each of the {} models", analyzedModels.size());
+    // Step 1: Aggregate bags from all models
+    logger.debug("Aggregating interaction bags from {} models", analyzedModels.size());
     for (AnalyzedModel model : analyzedModels) {
-      var modelResult = collectInteractionsForModel(model);
-      perModelResults.put(model.name(), modelResult); // Store per-model result
-      if (logger.isTraceEnabled()) {
-        logger.trace("Sorted interactions found in model {}:", model.name());
-        // Log the sorted list of AnalyzedBasePair from the per-model result
-        ((List<AnalyzedBasePair>) modelResult.sortedInteractions())
-            .forEach(interaction -> logger.trace("  {}", interaction));
-      }
-      combinedCanonicalBag.addAll(modelResult.canonicalPairsBag());
-      combinedNonCanonicalBag.addAll(modelResult.nonCanonicalPairsBag());
-      combinedStackingBag.addAll(modelResult.stackingsBag());
-      combinedAllBag.addAll(modelResult.allInteractionsBag());
+      // Temporarily collect bags without creating full per-model results yet
+      var modelBags = collectInteractionsForModel(model); // Gets bags only
+      combinedCanonicalBag.addAll(modelBags.canonicalPairsBag());
+      combinedNonCanonicalBag.addAll(modelBags.nonCanonicalPairsBag());
+      combinedStackingBag.addAll(modelBags.stackingsBag());
+      combinedAllBag.addAll(modelBags.allInteractionsBag());
     }
-
     logger.debug(
-        "Total unique interactions collected across all models: Canonical={}, NonCanonical={},"
+        "Total unique interactions aggregated across all models: Canonical={}, NonCanonical={},"
             + " Stacking={}, All={}",
         combinedCanonicalBag.uniqueSet().size(),
         combinedNonCanonicalBag.uniqueSet().size(),
         combinedStackingBag.uniqueSet().size(),
         combinedAllBag.uniqueSet().size());
 
-    logger.debug("Creating ConsensusInteraction objects from aggregated interactions");
-    var consensusInteractions =
+    // Step 2: Create the full set of ConsensusInteraction objects from aggregated data
+    logger.debug("Creating full set of ConsensusInteraction objects from aggregated bags");
+    var allConsensusInteractions =
         combinedAllBag.uniqueSet().stream()
             .map(
                 analyzedPair -> {
@@ -422,9 +416,25 @@ public class TaskProcessorService {
                 })
             .toList();
 
-    logger.debug("Sorting {} ConsensusInteraction objects", consensusInteractions.size());
-    var sortedInteractions =
-        consensusInteractions.stream()
+    // Create a lookup map for efficiency
+    var analyzedPairToConsensusMap =
+        allConsensusInteractions.stream()
+            .collect(
+                Collectors.toMap(
+                    ci ->
+                        AnalyzedBasePair.of(
+                            ci.partner1(),
+                            ci.partner2(),
+                            ci.category() == InteractionCategory.BASE_PAIR
+                                ? ci.leontisWesthof().orElse(null)
+                                : null), // Reconstruct key AnalyzedBasePair
+                    ci -> ci));
+
+    logger.debug(
+        "Sorting {} total ConsensusInteraction objects for the aggregated result",
+        allConsensusInteractions.size());
+    var sortedAggregatedInteractions =
+        allConsensusInteractions.stream()
             .sorted(
                 Comparator.comparing(ConsensusInteraction::category)
                     .thenComparing(ConsensusInteraction::modelCount, Comparator.reverseOrder())
@@ -433,30 +443,71 @@ public class TaskProcessorService {
             .toList();
 
     if (logger.isTraceEnabled()) {
-      logger.trace("Sorted Consensus Interactions:");
-      sortedInteractions.forEach(interaction -> logger.trace("  {}", interaction));
+      logger.trace("Sorted Aggregated Consensus Interactions:");
+      sortedAggregatedInteractions.forEach(interaction -> logger.trace("  {}", interaction));
     }
 
+    // Step 3: Create the aggregated result object
     var aggregatedResult =
         new InteractionCollectionResult(
-            sortedInteractions, // Include the sorted consensus list
+            sortedAggregatedInteractions, // Full sorted list
             combinedCanonicalBag,
             combinedNonCanonicalBag,
             combinedStackingBag,
             combinedAllBag);
 
+    // Step 4: Iterate again to create per-model results with ConsensusInteraction lists
+    var perModelResults = new HashMap<String, InteractionCollectionResult>();
+    logger.debug("Generating per-model results with ConsensusInteraction lists");
+    for (AnalyzedModel model : analyzedModels) {
+      // Get the bags for this specific model again
+      var modelBags = collectInteractionsForModel(model);
+      var modelAnalyzedPairs = modelBags.allInteractionsBag().uniqueSet();
+
+      // Look up the corresponding ConsensusInteraction objects
+      var modelConsensusInteractions =
+          modelAnalyzedPairs.stream()
+              .map(analyzedPairToConsensusMap::get) // Use the pre-built map
+              .filter(Objects::nonNull) // Filter out any potential misses (shouldn't happen)
+              .sorted( // Sort using the same comparator as the aggregated list
+                  Comparator.comparing(ConsensusInteraction::category)
+                      .thenComparing(ConsensusInteraction::modelCount, Comparator.reverseOrder())
+                      .thenComparing(ConsensusInteraction::partner1)
+                      .thenComparing(ConsensusInteraction::partner2))
+              .toList();
+
+      // Create the per-model result
+      var modelResult =
+          new InteractionCollectionResult(
+              modelConsensusInteractions, // Model-specific sorted ConsensusInteraction list
+              modelBags.canonicalPairsBag(),
+              modelBags.nonCanonicalPairsBag(),
+              modelBags.stackingsBag(),
+              modelBags.allInteractionsBag());
+
+      perModelResults.put(model.name(), modelResult);
+
+      // Update TRACE logging for the model
+      if (logger.isTraceEnabled()) {
+        logger.trace("Sorted Consensus Interactions found in model {}:", model.name());
+        modelConsensusInteractions.forEach(interaction -> logger.trace("  {}", interaction));
+      }
+    }
+
+    // Step 5: Return the final result containing aggregated and per-model data
     return new FullInteractionCollectionResult(aggregatedResult, perModelResults);
   }
 
   /**
-   * Collects all interactions (canonical, non-canonical, stacking) for a single analyzed model.
+   * Collects interaction bags (canonical, non-canonical, stacking, all) for a single analyzed
+   * model.
    *
    * @param model The analyzed model.
-   * @return An {@link InteractionCollectionResult} containing the interaction bags for the given
-   *     model (sortedInteractions field will be empty).
+   * @return An {@link InteractionCollectionResult} containing only the interaction bags for the
+   *     given model. The `sortedInteractions` field will be empty.
    */
   private InteractionCollectionResult collectInteractionsForModel(AnalyzedModel model) {
-    logger.trace("Collecting interactions for model: {}", model.name());
+    logger.trace("Collecting interaction bags for model: {}", model.name());
 
     var canonicalPairsBag =
         model.structure2D().basePairs().stream()
@@ -485,15 +536,9 @@ public class TaskProcessorService {
     logger.trace(
         "Model {}: Total interactions (all types): {}", model.name(), allInteractionsBag.size());
 
-    // Sort the unique interactions found in this model
-    var sortedModelInteractions =
-        allInteractionsBag.uniqueSet().stream().sorted().collect(Collectors.toList());
-    logger.trace(
-        "Model {}: Sorted {} unique interactions", model.name(), sortedModelInteractions.size());
-
-    // Return the result including the sorted list of AnalyzedBasePair for this model
+    // Return only the bags. The sorted list (of ConsensusInteraction) will be populated later.
     return new InteractionCollectionResult(
-        sortedModelInteractions, // Sorted interactions for this specific model
+        Collections.emptyList(), // sortedInteractions is empty at this stage
         canonicalPairsBag,
         nonCanonicalPairsBag,
         stackingsBag,
