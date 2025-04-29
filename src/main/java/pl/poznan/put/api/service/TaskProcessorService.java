@@ -158,7 +158,6 @@ public class TaskProcessorService {
       }
 
       var modelCount = analyzedModels.size();
-
       if (modelCount < 2) {
         task.setStatus(TaskStatus.FAILED);
         task.setMessage(
@@ -235,13 +234,14 @@ public class TaskProcessorService {
                 analyzedModels, fuzzyConsideredInteractions, request.consensusMode());
 
         logger.info("Generating fuzzy dot bracket notation");
-        dotBracket = generateFuzzyDotBracket(firstModel, fuzzyCanonicalPairs);
+        dotBracket = generateFuzzyDotBracket(firstModel, fuzzyCanonicalPairs, canonicalPairsBag);
 
         logger.info("Compute correct fuzzy interaction (for visualization)");
         correctConsideredInteractions =
             new HashSet<>(
                 switch (request.consensusMode()) {
-                  case CANONICAL -> correctFuzzyCanonicalPairs(fuzzyCanonicalPairs, canonicalPairsBag); // Pass bag
+                  case CANONICAL -> correctFuzzyCanonicalPairs(
+                      fuzzyCanonicalPairs, canonicalPairsBag); // Pass bag
                   case NON_CANONICAL -> correctFuzzyNonCanonicalPairs(
                       fuzzyNonCanonicalPairs, nonCanonicalPairsBag); // Pass bag
                   case STACKING -> correctFuzzyStackings(fuzzyStackings); // No change needed here
@@ -468,9 +468,8 @@ public class TaskProcessorService {
 
   /**
    * Resolves conflicts among a set of interactions based on the consensus mode and interaction
-   * counts. For base-base interactions (non-stacking modes), it iteratively removes the
-   * lower-count interaction involved in a conflict for each Leontis-Westhof type until no conflicts
-   * remain.
+   * counts. For base-base interactions (non-stacking modes), it iteratively removes the lower-count
+   * interaction involved in a conflict for each Leontis-Westhof type until no conflicts remain.
    *
    * @param interactions The initial set of interactions to resolve.
    * @param interactionCounts A bag containing the counts (frequency or confidence source) for each
