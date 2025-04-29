@@ -332,51 +332,40 @@ public class TaskProcessorService {
    *
    * @param analyzedModels The list of models analyzed by a secondary structure tool.
    * @param referenceStructure The parsed reference structure (dot-bracket).
-   * @return An {@link InteractionCollectionResult} containing the sorted list and interaction bags.
+   * @return An {@link InteractionCollectionResult} containing the sorted list of consensus
+   *     interactions and the aggregated interaction bags.
    */
   private InteractionCollectionResult collectInteractions(
       List<AnalyzedModel> analyzedModels,
       ReferenceStructureUtil.ReferenceParseResult referenceStructure) {
-    logger.debug("Collecting canonical base pairs from {} models", analyzedModels.size());
-    var canonicalPairsBag =
-        analyzedModels.stream()
-            .flatMap(
-                model ->
-                    model.structure2D().basePairs().stream()
-                        .filter(BasePair::isCanonical)
-                        .map(model::basePairToAnalyzed))
-            .collect(Collectors.toCollection(HashBag::new));
-    logger.debug("Found {} unique canonical base pairs", canonicalPairsBag.uniqueSet().size());
+    var combinedCanonicalBag = new HashBag<AnalyzedBasePair>();
+    var combinedNonCanonicalBag = new HashBag<AnalyzedBasePair>();
+    var combinedStackingBag = new HashBag<AnalyzedBasePair>();
+    var combinedAllBag = new HashBag<AnalyzedBasePair>();
 
-    logger.debug("Collecting non-canonical base pairs from {} models", analyzedModels.size());
-    var nonCanonicalPairsBag =
-        analyzedModels.stream()
-            .flatMap(
-                model ->
-                    model.structure2D().basePairs().stream()
-                        .filter(basePair -> !basePair.isCanonical())
-                        .map(model::basePairToAnalyzed))
-            .collect(Collectors.toCollection(HashBag::new));
+    logger.debug("Collecting interactions for each of the {} models", analyzedModels.size());
+    for (AnalyzedModel model : analyzedModels) {
+      var modelResult = collectInteractionsForModel(model);
+      if (logger.isTraceEnabled()) {
+        logger.trace("Interactions collected for model {}: {}", model.name(), modelResult);
+      }
+      combinedCanonicalBag.addAll(modelResult.canonicalPairsBag());
+      combinedNonCanonicalBag.addAll(modelResult.nonCanonicalPairsBag());
+      combinedStackingBag.addAll(modelResult.stackingsBag());
+      combinedAllBag.addAll(modelResult.allInteractionsBag());
+    }
+
     logger.debug(
-        "Found {} unique non-canonical base pairs", nonCanonicalPairsBag.uniqueSet().size());
+        "Total unique interactions collected across all models: Canonical={}, NonCanonical={},"
+            + " Stacking={}, All={}",
+        combinedCanonicalBag.uniqueSet().size(),
+        combinedNonCanonicalBag.uniqueSet().size(),
+        combinedStackingBag.uniqueSet().size(),
+        combinedAllBag.uniqueSet().size());
 
-    logger.debug("Collecting stackings from {} models", analyzedModels.size());
-    var stackingsBag =
-        analyzedModels.stream()
-            .flatMap(
-                model -> model.structure2D().stackings().stream().map(model::stackingToAnalyzed))
-            .collect(Collectors.toCollection(HashBag::new));
-    logger.debug("Found {} unique stackings", stackingsBag.uniqueSet().size());
-
-    var allInteractionsBag = new HashBag<>(canonicalPairsBag);
-    allInteractionsBag.addAll(nonCanonicalPairsBag);
-    allInteractionsBag.addAll(stackingsBag);
-    logger.debug(
-        "Total unique interactions (all types): {}", allInteractionsBag.uniqueSet().size());
-
-    logger.debug("Creating ConsensusInteraction objects");
+    logger.debug("Creating ConsensusInteraction objects from aggregated interactions");
     var consensusInteractions =
-        allInteractionsBag.uniqueSet().stream()
+        combinedAllBag.uniqueSet().stream()
             .map(
                 analyzedPair -> {
                   InteractionCategory category =
@@ -387,7 +376,7 @@ public class TaskProcessorService {
                       (category == InteractionCategory.BASE_PAIR)
                           ? Optional.of(analyzedPair.leontisWesthof())
                           : Optional.<LeontisWesthof>empty();
-                  int count = allInteractionsBag.getCount(analyzedPair);
+                  int count = combinedAllBag.getCount(analyzedPair); // Use combined bag for count
                   boolean presentInRef =
                       referenceStructure.basePairs().contains(analyzedPair.basePair());
                   boolean forbiddenInRef =
@@ -408,14 +397,7 @@ public class TaskProcessorService {
                   }
 
                   return new ConsensusInteraction(
-                      p1,
-                      p2,
-                      category,
-                      lw,
-                      count,
-                      probability,
-                      presentInRef,
-                      forbiddenInRef);
+                      p1, p2, category, lw, count, probability, presentInRef, forbiddenInRef);
                 })
             .toList();
 
@@ -435,7 +417,56 @@ public class TaskProcessorService {
     }
 
     return new InteractionCollectionResult(
-        sortedInteractions,
+        sortedInteractions, // Include the sorted consensus list
+        combinedCanonicalBag,
+        combinedNonCanonicalBag,
+        combinedStackingBag,
+        combinedAllBag);
+  }
+
+  /**
+   * Collects all interactions (canonical, non-canonical, stacking) for a single analyzed model.
+   *
+   * @param model The analyzed model.
+   * @return An {@link InteractionCollectionResult} containing the interaction bags for the given
+   *     model (sortedInteractions field will be empty).
+   */
+  private InteractionCollectionResult collectInteractionsForModel(AnalyzedModel model) {
+    logger.trace("Collecting interactions for model: {}", model.name());
+
+    var canonicalPairsBag =
+        model.structure2D().basePairs().stream()
+            .filter(BasePair::isCanonical)
+            .map(model::basePairToAnalyzed)
+            .collect(Collectors.toCollection(HashBag::new));
+    logger.trace(
+        "Model {}: Found {} canonical base pairs", model.name(), canonicalPairsBag.size());
+
+    var nonCanonicalPairsBag =
+        model.structure2D().basePairs().stream()
+            .filter(basePair -> !basePair.isCanonical())
+            .map(model::basePairToAnalyzed)
+            .collect(Collectors.toCollection(HashBag::new));
+    logger.trace(
+        "Model {}: Found {} non-canonical base pairs",
+        model.name(),
+        nonCanonicalPairsBag.size());
+
+    var stackingsBag =
+        model.structure2D().stackings().stream()
+            .map(model::stackingToAnalyzed)
+            .collect(Collectors.toCollection(HashBag::new));
+    logger.trace("Model {}: Found {} stackings", model.name(), stackingsBag.size());
+
+    var allInteractionsBag = new HashBag<>(canonicalPairsBag);
+    allInteractionsBag.addAll(nonCanonicalPairsBag);
+    allInteractionsBag.addAll(stackingsBag);
+    logger.trace(
+        "Model {}: Total interactions (all types): {}", model.name(), allInteractionsBag.size());
+
+    // Note: The sortedInteractions list is not populated here, only the bags.
+    return new InteractionCollectionResult(
+        Collections.emptyList(), // No consensus interactions at this stage
         canonicalPairsBag,
         nonCanonicalPairsBag,
         stackingsBag,
