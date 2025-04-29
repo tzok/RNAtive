@@ -355,17 +355,6 @@ public class TaskProcessorService {
       List<AnalyzedModel> analyzedModels,
       ReferenceStructureUtil.ReferenceParseResult referenceStructure) {
     var combinedCanonicalBag = new HashBag<AnalyzedBasePair>();
-   * them as a sorted list of {@link ConsensusInteraction} objects along with the intermediate bags.
-   *
-   * @param analyzedModels The list of models analyzed by a secondary structure tool.
-   * @param referenceStructure The parsed reference structure (dot-bracket).
-   * @return An {@link InteractionCollectionResult} containing the sorted list of consensus
-   *     interactions and the aggregated interaction bags.
-   */
-  private InteractionCollectionResult collectInteractions(
-      List<AnalyzedModel> analyzedModels,
-      ReferenceStructureUtil.ReferenceParseResult referenceStructure) {
-    var combinedCanonicalBag = new HashBag<AnalyzedBasePair>();
     var combinedNonCanonicalBag = new HashBag<AnalyzedBasePair>();
     var combinedStackingBag = new HashBag<AnalyzedBasePair>();
     var combinedAllBag = new HashBag<AnalyzedBasePair>();
