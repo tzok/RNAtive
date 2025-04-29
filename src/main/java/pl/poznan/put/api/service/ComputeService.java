@@ -70,21 +70,7 @@ public class ComputeService {
   }
 
   public String getTaskSvg(String taskId) {
-    var task = taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
-
-    if (task.getStatus() != TaskStatus.COMPLETED) {
-      throw new IllegalStateException("Task is not completed yet");
-    }
-
-    if (task.getSvg() == null) {
-      throw new ResourceNotFoundException("SVG visualization not available");
-    }
-
-    var modelSvgs = task.getModelSvgs();
-    if (modelSvgs == null || !modelSvgs.containsKey("consensus")) {
-      throw new ResourceNotFoundException("Consensus SVG visualization not available for task " + taskId);
-    }
-    return modelSvgs.get("consensus");
+    return getModelSvg(taskId, "consensus");
   }
 
   public String getModelSvg(String taskId, String modelName) {
@@ -97,7 +83,8 @@ public class ComputeService {
     var modelSvgs = task.getModelSvgs();
     if (modelSvgs == null || !modelSvgs.containsKey(modelName)) {
       throw new ResourceNotFoundException(
-          String.format("SVG visualization not available for model '%s' in task %s", modelName, taskId));
+          String.format(
+              "SVG visualization not available for model '%s' in task %s", modelName, taskId));
     }
     return modelSvgs.get(modelName);
   }

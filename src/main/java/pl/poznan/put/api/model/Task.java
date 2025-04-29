@@ -3,6 +3,7 @@ package pl.poznan.put.api.model;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Entity
 public class Task {

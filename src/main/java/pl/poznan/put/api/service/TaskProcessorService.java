@@ -249,8 +249,8 @@ public class TaskProcessorService {
                       }
                     } else {
                       logger.warn(
-                          "Could not find corresponding AnalyzedModel for RankedModel {} to generate"
-                              + " SVG.",
+                          "Could not find corresponding AnalyzedModel for RankedModel {} to"
+                              + " generate SVG.",
                           rankedModel.getName());
                     }
                     return null; // Return null if SVG generation failed for this model
@@ -263,8 +263,7 @@ public class TaskProcessorService {
       task.addModelSvg("consensus", consensusSvg);
       // Store all model-specific SVGs
       task.getModelSvgs().putAll(modelSvgMap);
-      logger.debug(
-          "Stored consensus SVG and {} model-specific SVGs", modelSvgMap.size());
+      logger.debug("Stored consensus SVG and {} model-specific SVGs", modelSvgMap.size());
 
       logger.info("Task processing completed successfully");
       task.setStatus(TaskStatus.COMPLETED);

@@ -23,9 +23,6 @@ public class RankedModel implements Comparable<RankedModel> {
 
   private String dotBracket;
 
-  // Store the object itself for potential reuse (e.g., visualization layout)
-  private transient DotBracketFromPdb dotBracketObject; // transient to avoid JSON serialization
-
   // Default constructor for Jackson
   public RankedModel() {}
 
@@ -41,7 +38,6 @@ public class RankedModel implements Comparable<RankedModel> {
     this.stackings = analyzedModel.stackings();
     this.interactionNetworkFidelity = interactionNetworkFidelity;
     this.f1score = f1score;
-    this.dotBracketObject = dotBracketObject;
     this.dotBracket = dotBracketObject.toStringWithStrands();
   }
 
@@ -115,11 +111,6 @@ public class RankedModel implements Comparable<RankedModel> {
 
   public void setDotBracket(String dotBracket) {
     this.dotBracket = dotBracket;
-  }
-
-  /** Returns the underlying DotBracketFromPdb object used to generate the string representation. */
-  public DotBracketFromPdb getDotBracketObject() {
-    return dotBracketObject;
   }
 
   @Override
