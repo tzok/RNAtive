@@ -2,6 +2,7 @@ package pl.poznan.put.api.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.orsay.lri.varna.models.rna.ModeleBP;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -9,6 +10,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.commons.collections4.MultiValuedMap;
@@ -28,11 +30,9 @@ import pl.poznan.put.InteractionNetworkFidelity;
 import pl.poznan.put.RankedModel;
 import pl.poznan.put.api.dto.*;
 import pl.poznan.put.api.exception.TaskNotFoundException;
+import pl.poznan.put.api.model.*;
 import pl.poznan.put.api.model.MolProbityFilter;
 import pl.poznan.put.api.model.Task;
-import fr.orsay.lri.varna.models.rna.ModeleBP;
-import java.util.concurrent.atomic.AtomicInteger;
-import pl.poznan.put.api.model.*;
 import pl.poznan.put.api.repository.TaskRepository;
 import pl.poznan.put.api.util.DrawerVarnaTz;
 import pl.poznan.put.api.util.ReferenceStructureUtil;
@@ -1015,22 +1015,20 @@ public class TaskProcessorService {
                   varnaBp.id1 = id1;
                   varnaBp.id2 = id2;
 
-                  ModeleBP.Edge edge5 = translateEdge(lw.edge5());
-                  ModeleBP.Edge edge3 = translateEdge(lw.edge3());
-                  ModeleBP.Stericity stericity = translateStericity(lw.stericity());
+                  Optional<ModeleBP.Edge> edge5 = translateEdge(lw.edge5());
+                  Optional<ModeleBP.Edge> edge3 = translateEdge(lw.edge3());
+                  Optional<ModeleBP.Stericity> stericity = translateStericity(lw.stericity());
 
                   // Skip if any part is UNKNOWN
-                  if (edge5 == ModeleBP.Edge.UNKNOWN
-                      || edge3 == ModeleBP.Edge.UNKNOWN
-                      || stericity == ModeleBP.Stericity.UNKNOWN) {
+                  if (edge5.isEmpty() || edge3.isEmpty() || stericity.isEmpty()) {
                     logger.warn(
                         "Skipping base pair due to UNKNOWN edge or stericity: {}", analyzedPair);
                     return null;
                   }
 
-                  varnaBp.edge5 = edge5;
-                  varnaBp.edge3 = edge3;
-                  varnaBp.stericity = stericity;
+                  varnaBp.edge5 = edge5.get();
+                  varnaBp.edge3 = edge3.get();
+                  varnaBp.stericity = stericity.get();
                   varnaBp.canonical = analyzedPair.isCanonical();
                   // Color and thickness are left null
 
@@ -1054,20 +1052,20 @@ public class TaskProcessorService {
     return structureData;
   }
 
-  private ModeleBP.Edge translateEdge(final NucleobaseEdge edge) {
+  private Optional<ModeleBP.Edge> translateEdge(final NucleobaseEdge edge) {
     return switch (edge) {
-      case WATSON_CRICK -> ModeleBP.Edge.WC;
-      case HOOGSTEEN -> ModeleBP.Edge.HOOGSTEEN;
-      case SUGAR -> ModeleBP.Edge.SUGAR;
-      case UNKNOWN -> ModeleBP.Edge.UNKNOWN; // Or handle as needed
+      case WATSON_CRICK -> Optional.of(ModeleBP.Edge.WC);
+      case HOOGSTEEN -> Optional.of(ModeleBP.Edge.HOOGSTEEN);
+      case SUGAR -> Optional.of(ModeleBP.Edge.SUGAR);
+      case UNKNOWN -> Optional.empty();
     };
   }
 
-  private ModeleBP.Stericity translateStericity(final Stericity stericity) {
+  private Optional<ModeleBP.Stericity> translateStericity(final Stericity stericity) {
     return switch (stericity) {
-      case CIS -> ModeleBP.Stericity.CIS;
-      case TRANS -> ModeleBP.Stericity.TRANS;
-      case UNKNOWN -> ModeleBP.Stericity.UNKNOWN; // Or handle as needed
+      case CIS -> Optional.of(ModeleBP.Stericity.CIS);
+      case TRANS -> Optional.of(ModeleBP.Stericity.TRANS);
+      case UNKNOWN -> Optional.empty();
     };
   }
 }

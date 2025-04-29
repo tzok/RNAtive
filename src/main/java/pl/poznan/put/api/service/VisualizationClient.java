@@ -29,6 +29,8 @@ public class VisualizationClient {
           case RNAPUZZLER -> "rnapuzzler";
           case VARNA -> throw new UnsupportedOperationException(
               "VARNA visualization not supported");
+          case VARNA_TZ -> throw new UnsupportedOperationException(
+              "VARNA_TZ visualization not supported");
         };
 
     return restClient
