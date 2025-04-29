@@ -136,10 +136,42 @@ function Home() {
   const [isFuzzy, setIsFuzzy] = useState(true);
   const [confidenceLevel, setConfidenceLevel] = useState(fileList.length);
   const [dotBracket, setDotBracket] = useState(null);
+
+  const [sequenceToCheck, setSequenceToCheck] = useState("");
+  const [isSequenceOk, setIsSequenceOk] = useState(true);
+  const [isDotBracketOk, setIsDotBracketOk] = useState(true);
+  const [sequenceList, setSequenceList] = useState([]);
+  const addOrUpdateSequenceList = (name, sequence) => {
+    console.log("added or updated file", name);
+    console.log("=====================", sequence);
+    setSequenceList((prev) =>
+      prev.some((item) => item.name === name)
+        ? prev.map((item) =>
+            item.name === name ? { ...item, sequence } : item
+          )
+        : [...prev, { name, sequence }]
+    );
+  };
+  const removeFromSequenceList = (name) => {
+    setSequenceList((prev) => prev.filter((item) => item.name !== name));
+  };
+  const findSequenceInSequenceList = (sequence) => {
+    return sequenceList
+      .filter((item) => item.sequence === sequence)
+      .map((item) => item.name);
+  };
+  const findSequenceInSequenceList_local = (list, sequence) => {
+    return list
+      .filter((item) => item.sequence === sequence)
+      .map((item) => item.name);
+  };
   const resetFileList = (file) => {
     //resets both file list and dotBracket textview
     setDotBracket("");
     setFileList([]);
+    setSequenceToCheck("");
+    setIsSequenceOk(true);
+    setIsDotBracketOk(true);
   };
   const resetDotBracket = (file) => {
     //resets the dotBracket textview
@@ -209,11 +241,36 @@ function Home() {
       }
 
       const result = await response.json();
+      console.log("RESPONSE:", result);
+      console.log("SEQUENCE:", result.sequence);
 
       // If we got split files back
       if (result.files && result.files.length > 0) {
         // If there's more than one file returned, it means the file was split
         // or it was an archive that was extracted
+        let localSequenceToCheck = sequenceToCheck;
+        result.files.forEach((file, index) => {
+          //setSequenceToCheck("");
+          //setIsSequenceOk(true);
+          //setIsDotBracketOk(true);
+          if (
+            localSequenceToCheck === "" &&
+            file.sequence != "" &&
+            file.sequence != null
+          ) {
+            localSequenceToCheck = file.sequence;
+            setSequenceToCheck(file.sequence);
+          }
+          if (localSequenceToCheck === file.sequence) {
+            console.log(`File ${index}: seq is ok sequence =`, file.sequence);
+            console.log(`Sequence to check =`, localSequenceToCheck);
+          } else {
+            setIsSequenceOk(false);
+            console.log(`File ${index}: seq not ok sequence =`, file.sequence);
+            console.log(`Sequence to check =`, localSequenceToCheck);
+          }
+        });
+
         if (result.files.length > 1 || fileWithUid.isArchive) {
           // Sort files by model number if they follow the pattern base_model_n.ext
           const sortedFiles = [...result.files].sort((a, b) => {
@@ -228,13 +285,16 @@ function Home() {
 
           // Create File objects for each split file
           const splitFiles = sortedFiles.map((fileData, index) => {
-            const newFile = new File(
-              [fileData.content],
-              fileData.name || `split_${index}_${file.name}`,
-              { type: file.type }
-            );
+            const newFileName = fileData.name || `split_${index}_${file.name}`;
+            const newFile = new File([fileData.content], newFileName, {
+              type: file.type,
+            });
             newFile.url = URL.createObjectURL(newFile);
             newFile.obj = newFile;
+
+            //also save the information on sequenceList
+            addOrUpdateSequenceList(newFileName, fileData.sequence);
+
             return {
               uid: `${Date.now()}_${index}`,
               name: newFile.name,
@@ -279,6 +339,9 @@ function Home() {
               f.uid === fileWithUid.uid ? { ...f, status: "done" } : f
             )
           );
+          //also add the file to the sequenceList
+          //also save the information on sequenceList
+          addOrUpdateSequenceList(file.name, result.files[0].sequence);
         }
       } else {
         // No files returned, update the status of the existing file
@@ -318,18 +381,73 @@ function Home() {
   };
 
   const handleFileListChange = ({ fileList: newFileList }) => {
+    var removedFiles = [];
     // Clean up removed file URLs
     fileList.forEach((file) => {
       if (!newFileList.find((f) => f.uid === file.uid)) {
         URL.revokeObjectURL(file.url);
+        removedFiles.push(file.name);
       }
     });
-
+    console.log("removed files", removedFiles);
     // We'll let the beforeUpload function handle the file list updates
     // This is mainly for handling file removals
     const hasRemovals = fileList.length > newFileList.length;
     if (hasRemovals) {
       setFileList(newFileList);
+      if (newFileList.length == 0) {
+        resetFileList();
+      } else {
+        //we also check if we removed all problematic files
+        //(unmatching the reference sequence, or if we are supposed to change the reference sequence)
+        //remove the file we just removed
+        var sequenceListLocal = sequenceList;
+        removedFiles.forEach((f) => {
+          removeFromSequenceList(f);
+          sequenceListLocal = sequenceListLocal.filter(
+            (item) => item.name !== f
+          );
+        });
+        //check how many files of required sequence remain
+        var filesInSlist = findSequenceInSequenceList_local(
+          sequenceListLocal,
+          sequenceToCheck
+        );
+
+        //check if there are also examples on the file list
+        if (sequenceListLocal.length < newFileList.length) {
+          //there are examples, so we force stay with the example sequence as the one to check
+          //check, if there still are files not fitting the required sequence
+          if (filesInSlist.length < sequenceListLocal.length) {
+            //there certainly are such files, value remains false
+          } else {
+            //all files caught as correct, we set to true
+            setIsSequenceOk(true);
+          }
+        } else {
+          //there aren't any example files, reevaluate, if the list is mayhaps supposed to have new sequence to check
+          //check, if there still are files not fitting the required sequence
+          if (filesInSlist.length < sequenceListLocal.length) {
+            //there certainly are such files
+            //check if no file of old sequence remains:
+            if (filesInSlist.length == 0) {
+              setSequenceToCheck(sequenceListLocal[0].sequence);
+              checkDotBracket(dotBracket, sequenceListLocal[0].sequence);
+              //check if only this sequence is within the list, if so, sequence of files is fine
+              var filesInSlistNew = findSequenceInSequenceList_local(
+                sequenceListLocal,
+                sequenceListLocal[0].sequence
+              );
+              if (filesInSlistNew.length == sequenceListLocal.length) {
+                setIsSequenceOk(true);
+              }
+            }
+          } else {
+            //all files caught as correct, we set to true
+            setIsSequenceOk(true);
+          }
+        }
+      }
     }
   };
 
@@ -348,8 +466,78 @@ function Home() {
       handleSendData(id);
     }
   }, [id]);
+  const checkDotBracket = (string, seqToCheck) => {
+    /*
+     * Regex:
+     * (>.+\r?\n)?([ACGUTRYNacgutryn]+)\r?\n([-.()\[\]{}<>A-Za-z]+)
+     *
+     * Groups:
+     *  1: strand name with leading '>' or null
+     *  2: sequence
+     *  3: structure
+     */
+    const regex =
+      /(>.+\r?\n)?([ACGUTRYNacgutryn]+)\r?\n([-.()\[\]{}<>A-Za-z]+)/;
+    const text = string;
+    const match = text.match(regex);
+    if (text === "") {
+      setIsDotBracketOk(true);
+    } else {
+      if (match) {
+        const extractedSequence = match[2]; // the second capture group
 
+        console.log("Extracted sequence:", extractedSequence);
+        console.log("sequenceToCheck:", seqToCheck);
+
+        if (extractedSequence === seqToCheck) {
+          console.log("✅ Sequence matches");
+          setIsDotBracketOk(true);
+        } else {
+          console.log("❌ Sequence does not match");
+          setIsDotBracketOk(false);
+        }
+      } else {
+        console.log("No match found in input.");
+        setIsDotBracketOk(false);
+      }
+    }
+  };
   const handleDotBracket = (event) => {
+    /*
+     * Regex:
+     * (>.+\r?\n)?([ACGUTRYNacgutryn]+)\r?\n([-.()\[\]{}<>A-Za-z]+)
+     *
+     * Groups:
+     *  1: strand name with leading '>' or null
+     *  2: sequence
+     *  3: structure
+     */
+    // const regex =
+    //   /(>.+\r?\n)?([ACGUTRYNacgutryn]+)\r?\n([-.()\[\]{}<>A-Za-z]+)/;
+    // const text = event.target.value;
+    // const match = text.match(regex);
+    // if (text === "") {
+    //   setIsDotBracketOk(true);
+    // } else {
+    //   if (match) {
+    //     const extractedSequence = match[2]; // the second capture group
+
+    //     console.log("Extracted sequence:", extractedSequence);
+    //     console.log("sequenceToCheck:", sequenceToCheck);
+
+    //     if (extractedSequence === sequenceToCheck) {
+    //       console.log("✅ Sequence matches");
+    //       setIsDotBracketOk(true);
+    //     } else {
+    //       console.log("❌ Sequence does not match");
+    //       setIsDotBracketOk(false);
+    //     }
+    //   } else {
+    //     console.log("No match found in input.");
+    //     setIsDotBracketOk(false);
+    //   }
+    // }
+    checkDotBracket(event.target.value, sequenceToCheck);
     setDotBracket(event.target.value);
   };
 
@@ -479,9 +667,12 @@ function Home() {
       const resultData = await resultResponse.json();
 
       // Fetch user request parameters
-      const requestResponse = await fetch(`${serverAddress}/${taskId}/request`, {
-        method: "GET",
-      });
+      const requestResponse = await fetch(
+        `${serverAddress}/${taskId}/request`,
+        {
+          method: "GET",
+        }
+      );
       if (!requestResponse.ok) {
         throw new Error(
           `Failed to get request parameters. Status: ${requestResponse.status}`
@@ -543,7 +734,8 @@ function Home() {
         originFileObj: file,
         obj: file,
       }));
-
+      resetFileList();
+      setSequenceToCheck("CCGCCGCGCCAUGCCUGUGGCGGCCGCCGCGCCAUGCCUGUGGCGG");
       setFileList(newFiles); // Replace current files with examples
       setDotBracket(
         ">strand_A\n" +
@@ -592,6 +784,8 @@ function Home() {
         obj: file,
       }));
 
+      resetFileList();
+      setSequenceToCheck("CCUGGUAUUGCAGUACCUCCAGGU");
       setFileList(newFiles); // Replace current files with examples
       setDotBracket(
         ">strand_R\n" +
@@ -638,6 +832,10 @@ function Home() {
         obj: file,
       }));
 
+      resetFileList();
+      setSequenceToCheck(
+        "CCUUCCGGCGUCCCAGGCGGGGCGCCGCGGGACCGCCCUCGUGUCUGUGGCGGUGGGAUCCCGCGGCCGUGUUUUCCUGGUGGCCCGGCC"
+      );
       setFileList(newFiles); // Replace current files with examples
       setDotBracket(
         ">strand_A\n" +
@@ -1142,6 +1340,14 @@ function Home() {
             >
               <Row gutter={8}>
                 <Col>
+                  {!isSequenceOk ? (
+                    <div style={{ color: "red" }}>
+                      Please ensure that every file provided has the same
+                      sequence
+                    </div>
+                  ) : (
+                    <div></div>
+                  )}
                   <Upload
                     accept={".pdb,.cif,.zip,.tar.gz,.tgz"}
                     multiple={true}
@@ -1220,6 +1426,14 @@ function Home() {
                 </div>
               }
             >
+              {!isDotBracketOk ? (
+                <div style={{ color: "red" }}>
+                  Please ensure that dot-bracket's sequence is the same as in
+                  the files provided.
+                </div>
+              ) : (
+                <div></div>
+              )}
               <div style={{ position: "relative" }}>
                 <TextArea
                   rows={6}
@@ -1444,8 +1658,20 @@ function Home() {
                     Submit
                   </Button>
                 </Tooltip>
+              ) : !isDotBracketOk ? (
+                <Tooltip title="Fix dot-bracket errors">
+                  <Button type="primary" danger disabled>
+                    Submit
+                  </Button>
+                </Tooltip>
+              ) : !isSequenceOk ? (
+                <Tooltip title="Please provide only files with the same sequence">
+                  <Button type="primary" danger disabled>
+                    Submit
+                  </Button>
+                </Tooltip>
               ) : (
-                <Button type="primary" onClick={() => handleSendData()}>
+                <Button type="primary" onClick={handleSendData}>
                   Submit
                 </Button>
               )}
