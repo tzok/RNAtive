@@ -440,32 +440,11 @@ public class TaskProcessorService {
     if (consensusMode != ConsensusMode.STACKING) {
       logger.debug("Resolving conflicts in base pairs for consensus mode: {}", consensusMode);
       for (var leontisWesthof : LeontisWesthof.values()) {
-        MultiValuedMap<PdbNamedResidueIdentifier, AnalyzedBasePair> map =
-            new ArrayListValuedHashMap<>();
-
-        correctConsideredInteractions.stream()
-            .filter(candidate -> candidate.leontisWesthof() == leontisWesthof)
-            .forEach(
-                candidate -> {
-                  var basePair = candidate.basePair();
-                  map.put(basePair.left(), candidate);
-                  map.put(basePair.right(), candidate);
-                });
-
-        var conflicting =
-            map.keySet().stream()
-                .filter(key -> map.get(key).size() > 1)
-                .flatMap(key -> map.get(key).stream())
-                .distinct()
-                .sorted(Comparator.comparingInt(consideredInteractionsBag::getCount))
-                .collect(Collectors.toList());
-
-        while (!conflicting.isEmpty()) {
-          correctConsideredInteractions.remove(conflicting.get(0));
-
-          // Update the map after removing a conflicting base pair
-          map.clear();
+        while (true) {
+          MultiValuedMap<PdbNamedResidueIdentifier, AnalyzedBasePair> map =
+              new ArrayListValuedHashMap<>();
           correctConsideredInteractions.stream()
+              .filter(candidate -> candidate.interactionType() == InteractionType.BASE_BASE)
               .filter(candidate -> candidate.leontisWesthof() == leontisWesthof)
               .forEach(
                   candidate -> {
@@ -474,13 +453,21 @@ public class TaskProcessorService {
                     map.put(basePair.right(), candidate);
                   });
 
-          conflicting =
+          var conflicting =
               map.keySet().stream()
                   .filter(key -> map.get(key).size() > 1)
                   .flatMap(key -> map.get(key).stream())
                   .distinct()
                   .sorted(Comparator.comparingInt(consideredInteractionsBag::getCount))
                   .toList();
+
+          if (conflicting.isEmpty()) {
+            break; // No more conflicts for this LeontisWesthof type
+          }
+
+          // Remove the lowest-count conflicting pair
+          correctConsideredInteractions.remove(conflicting.get(0));
+          // Loop will recalculate conflicts in the next iteration
         }
       }
     }
