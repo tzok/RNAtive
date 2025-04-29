@@ -893,6 +893,10 @@ public class TaskProcessorService {
                   }
                   // Otherwise, score is the confidence level (frequency)
                   return (double) (consideredInteractionsBag.getCount(v)) / modelCount;
+                }));
+  }
+
+  private boolean isModelValid(
       String modelName,
       MolProbityResponse.Structure structure,
       MolProbityFilter filter,
