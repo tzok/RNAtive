@@ -30,8 +30,9 @@ import pl.poznan.put.api.dto.*;
 import pl.poznan.put.api.exception.TaskNotFoundException;
 import pl.poznan.put.api.model.MolProbityFilter;
 import pl.poznan.put.api.model.Task;
-import pl.poznan.put.api.model.TaskStatus;
-import pl.poznan.put.api.model.VisualizationTool;
+import fr.orsay.lri.varna.models.rna.ModeleBP;
+import java.util.concurrent.atomic.AtomicInteger;
+import pl.poznan.put.api.model.*;
 import pl.poznan.put.api.repository.TaskRepository;
 import pl.poznan.put.api.util.DrawerVarnaTz;
 import pl.poznan.put.api.util.ReferenceStructureUtil;
@@ -43,10 +44,13 @@ import pl.poznan.put.pdb.*;
 import pl.poznan.put.pdb.analysis.*;
 import pl.poznan.put.rnalyzer.MolProbityResponse;
 import pl.poznan.put.rnalyzer.RnalyzerClient;
-import pl.poznan.put.structure.AnalyzedBasePair;
+import pl.poznan.put.structure.*;
 import pl.poznan.put.structure.formats.*;
 import pl.poznan.put.utility.svg.Format;
 import pl.poznan.put.utility.svg.SVGHelper;
+import pl.poznan.put.varna.model.BasePair; // Renamed import to avoid conflict
+import pl.poznan.put.varna.model.Nucleotide;
+import pl.poznan.put.varna.model.StructureData;
 
 @Service
 @Transactional
@@ -60,6 +64,7 @@ public class TaskProcessorService {
   private final VisualizationService visualizationService;
   private final ConversionClient conversionClient;
   private final RnapolisClient rnapolisClient;
+  private final VarnaTzClient varnaTzClient;
 
   @Autowired
   public TaskProcessorService(
@@ -70,7 +75,8 @@ public class TaskProcessorService {
       VisualizationService visualizationService,
       ConversionClient conversionClient,
       DrawerVarnaTz drawerVarnaTz,
-      RnapolisClient rnapolisClient) {
+      RnapolisClient rnapolisClient,
+      VarnaTzClient varnaTzClient) {
     this.taskRepository = taskRepository;
     this.objectMapper = objectMapper;
     this.analysisClient = analysisClient;
@@ -79,6 +85,7 @@ public class TaskProcessorService {
     this.conversionClient = conversionClient;
     this.drawerVarnaTz = drawerVarnaTz;
     this.rnapolisClient = rnapolisClient;
+    this.varnaTzClient = varnaTzClient;
   }
 
   private static List<Pair<AnalyzedBasePair, Double>> sortFuzzySet(
@@ -869,10 +876,11 @@ public class TaskProcessorService {
       VisualizationTool visualizationTool,
       AnalyzedModel firstModel,
       Set<AnalyzedBasePair> correctConsideredInteractions,
-      DotBracketFromPdb dotBracket) {
+      DotBracketFromPdb dotBracket) { // Note: dotBracket might not be needed for VARNA_TZ
     try {
       String svg;
       if (visualizationTool == VisualizationTool.VARNA) {
+        logger.info("Generating visualization using DrawerVarnaTz (local VARNA)");
         var svgDoc =
             drawerVarnaTz.drawSecondaryStructure(
                 dotBracket,
@@ -880,7 +888,14 @@ public class TaskProcessorService {
                 new ArrayList<>(correctConsideredInteractions));
         var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
         svg = new String(svgBytes);
+      } else if (visualizationTool == VisualizationTool.VARNA_TZ) {
+        logger.info("Generating visualization using VarnaTzClient (remote varna-tz service)");
+        var structureData = createStructureData(firstModel, correctConsideredInteractions);
+        var svgDoc = varnaTzClient.visualize(structureData);
+        var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
+        svg = new String(svgBytes);
       } else {
+        logger.info("Generating visualization using VisualizationClient (remote adapters service)");
         var visualizationInput =
             visualizationService.prepareVisualizationInput(firstModel, dotBracket);
         var visualizationJson = objectMapper.writeValueAsString(visualizationInput);
@@ -888,8 +903,10 @@ public class TaskProcessorService {
       }
       return svg;
     } catch (Exception e) {
-      logger.warn("Visualization generation failed", e);
-      throw new RuntimeException("Visualization generation failed: " + e.getMessage(), e);
+      logger.warn("Visualization generation failed for tool: {}", visualizationTool, e);
+      throw new RuntimeException(
+          "Visualization generation failed for tool " + visualizationTool + ": " + e.getMessage(),
+          e);
     }
   }
 
@@ -938,5 +955,104 @@ public class TaskProcessorService {
     result.addAll(correctFuzzyNonCanonicalPairs(fuzzyNonCanonicalPairs));
     result.addAll(correctFuzzyStackings(fuzzyStackings));
     return result;
+  }
+
+  private StructureData createStructureData(
+      AnalyzedModel model, Set<AnalyzedBasePair> correctInteractions) {
+    logger.debug("Creating StructureData for VarnaTzClient");
+    var structureData = new StructureData();
+    var nucleotides = new ArrayList<Nucleotide>();
+    var residueToIdMap = new HashMap<PdbNamedResidueIdentifier, Integer>();
+    var idCounter = new AtomicInteger(1); // Start IDs from 1
+
+    // Create Nucleotides and map PdbNamedResidueIdentifier to generated ID
+    model
+        .residueIdentifiers()
+        .forEach(
+            residueIdentifier -> {
+              var nucleotide = new Nucleotide();
+              int currentId = idCounter.getAndIncrement();
+              nucleotide.id = currentId;
+              nucleotide.number = residueIdentifier.residueNumber();
+              nucleotide.character = String.valueOf(residueIdentifier.oneLetterName());
+              // Colors are left null for now
+              nucleotides.add(nucleotide);
+              residueToIdMap.put(residueIdentifier, currentId);
+              logger.trace(
+                  "Created Nucleotide: id={}, number={}, char={}, mapped from {}",
+                  nucleotide.id,
+                  nucleotide.number,
+                  nucleotide.character,
+                  residueIdentifier);
+            });
+    structureData.nucleotides = nucleotides;
+    logger.debug("Generated {} nucleotides", nucleotides.size());
+
+    // Create BasePairs using the mapped IDs
+    var basePairs =
+        correctInteractions.stream()
+            .filter(
+                interaction ->
+                    interaction.interactionType()
+                        == InteractionType
+                            .BASE_PAIR) // Ensure we only process base pairs for this structure
+            .map(
+                analyzedPair -> {
+                  var varnaBp = new pl.poznan.put.varna.model.BasePair();
+                  var bioCommonsPair = analyzedPair.basePair();
+                  var lw = analyzedPair.leontisWesthof();
+
+                  Integer id1 = residueToIdMap.get(bioCommonsPair.left());
+                  Integer id2 = residueToIdMap.get(bioCommonsPair.right());
+
+                  if (id1 == null || id2 == null) {
+                    logger.warn(
+                        "Could not find mapping for base pair: {}. Skipping.", analyzedPair);
+                    return null; // Skip if mapping not found
+                  }
+
+                  varnaBp.id1 = id1;
+                  varnaBp.id2 = id2;
+                  varnaBp.edge5 = translateEdge(lw.edge5());
+                  varnaBp.edge3 = translateEdge(lw.edge3());
+                  varnaBp.stericity = translateStericity(lw);
+                  varnaBp.canonical = analyzedPair.isCanonical();
+                  // Color and thickness are left null
+
+                  logger.trace(
+                      "Created Varna BasePair: id1={}, id2={}, edge5={}, edge3={}, stericity={},"
+                          + " canonical={}",
+                      varnaBp.id1,
+                      varnaBp.id2,
+                      varnaBp.edge5,
+                      varnaBp.edge3,
+                      varnaBp.stericity,
+                      varnaBp.canonical);
+                  return varnaBp;
+                })
+            .filter(Objects::nonNull) // Remove skipped pairs
+            .collect(Collectors.toList());
+
+    structureData.basePairs = basePairs;
+    logger.debug("Generated {} base pairs for Varna", basePairs.size());
+
+    return structureData;
+  }
+
+  private ModeleBP.Edge translateEdge(final NucleobaseEdge edge) {
+    return switch (edge) {
+      case WATSON_CRICK -> ModeleBP.Edge.WC;
+      case HOOGSTEEN -> ModeleBP.Edge.HOOGSTEEN;
+      case SUGAR -> ModeleBP.Edge.SUGAR;
+      case UNKNOWN -> ModeleBP.Edge.UNKNOWN; // Or handle as needed
+    };
+  }
+
+  private ModeleBP.Stericity translateStericity(final LeontisWesthof lw) {
+    return switch (lw.orientation()) {
+      case CIS -> ModeleBP.Stericity.CIS;
+      case TRANS -> ModeleBP.Stericity.TRANS;
+      case UNKNOWN -> ModeleBP.Stericity.UNKNOWN; // Or handle as needed
+    };
   }
 }
