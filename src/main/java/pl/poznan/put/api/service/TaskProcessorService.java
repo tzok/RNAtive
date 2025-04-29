@@ -1217,7 +1217,7 @@ public class TaskProcessorService {
   private StructureData createStructureData(
       AnalyzedModel model,
       Collection<AnalyzedBasePair> interactionsToVisualize,
-      HashBag<AnalyzedBasePair> consideredInteractionsBag,
+      HashBag<AnalyzedBasePair> allInteractionsBag, // Use the full bag for counts
       int modelCount,
       Map<AnalyzedBasePair, Double> fuzzyConsideredInteractions) {
     logger.debug("Creating StructureData for VarnaTzClient with confidence coloring");
