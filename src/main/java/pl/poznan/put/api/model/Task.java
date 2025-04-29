@@ -76,13 +76,6 @@ public class Task {
     this.result = result;
   }
 
-  public String getSvg() {
-    return svg;
-  }
-
-  public void setSvg(String svg) {
-  }
-
   public String getMessage() {
     return message;
   }
