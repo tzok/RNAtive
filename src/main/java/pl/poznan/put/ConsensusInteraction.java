@@ -2,7 +2,7 @@ package pl.poznan.put;
 
 import java.util.Optional;
 import pl.poznan.put.notation.LeontisWesthof;
-import pl.poznan.put.pdb.analysis.PdbNamedResidueIdentifier;
+import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
 
 /**
  * Represents an interaction (base pair or stacking) identified during consensus analysis.
