@@ -241,11 +241,16 @@ public class TaskProcessorService {
         correctConsideredInteractions =
             new HashSet<>(
                 switch (request.consensusMode()) {
-                  case CANONICAL -> correctFuzzyCanonicalPairs(fuzzyCanonicalPairs);
-                  case NON_CANONICAL -> correctFuzzyNonCanonicalPairs(fuzzyNonCanonicalPairs);
-                  case STACKING -> correctFuzzyStackings(fuzzyStackings);
+                  case CANONICAL -> correctFuzzyCanonicalPairs(fuzzyCanonicalPairs, canonicalPairsBag); // Pass bag
+                  case NON_CANONICAL -> correctFuzzyNonCanonicalPairs(
+                      fuzzyNonCanonicalPairs, nonCanonicalPairsBag); // Pass bag
+                  case STACKING -> correctFuzzyStackings(fuzzyStackings); // No change needed here
                   case ALL -> correctFuzzyAllInteraction(
-                      fuzzyCanonicalPairs, fuzzyNonCanonicalPairs, fuzzyStackings);
+                      fuzzyCanonicalPairs,
+                      fuzzyNonCanonicalPairs,
+                      fuzzyStackings,
+                      allInteractionsBag, // Pass bag
+                      stackingsBag); // Pass bag
                 });
       } else {
         logger.info("Computing correct interactions");
@@ -320,9 +325,12 @@ public class TaskProcessorService {
   }
 
   private DefaultDotBracketFromPdb generateFuzzyDotBracket(
-      AnalyzedModel model, Map<AnalyzedBasePair, Double> fuzzyCanonicalPairs) {
+      AnalyzedModel model,
+      Map<AnalyzedBasePair, Double> fuzzyCanonicalPairs,
+      HashBag<AnalyzedBasePair> canonicalPairsBag) { // Add bag parameter
     var residues = model.residueIdentifiers();
-    var canonicalPairs = correctFuzzyCanonicalPairs(fuzzyCanonicalPairs);
+    // Pass bag to fuzzy correction method
+    var canonicalPairs = correctFuzzyCanonicalPairs(fuzzyCanonicalPairs, canonicalPairsBag);
     logger.trace(
         "Generating dot-bracket notation for {} residues and {} fuzzy canonical base pairs",
         residues.size(),
@@ -335,31 +343,27 @@ public class TaskProcessorService {
   }
 
   private List<AnalyzedBasePair> correctFuzzyCanonicalPairs(
-      Map<AnalyzedBasePair, Double> fuzzyCanonicalPairs) {
-    var used = new HashSet<PdbNamedResidueIdentifier>();
-    var filtered = new ArrayList<AnalyzedBasePair>();
+      Map<AnalyzedBasePair, Double> fuzzyCanonicalPairs,
+      HashBag<AnalyzedBasePair> canonicalPairsBag) { // Add bag parameter
 
     // Filter out pairs with probability 0 before conflict resolution
-    var sortedSet = sortFuzzySet(fuzzyCanonicalPairs);
     var positiveProbabilityPairs =
-        sortedSet.stream().filter(pair -> pair.getRight() > 0.0).toList();
+        sortFuzzySet(fuzzyCanonicalPairs).stream()
+            .filter(pair -> pair.getRight() > 0.0)
+            .map(Pair::getKey) // Get the AnalyzedBasePair
+            .collect(Collectors.toSet()); // Collect into a Set
+    logger.trace(
+        "Found {} fuzzy canonical pairs with probability > 0 before conflict resolution",
+        positiveProbabilityPairs.size());
 
-    for (var entry : positiveProbabilityPairs) {
-      var analyzedBasePair = entry.getKey();
-      var basePair = analyzedBasePair.basePair();
+    // Resolve conflicts using the helper method
+    var resolvedPairs =
+        resolveInteractionConflicts(
+            positiveProbabilityPairs, canonicalPairsBag, ConsensusMode.CANONICAL);
+    logger.trace(
+        "{} fuzzy canonical pairs remaining after conflict resolution", resolvedPairs.size());
 
-      logger.trace("Base pair: {} with probability {}", analyzedBasePair, entry.getValue());
-
-      if (used.contains(basePair.left()) || used.contains(basePair.right())) {
-        continue;
-      }
-
-      used.add(basePair.left());
-      used.add(basePair.right());
-      filtered.add(analyzedBasePair);
-    }
-
-    return filtered;
+    return new ArrayList<>(resolvedPairs); // Return as list
   }
 
   private List<RankedModel> generateFuzzyRankedModels(
@@ -437,46 +441,13 @@ public class TaskProcessorService {
         threshold,
         correctConsideredInteractions.size());
 
-    if (consensusMode != ConsensusMode.STACKING) {
-      logger.debug("Resolving conflicts in base pairs for consensus mode: {}", consensusMode);
-      for (var leontisWesthof : LeontisWesthof.values()) {
-        while (true) {
-          MultiValuedMap<PdbNamedResidueIdentifier, AnalyzedBasePair> map =
-              new ArrayListValuedHashMap<>();
-          correctConsideredInteractions.stream()
-              .filter(candidate -> candidate.interactionType() == InteractionType.BASE_BASE)
-              .filter(candidate -> candidate.leontisWesthof() == leontisWesthof)
-              .forEach(
-                  candidate -> {
-                    var basePair = candidate.basePair();
-                    map.put(basePair.left(), candidate);
-                    map.put(basePair.right(), candidate);
-                  });
+    // Resolve conflicts using the helper method
+    var resolvedInteractions =
+        resolveInteractionConflicts(
+            correctConsideredInteractions, consideredInteractionsBag, consensusMode);
 
-          var conflicting =
-              map.keySet().stream()
-                  .filter(key -> map.get(key).size() > 1)
-                  .flatMap(key -> map.get(key).stream())
-                  .distinct()
-                  .sorted(Comparator.comparingInt(consideredInteractionsBag::getCount))
-                  .toList();
-
-          if (conflicting.isEmpty()) {
-            break; // No more conflicts for this LeontisWesthof type
-          }
-
-          // Remove the lowest-count conflicting pair
-          correctConsideredInteractions.remove(conflicting.get(0));
-          // Loop will recalculate conflicts in the next iteration
-        }
-      }
-    }
-
-    logger.debug(
-        "Number of interactions after conflict resolution: {}",
-        correctConsideredInteractions.size());
     logger.info("Finished computing correct interactions");
-    return correctConsideredInteractions;
+    return resolvedInteractions; // Return the resolved set
   }
 
   private DefaultDotBracketFromPdb generateDotBracket(
@@ -493,6 +464,70 @@ public class TaskProcessorService {
     var sequence = converted.split("\n")[0];
     var structure = converted.split("\n")[1];
     return ImmutableDefaultDotBracketFromPdb.of(sequence, structure, model.structure3D());
+  }
+
+  /**
+   * Resolves conflicts among a set of interactions based on the consensus mode and interaction
+   * counts. For base-base interactions (non-stacking modes), it iteratively removes the
+   * lower-count interaction involved in a conflict for each Leontis-Westhof type until no conflicts
+   * remain.
+   *
+   * @param interactions The initial set of interactions to resolve.
+   * @param interactionCounts A bag containing the counts (frequency or confidence source) for each
+   *     interaction, used for tie-breaking.
+   * @param mode The consensus mode, determining if base-base conflict resolution is needed.
+   * @return A new set containing the interactions after conflict resolution.
+   */
+  private Set<AnalyzedBasePair> resolveInteractionConflicts(
+      Set<AnalyzedBasePair> interactions,
+      HashBag<AnalyzedBasePair> interactionCounts,
+      ConsensusMode mode) {
+    logger.debug("Resolving conflicts for {} interactions (mode: {})", interactions.size(), mode);
+    var resolvedInteractions = new HashSet<>(interactions); // Work on a mutable copy
+
+    if (mode != ConsensusMode.STACKING) {
+      logger.debug("Resolving base-base conflicts");
+      for (var leontisWesthof : LeontisWesthof.values()) {
+        while (true) {
+          MultiValuedMap<PdbNamedResidueIdentifier, AnalyzedBasePair> map =
+              new ArrayListValuedHashMap<>();
+          resolvedInteractions.stream() // Operate on the mutable set
+              .filter(candidate -> candidate.interactionType() == InteractionType.BASE_BASE)
+              .filter(candidate -> candidate.leontisWesthof() == leontisWesthof)
+              .forEach(
+                  candidate -> {
+                    var basePair = candidate.basePair();
+                    map.put(basePair.left(), candidate);
+                    map.put(basePair.right(), candidate);
+                  });
+
+          var conflicting =
+              map.keySet().stream()
+                  .filter(key -> map.get(key).size() > 1)
+                  .flatMap(key -> map.get(key).stream())
+                  .distinct()
+                  .sorted(
+                      Comparator.comparingInt(interactionCounts::getCount)) // Use passed bag count
+                  .toList();
+
+          if (conflicting.isEmpty()) {
+            break; // No more conflicts for this LeontisWesthof type
+          }
+
+          // Remove the lowest-count conflicting pair from the mutable set
+          logger.trace(
+              "Conflict detected for LW {}. Removing lowest count pair: {}",
+              leontisWesthof,
+              conflicting.get(0));
+          resolvedInteractions.remove(conflicting.get(0));
+          // Loop will recalculate conflicts in the next iteration
+        }
+      }
+    }
+
+    logger.debug(
+        "Number of interactions after conflict resolution: {}", resolvedInteractions.size());
+    return resolvedInteractions;
   }
 
   private Map<AnalyzedBasePair, Double> computeFuzzyInteractions(
@@ -945,31 +980,27 @@ public class TaskProcessorService {
   }
 
   private List<AnalyzedBasePair> correctFuzzyNonCanonicalPairs(
-      Map<AnalyzedBasePair, Double> fuzzyNonCanonicalPairs) {
-    var used = new HashSet<Pair<PdbNamedResidueIdentifier, NucleobaseEdge>>();
-    var filtered = new ArrayList<AnalyzedBasePair>();
+      Map<AnalyzedBasePair, Double> fuzzyNonCanonicalPairs,
+      HashBag<AnalyzedBasePair> nonCanonicalPairsBag) { // Add bag parameter
 
     // Filter out pairs with probability 0 before conflict resolution
-    var sortedSet = sortFuzzySet(fuzzyNonCanonicalPairs);
     var positiveProbabilityPairs =
-        sortedSet.stream().filter(pair -> pair.getRight() > 0.0).toList();
+        sortFuzzySet(fuzzyNonCanonicalPairs).stream()
+            .filter(pair -> pair.getRight() > 0.0)
+            .map(Pair::getKey) // Get the AnalyzedBasePair
+            .collect(Collectors.toSet()); // Collect into a Set
+    logger.trace(
+        "Found {} fuzzy non-canonical pairs with probability > 0 before conflict resolution",
+        positiveProbabilityPairs.size());
 
-    for (var entry : positiveProbabilityPairs) {
-      logger.trace("Base pair: {} with probability {}", entry.getKey(), entry.getValue());
-      var key = entry.getKey();
-      var left = Pair.of(key.basePair().left(), key.leontisWesthof().edge5());
-      var right = Pair.of(key.basePair().right(), key.leontisWesthof().edge3());
+    // Resolve conflicts using the helper method
+    var resolvedPairs =
+        resolveInteractionConflicts(
+            positiveProbabilityPairs, nonCanonicalPairsBag, ConsensusMode.NON_CANONICAL);
+    logger.trace(
+        "{} fuzzy non-canonical pairs remaining after conflict resolution", resolvedPairs.size());
 
-      if (used.contains(left) || used.contains(right)) {
-        continue;
-      }
-
-      used.add(left);
-      used.add(right);
-      filtered.add(key);
-    }
-
-    return filtered;
+    return new ArrayList<>(resolvedPairs); // Return as list
   }
 
   private List<AnalyzedBasePair> correctFuzzyStackings(
@@ -984,17 +1015,46 @@ public class TaskProcessorService {
   private List<AnalyzedBasePair> correctFuzzyAllInteraction(
       Map<AnalyzedBasePair, Double> fuzzyCanonicalPairs,
       Map<AnalyzedBasePair, Double> fuzzyNonCanonicalPairs,
-      Map<AnalyzedBasePair, Double> fuzzyStackings) {
-    var result = correctFuzzyCanonicalPairs(fuzzyCanonicalPairs);
-    result.addAll(correctFuzzyNonCanonicalPairs(fuzzyNonCanonicalPairs));
-    result.addAll(correctFuzzyStackings(fuzzyStackings));
-    return result;
+      Map<AnalyzedBasePair, Double> fuzzyStackings,
+      HashBag<AnalyzedBasePair> allInteractionsBag, // Add bag parameter
+      HashBag<AnalyzedBasePair> stackingsBag) { // Add bag parameter (optional for now)
+
+    // Combine positive-probability canonical and non-canonical pairs
+    var positiveBasePairs = new HashSet<AnalyzedBasePair>();
+    fuzzyCanonicalPairs.entrySet().stream()
+        .filter(entry -> entry.getValue() > 0.0)
+        .map(Map.Entry::getKey)
+        .forEach(positiveBasePairs::add);
+    fuzzyNonCanonicalPairs.entrySet().stream()
+        .filter(entry -> entry.getValue() > 0.0)
+        .map(Map.Entry::getKey)
+        .forEach(positiveBasePairs::add);
+    logger.trace(
+        "Found {} fuzzy base pairs (canonical + non-canonical) with probability > 0 before"
+            + " conflict resolution",
+        positiveBasePairs.size());
+
+    // Resolve conflicts for base pairs using the helper method
+    var resolvedBasePairs =
+        resolveInteractionConflicts(positiveBasePairs, allInteractionsBag, ConsensusMode.ALL);
+    logger.trace(
+        "{} fuzzy base pairs remaining after conflict resolution", resolvedBasePairs.size());
+
+    // Initialize result with resolved base pairs
+    var filtered = new ArrayList<>(resolvedBasePairs);
+
+    // Add stackings with positive probability (no conflict resolution needed for them here)
+    var positiveStackings = correctFuzzyStackings(fuzzyStackings);
+    logger.trace("Adding {} fuzzy stackings with probability > 0", positiveStackings.size());
+    filtered.addAll(positiveStackings);
+
+    logger.trace("Total {} fuzzy interactions (resolved base pairs + stackings)", filtered.size());
+    return filtered;
   }
 
   private StructureData createStructureData(
       AnalyzedModel model,
       Set<AnalyzedBasePair> interactionsToVisualize,
-      // Context for confidence coloring
       HashBag<AnalyzedBasePair> consideredInteractionsBag,
       int modelCount,
       Map<AnalyzedBasePair, Double> fuzzyConsideredInteractions) {
@@ -1140,7 +1200,7 @@ public class TaskProcessorService {
     };
   }
 
-  private static final Colormap COLORMAP = Colormaps.get("RdYlGn");
+  private static final Colormap COLORMAP = Colormaps.get("Algae");
 
   /**
    * Generates a hex color string (#RRGGBB) based on a confidence score (0.0 to 1.0) using the Blues
