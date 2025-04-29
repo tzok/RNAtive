@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Alert, Collapse, Spin, Table, Row, Tooltip } from "antd";
 import { getTableColumns, getTableRows } from "./utils/tableUtils";
 import DownloadButton from "./DownloadButton";
+import SvgImg from "./SvgImg"; // Import SvgImg
 import { QuestionCircleOutlined } from "@ant-design/icons";
 const FileDetails = ({ taskId, serverAddress, filename, fileCount }) => {
   const [data, setData] = useState(null);
@@ -62,11 +63,24 @@ const FileDetails = ({ taskId, serverAddress, filename, fileCount }) => {
     {
       key: filename + "-2d-structure",
       label: "Secondary structure",
-      children: (
-        <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+      children: [
+        <SvgImg
+          key="svg"
+          serverAddress={serverAddress}
+          taskId={taskId}
+          modelName={filename} // Pass the filename as modelName
+        />,
+        <pre
+          key="dotbracket"
+          style={{
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            marginTop: "16px",
+          }} // Add some margin
+        >
           {data.dotBracket}
-        </pre>
-      ),
+        </pre>,
+      ],
     },
     {
       key: filename + "-base-pairs",
