@@ -398,10 +398,7 @@ public class TaskProcessorService {
                           (category == InteractionCategory.BASE_PAIR)
                               ? Optional.of(analyzedPair.leontisWesthof())
                               : Optional.<LeontisWesthof>empty();
-                      boolean isCanonical =
-                          category == InteractionCategory.BASE_PAIR
-                              && lw.isPresent()
-                              && lw.get().isCanonical();
+                      boolean isCanonical = analyzedPair.isCanonical();
                       int count =
                           combinedAllBag.getCount(analyzedPair); // Use combined bag for count
                       boolean presentInRef =
@@ -430,11 +427,11 @@ public class TaskProcessorService {
                           p2,
                           category,
                           lw,
+                          isCanonical,
                           count,
                           probability,
                           presentInRef,
-                          forbiddenInRef,
-                          isCanonical);
+                          forbiddenInRef);
                     }));
 
     logger.debug(
@@ -1274,16 +1271,21 @@ public class TaskProcessorService {
 
       // Calculate INF and F1 scores based on mode
       double inf;
+      double inf;
       double f1;
       if (confidenceLevel == null) { // Fuzzy mode
         logger.debug("Calculating fuzzy INF and F1 scores for model {}", model.name());
-        inf = InteractionNetworkFidelity.calculateFuzzy(fuzzyTargetMap, modelInteractionsAnalyzed);
-        f1 = F1score.calculateFuzzy(fuzzyTargetMap, modelInteractionsAnalyzed);
+        inf =
+            InteractionNetworkFidelity.<AnalyzedBasePair>calculateFuzzy(
+                fuzzyTargetMap, modelInteractionsAnalyzed);
+        f1 = F1score.<AnalyzedBasePair>calculateFuzzy(fuzzyTargetMap, modelInteractionsAnalyzed);
         logger.debug("Model {}: Fuzzy INF = {}, Fuzzy F1 = {}", model.name(), inf, f1);
       } else { // Threshold mode
         logger.debug("Calculating threshold INF and F1 scores for model {}", model.name());
-        inf = InteractionNetworkFidelity.calculate(thresholdTargetSet, modelInteractionsAnalyzed);
-        f1 = F1score.calculate(thresholdTargetSet, modelInteractionsAnalyzed);
+        inf =
+            InteractionNetworkFidelity.<AnalyzedBasePair>calculate(
+                thresholdTargetSet, modelInteractionsAnalyzed);
+        f1 = F1score.<AnalyzedBasePair>calculate(thresholdTargetSet, modelInteractionsAnalyzed);
         logger.debug("Model {}: Threshold INF = {}, Threshold F1 = {}", model.name(), inf, f1);
       }
 
