@@ -327,7 +327,7 @@ public class TaskProcessorService {
    * across models.
    */
   private record InteractionCollectionResult(
-      List<ConsensusInteraction> sortedInteractions, // Populated only in the aggregated result
+      List<?> sortedInteractions, // Can be List<ConsensusInteraction> or List<AnalyzedBasePair>
       HashBag<AnalyzedBasePair> canonicalPairsBag,
       HashBag<AnalyzedBasePair> nonCanonicalPairsBag,
       HashBag<AnalyzedBasePair> stackingsBag,
@@ -365,7 +365,10 @@ public class TaskProcessorService {
       var modelResult = collectInteractionsForModel(model);
       perModelResults.put(model.name(), modelResult); // Store per-model result
       if (logger.isTraceEnabled()) {
-        logger.trace("Interactions collected for model {}: {}", model.name(), modelResult);
+        logger.trace("Sorted interactions found in model {}:", model.name());
+        // Log the sorted list of AnalyzedBasePair from the per-model result
+        ((List<AnalyzedBasePair>) modelResult.sortedInteractions())
+            .forEach(interaction -> logger.trace("  {}", interaction));
       }
       combinedCanonicalBag.addAll(modelResult.canonicalPairsBag());
       combinedNonCanonicalBag.addAll(modelResult.nonCanonicalPairsBag());
@@ -460,8 +463,7 @@ public class TaskProcessorService {
             .filter(BasePair::isCanonical)
             .map(model::basePairToAnalyzed)
             .collect(Collectors.toCollection(HashBag::new));
-    logger.trace(
-        "Model {}: Found {} canonical base pairs", model.name(), canonicalPairsBag.size());
+    logger.trace("Model {}: Found {} canonical base pairs", model.name(), canonicalPairsBag.size());
 
     var nonCanonicalPairsBag =
         model.structure2D().basePairs().stream()
@@ -469,9 +471,7 @@ public class TaskProcessorService {
             .map(model::basePairToAnalyzed)
             .collect(Collectors.toCollection(HashBag::new));
     logger.trace(
-        "Model {}: Found {} non-canonical base pairs",
-        model.name(),
-        nonCanonicalPairsBag.size());
+        "Model {}: Found {} non-canonical base pairs", model.name(), nonCanonicalPairsBag.size());
 
     var stackingsBag =
         model.structure2D().stackings().stream()
@@ -485,9 +485,15 @@ public class TaskProcessorService {
     logger.trace(
         "Model {}: Total interactions (all types): {}", model.name(), allInteractionsBag.size());
 
-    // Note: The sortedInteractions list is not populated here, only the bags.
+    // Sort the unique interactions found in this model
+    var sortedModelInteractions =
+        allInteractionsBag.uniqueSet().stream().sorted().collect(Collectors.toList());
+    logger.trace(
+        "Model {}: Sorted {} unique interactions", model.name(), sortedModelInteractions.size());
+
+    // Return the result including the sorted list of AnalyzedBasePair for this model
     return new InteractionCollectionResult(
-        Collections.emptyList(), // No consensus interactions at this stage
+        sortedModelInteractions, // Sorted interactions for this specific model
         canonicalPairsBag,
         nonCanonicalPairsBag,
         stackingsBag,
