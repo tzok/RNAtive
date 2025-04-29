@@ -388,7 +388,15 @@ public class TaskProcessorService {
                           ? Optional.of(analyzedPair.leontisWesthof())
                           : Optional.<LeontisWesthof>empty();
                   int count = allInteractionsBag.getCount(analyzedPair);
-                  boolean isRef = referenceStructure.basePairs().contains(analyzedPair.basePair());
+                  boolean presentInRef =
+                      referenceStructure.basePairs().contains(analyzedPair.basePair());
+                  boolean forbiddenInRef =
+                      referenceStructure.markedResidues().contains(analyzedPair.basePair().left())
+                          || referenceStructure
+                              .markedResidues()
+                              .contains(analyzedPair.basePair().right());
+                  double probability =
+                      analyzedModels.isEmpty() ? 0.0 : (double) count / analyzedModels.size();
 
                   // Ensure partner1 is always "less than" partner2 for consistent sorting
                   var p1 = analyzedPair.basePair().left();
@@ -399,7 +407,15 @@ public class TaskProcessorService {
                     p2 = temp;
                   }
 
-                  return new ConsensusInteraction(p1, p2, category, lw, count, isRef);
+                  return new ConsensusInteraction(
+                      p1,
+                      p2,
+                      category,
+                      lw,
+                      count,
+                      probability,
+                      presentInRef,
+                      forbiddenInRef);
                 })
             .toList();
 
