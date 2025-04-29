@@ -80,7 +80,26 @@ public class ComputeService {
       throw new ResourceNotFoundException("SVG visualization not available");
     }
 
-    return task.getSvg();
+    var modelSvgs = task.getModelSvgs();
+    if (modelSvgs == null || !modelSvgs.containsKey("consensus")) {
+      throw new ResourceNotFoundException("Consensus SVG visualization not available for task " + taskId);
+    }
+    return modelSvgs.get("consensus");
+  }
+
+  public String getModelSvg(String taskId, String modelName) {
+    var task = taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
+
+    if (task.getStatus() != TaskStatus.COMPLETED) {
+      throw new IllegalStateException("Task " + taskId + " is not completed yet");
+    }
+
+    var modelSvgs = task.getModelSvgs();
+    if (modelSvgs == null || !modelSvgs.containsKey(modelName)) {
+      throw new ResourceNotFoundException(
+          String.format("SVG visualization not available for model '%s' in task %s", modelName, taskId));
+    }
+    return modelSvgs.get(modelName);
   }
 
   /**

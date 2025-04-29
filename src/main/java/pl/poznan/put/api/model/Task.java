@@ -17,9 +17,13 @@ public class Task {
 
   @Lob private String result;
 
-  @Lob private String svg;
-
   @Lob private String message;
+
+  @ElementCollection(fetch = FetchType.LAZY)
+  @CollectionTable(name = "model_svgs", joinColumns = @JoinColumn(name = "task_id"))
+  @MapKeyColumn(name = "model_name")
+  @Column(name = "svg_content", columnDefinition = "TEXT")
+  private Map<String, String> modelSvgs = new HashMap<>();
 
   @ElementCollection(fetch = FetchType.EAGER)
   @CollectionTable(name = "removal_reasons", joinColumns = @JoinColumn(name = "task_id"))
@@ -77,7 +81,6 @@ public class Task {
   }
 
   public void setSvg(String svg) {
-    this.svg = svg;
   }
 
   public String getMessage() {
@@ -102,5 +105,13 @@ public class Task {
 
   public void addMolProbityResponse(String modelName, String responseJson) {
     molprobityResponses.put(modelName, responseJson);
+  }
+
+  public Map<String, String> getModelSvgs() {
+    return modelSvgs;
+  }
+
+  public void addModelSvg(String modelName, String svgContent) {
+    modelSvgs.put(modelName, svgContent);
   }
 }

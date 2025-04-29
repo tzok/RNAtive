@@ -50,10 +50,20 @@ public class ComputeController {
   }
 
   @GetMapping(value = "/{taskId}/svg", produces = "image/svg+xml")
-  public String getSvg(@PathVariable String taskId) {
+  public String getConsensusSvg(@PathVariable String taskId) {
     try {
+      // This endpoint now returns the consensus SVG by default
       return computeService.getTaskSvg(taskId);
-    } catch (ResourceNotFoundException e) {
+    } catch (ResourceNotFoundException | IllegalStateException e) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
+    }
+  }
+
+  @GetMapping(value = "/{taskId}/svg/{modelName}", produces = "image/svg+xml")
+  public String getModelSvg(@PathVariable String taskId, @PathVariable String modelName) {
+    try {
+      return computeService.getModelSvg(taskId, modelName);
+    } catch (ResourceNotFoundException | IllegalStateException e) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
     }
   }
