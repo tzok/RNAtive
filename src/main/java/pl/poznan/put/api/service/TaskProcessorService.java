@@ -1206,6 +1206,107 @@ public class TaskProcessorService {
 
   // Removed validateGoodAndCaution as it's no longer used
 
+  /**
+   * Generates ranked models based on the comparison against a determined consensus set. Handles
+   * both threshold and fuzzy modes.
+   *
+   * @param analyzedModels The list of models to rank.
+   * @param fullInteractionResult The complete interaction results (aggregated and per-model).
+   * @param request The original compute request containing parameters.
+   * @param referenceStructure The parsed reference structure.
+   * @return A list of RankedModel objects, sorted by rank.
+   */
+  private List<RankedModel> generateRankedModels(
+      List<AnalyzedModel> analyzedModels,
+      FullInteractionCollectionResult fullInteractionResult,
+      ComputeRequest request,
+      ReferenceStructureUtil.ReferenceParseResult referenceStructure) {
+
+    logger.info("Starting generation of ranked models (unified logic)");
+    Integer confidenceLevel = request.confidenceLevel();
+    ConsensusMode consensusMode = request.consensusMode();
+
+    // 1. Determine the target consensus set based on the request's mode and consensus type
+    Set<ConsensusInteraction> targetConsensusSet =
+        determineConsensusSet(
+            fullInteractionResult.aggregatedResult().sortedInteractions(),
+            confidenceLevel,
+            referenceStructure,
+            consensusMode);
+
+    // Prepare data structures needed for scoring based on mode
+    Map<AnalyzedBasePair, Double> fuzzyTargetMap = null;
+    Set<AnalyzedBasePair> thresholdTargetSet = null;
+    if (confidenceLevel == null) { // Fuzzy mode
+      fuzzyTargetMap = consensusSetToFuzzyMap(targetConsensusSet);
+      logger.debug("Prepared fuzzy target map with {} entries for scoring", fuzzyTargetMap.size());
+    } else { // Threshold mode
+      thresholdTargetSet = consensusSetToAnalyzedSet(targetConsensusSet);
+      logger.debug(
+          "Prepared threshold target set with {} entries for scoring", thresholdTargetSet.size());
+    }
+
+    // 2. Iterate through models, calculate scores, and generate dot-brackets
+    var rankedModelsList = new ArrayList<RankedModel>();
+    for (AnalyzedModel model : analyzedModels) {
+      logger.debug("Processing model for ranking: {}", model.name());
+      InteractionCollectionResult modelResult = fullInteractionResult.perModelResults().get(model.name());
+      if (modelResult == null) {
+          logger.warn("Could not find per-model interaction results for {}. Skipping ranking.", model.name());
+          continue; // Should not happen ideally
+      }
+
+      // Get the model's interactions matching the consensus mode
+      // Note: We don't need to re-filter by isInteractionConsidered here for scoring,
+      // as scoring functions compare the model's raw interactions against the target set.
+      // We just need the AnalyzedBasePair representation of the model's interactions.
+      Set<AnalyzedBasePair> modelInteractionsAnalyzed =
+          model.streamBasePairs(consensusMode).collect(Collectors.toSet());
+      logger.trace("Model {} has {} interactions of type {}", model.name(), modelInteractionsAnalyzed.size(), consensusMode);
+
+
+      // Calculate INF and F1 scores based on mode
+      double inf;
+      double f1;
+      if (confidenceLevel == null) { // Fuzzy mode
+        logger.debug("Calculating fuzzy INF and F1 scores for model {}", model.name());
+        inf = InteractionNetworkFidelity.calculateFuzzy(fuzzyTargetMap, modelInteractionsAnalyzed);
+        f1 = F1score.calculateFuzzy(fuzzyTargetMap, modelInteractionsAnalyzed);
+        logger.debug("Model {}: Fuzzy INF = {}, Fuzzy F1 = {}", model.name(), inf, f1);
+      } else { // Threshold mode
+        logger.debug("Calculating threshold INF and F1 scores for model {}", model.name());
+        inf = InteractionNetworkFidelity.calculate(thresholdTargetSet, modelInteractionsAnalyzed);
+        f1 = F1score.calculate(thresholdTargetSet, modelInteractionsAnalyzed);
+        logger.debug("Model {}: Threshold INF = {}, Threshold F1 = {}", model.name(), inf, f1);
+      }
+
+      // Generate dot-bracket for the model
+      logger.debug("Generating dot-bracket for model {}", model.name());
+      DefaultDotBracketFromPdb dotBracket =
+          generateDotBracketForModel(model, modelResult, confidenceLevel, referenceStructure);
+
+      rankedModelsList.add(new RankedModel(model, inf, f1, dotBracket));
+    }
+
+    // 3. Rank the models based on Interaction Network Fidelity (INF)
+    logger.info("Ranking {} models based on Interaction Network Fidelity", rankedModelsList.size());
+    final var infs = // Use final for lambda capture clarity
+        rankedModelsList.stream()
+            .map(RankedModel::getInteractionNetworkFidelity)
+            .sorted(Comparator.reverseOrder())
+            .toList();
+    rankedModelsList.forEach(
+        rankedModel -> {
+          int rank = infs.indexOf(rankedModel.getInteractionNetworkFidelity()) + 1;
+          rankedModel.setRank(rank);
+          logger.trace("Model {} assigned rank {}", rankedModel.getName(), rank);
+        });
+    rankedModelsList.sort(Comparator.comparingInt(RankedModel::getRank)); // Sort by rank
+
+    logger.info("Finished generating ranked models");
+    return rankedModelsList;
+  }
+
   // Removed old generateRankedModels
 
   private String generateVisualization( // Will be modified later
