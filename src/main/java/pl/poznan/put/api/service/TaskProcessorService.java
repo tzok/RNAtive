@@ -1115,7 +1115,7 @@ public class TaskProcessorService {
     };
   }
 
-  private static final Colormap COLORMAP = Colormaps.Blues;
+  private static final Colormap COLORMAP = Colormaps.get("RdYlGn");
 
   /**
    * Generates a hex color string (#RRGGBB) based on a confidence score (0.0 to 1.0) using the
