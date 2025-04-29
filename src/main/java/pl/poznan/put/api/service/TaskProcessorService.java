@@ -319,6 +319,353 @@ public class TaskProcessorService {
     return CompletableFuture.completedFuture(null);
   }
 
+  /** Internal record to hold intermediate parsing results. */
+  private record ParsedModel(String name, String content, PdbModel structure3D) {}
+
+  /**
+   * Parses PDB files, filters for RNA, and handles basic parsing errors.
+   *
+   * @param files The list of FileData objects to parse.
+   * @return A list of ParsedModel objects.
+   */
+  private List<ParsedModel> parsePdbFiles(List<FileData> files) {
+    logger.info("Parsing {} PDB files in parallel", files.size());
+    return files.parallelStream()
+        .map(
+            fileData -> {
+              try {
+                PdbModel structure3D =
+                    new PdbParser()
+                        .parse(fileData.content()).stream()
+                            .findFirst()
+                            .map(model -> model.filteredNewInstance(MoleculeType.RNA))
+                            .orElseThrow(
+                                () ->
+                                    new RuntimeException(
+                                        "No RNA structure found in file " + fileData.name()));
+                return new ParsedModel(fileData.name(), fileData.content(), structure3D);
+              } catch (Exception e) {
+                // Log and save problematic file content for debugging
+                String errorFileName = "error-" + fileData.name();
+                Path tempFilePath = Paths.get("/tmp", errorFileName);
+                try {
+                  logger.warn(
+                      "Failed to parse file {}, saving content to {}. Error: {}",
+                      fileData.name(),
+                      tempFilePath,
+                      e.getMessage());
+                  Files.writeString(
+                      tempFilePath,
+                      fileData.content(),
+                      StandardOpenOption.CREATE,
+                      StandardOpenOption.WRITE,
+                      StandardOpenOption.TRUNCATE_EXISTING);
+                } catch (IOException ioEx) {
+                  logger.error(
+                      "Failed to save content of {} to {}",
+                      fileData.name(),
+                      tempFilePath,
+                      ioEx);
+                }
+                // Propagate the original parsing exception
+                throw new RuntimeException(
+                    "Failed to parse file " + fileData.name() + ": " + e.getMessage(), e);
+              }
+            })
+        .toList();
+  }
+
+  /**
+   * Checks for consistency in nucleotide composition and identifiers across models. Attempts to
+   * unify models if sequences match but identifiers differ.
+   *
+   * @param models The list of parsed models.
+   * @return The list of models, potentially unified.
+   * @throws RuntimeException if models have fundamentally different sequences or unification fails.
+   */
+  private List<ParsedModel> unifyModelsIfNeeded(List<ParsedModel> models) {
+    logger.info("Checking nucleotide composition consistency for {} models", models.size());
+    var identifiersToModels =
+        models.stream()
+            .collect(Collectors.groupingBy(model -> model.structure3D.namedResidueIdentifiers()));
+
+    if (identifiersToModels.size() <= 1) {
+      logger.info("All models have consistent nucleotide composition and identifiers.");
+      return models; // No unification needed
+    }
+
+    logger.warn(
+        "Models have inconsistent identifiers ({} groups found). Checking sequences.",
+        identifiersToModels.size());
+
+    // Check if sequences are identical despite identifier differences
+    var sequences =
+        identifiersToModels.keySet().stream()
+            .map(
+                list ->
+                    list.stream()
+                        .map(PdbNamedResidueIdentifier::oneLetterName)
+                        .map(String::valueOf)
+                        .map(String::toUpperCase)
+                        .collect(Collectors.joining()))
+            .collect(Collectors.toSet());
+
+    if (sequences.size() > 1) {
+      logger.error("Models have fundamentally different sequences. Cannot proceed.");
+      throw new RuntimeException(formatNucleotideCompositionError(identifiersToModels));
+    }
+
+    logger.info(
+        "Sequences match despite identifier differences. Attempting model unification (renaming,"
+            + " renumbering, forcing MODRES).");
+
+    // Find indices of modified residues across all models
+    var modifiedResidueIndices =
+        models.stream()
+            .map(ParsedModel::structure3D)
+            .map(ResidueCollection::residues)
+            .map(
+                residues ->
+                    IntStream.range(0, residues.size())
+                        .boxed()
+                        .filter(i -> residues.get(i).isModified())
+                        .toList())
+            .flatMap(Collection::stream)
+            .collect(Collectors.toSet());
+    logger.debug("Indices of modified residues found across models: {}", modifiedResidueIndices);
+
+    // Regenerate models with a unified scheme (Chain A, 1-based numbering, no icodes, forced
+    // MODRES)
+    var unifiedModels =
+        models.stream()
+            .map(
+                model -> {
+                  logger.trace("Unifying model: {}", model.name());
+                  var originalResidues = model.structure3D.residues();
+                  int residueCount = originalResidues.size();
+
+                  // Create mapping from old identifier to new unified identifier
+                  var mapping =
+                      IntStream.range(0, residueCount)
+                          .boxed()
+                          .collect(
+                              Collectors.toMap(
+                                  i -> originalResidues.get(i).identifier(),
+                                  i ->
+                                      ImmutablePdbResidueIdentifier.of(
+                                          "A", i + 1, Optional.empty())));
+
+                  // Generate MODRES lines for residues identified as modified in *any* model
+                  var modresLines =
+                      IntStream.range(0, residueCount)
+                          .boxed()
+                          .filter(modifiedResidueIndices::contains)
+                          .map(
+                              i -> {
+                                var name = originalResidues.get(i).standardResidueName();
+                                return ImmutablePdbModresLine.of(
+                                    "", name, "A", i + 1, Optional.empty(), name.toLowerCase(), "");
+                              })
+                          .toList();
+
+                  // Regenerate atom lines with new chain and residue numbers
+                  var atoms =
+                      model.structure3D.atoms().stream()
+                          .map(
+                              atom -> {
+                                var identifier = PdbResidueIdentifier.from(atom);
+                                var mapped =
+                                    mapping.get(identifier); // Should always exist if parsing
+                                // succeeded
+                                if (mapped == null) {
+                                  // This indicates an internal logic error
+                                  throw new IllegalStateException(
+                                      "Internal error: No mapping found for residue "
+                                          + identifier
+                                          + " during unification of model "
+                                          + model.name());
+                                }
+                                return (PdbAtomLine)
+                                    ImmutablePdbAtomLine.copyOf(atom)
+                                        .withChainIdentifier(mapped.chainIdentifier())
+                                        .withResidueNumber(mapped.residueNumber())
+                                        .withInsertionCode(Optional.empty());
+                              })
+                          .toList();
+
+                  // Rebuild the PdbModel with unified data
+                  var regenerated =
+                      ImmutableDefaultPdbModel.of(
+                          ImmutablePdbHeaderLine.of("", new Date(0L), ""),
+                          ImmutablePdbExpdtaLine.of(Collections.emptyList()),
+                          ImmutablePdbRemark2Line.of(Double.NaN),
+                          1, // Assuming single model PDBs after RNApolis splitting
+                          atoms,
+                          modresLines,
+                          Collections.emptyList(), // Assuming no TER cards needed for RNA
+                          "", // Original PDB content is lost here, using regenerated
+                          Collections.emptyList()); // Assuming no CONECT records needed
+
+                  logger.trace("Finished unifying model: {}", model.name());
+                  // Return a new ParsedModel with the regenerated structure and its PDB string
+                  return new ParsedModel(model.name, regenerated.toPdb(), regenerated);
+                })
+            .toList();
+
+    // Final check after unification
+    var finalIdentifiersToModels =
+        unifiedModels.stream()
+            .collect(Collectors.groupingBy(model -> model.structure3D.namedResidueIdentifiers()));
+    if (finalIdentifiersToModels.size() > 1) {
+      // This should ideally not happen if sequences matched
+      logger.error("Model unification failed. Inconsistent identifiers remain.");
+      throw new RuntimeException(formatNucleotideCompositionError(finalIdentifiersToModels));
+    }
+
+    logger.info("Model unification successful.");
+    return unifiedModels;
+  }
+
+  /**
+   * Filters models based on MolProbity analysis results.
+   *
+   * @param models The list of models to filter.
+   * @param filter The MolProbity filter level.
+   * @param task The current task, used to store removal reasons and responses.
+   * @return A list of models that passed the filter.
+   */
+  private List<ParsedModel> filterModelsWithMolProbity(
+      List<ParsedModel> models, MolProbityFilter filter, Task task) {
+    if (filter == MolProbityFilter.ALL) {
+      logger.info("MolProbity filtering is set to ALL, skipping filtering.");
+      return new ArrayList<>(models); // Return a mutable copy
+    }
+
+    logger.info("Attempting MolProbity filtering with level: {}", filter);
+    var validModels = new ArrayList<ParsedModel>(); // Use mutable list
+
+    try (var rnalyzerClient = new RnalyzerClient()) {
+      rnalyzerClient.initializeSession();
+
+      for (ParsedModel model : models) {
+        MolProbityResponse response = null;
+        boolean isValid = true; // Assume valid unless proven otherwise or analysis fails
+        try {
+          response = rnalyzerClient.analyzePdbContent(model.content(), model.name());
+
+          // Store the MolProbity response JSON in the task
+          try {
+            String responseJson = objectMapper.writeValueAsString(response);
+            task.addMolProbityResponse(model.name(), responseJson);
+          } catch (JsonProcessingException e) {
+            logger.error(
+                "Failed to serialize MolProbityResponse for model {}", model.name(), e);
+            task.addMolProbityResponse(model.name(), "{\"error\": \"Serialization failed\"}");
+          }
+
+          // Check validity using the obtained response
+          isValid = isModelValid(model.name(), response.structure(), filter, task);
+
+        } catch (Exception e) {
+          logger.warn(
+              "MolProbity analysis failed for model {}: {}. Model will be included by default.",
+              model.name(),
+              e.getMessage());
+          // Store an error indication if analysis failed
+          if (response == null) { // Only store error if we didn't get a response to serialize
+            task.addMolProbityResponse(
+                model.name(),
+                String.format(
+                    "{\"error\": \"MolProbity analysis failed: %s\"}", e.getMessage()));
+          }
+          isValid = true; // Include model if analysis fails
+        }
+
+        if (isValid) {
+          validModels.add(model);
+        }
+        // Removal reason is added within isModelValid if !isValid
+      }
+
+      logger.info(
+          "MolProbity filtering completed. {} models passed out of {}.",
+          validModels.size(),
+          models.size());
+      return validModels;
+
+    } catch (Exception e) {
+      logger.warn(
+          "MolProbity filtering failed due to an error initializing or using the RNAlyzer service:"
+              + " {}. Proceeding without MolProbity filtering.",
+          e.getMessage());
+      // If the RNAlyzer service fails entirely, return all original models
+      return new ArrayList<>(models); // Return a mutable copy
+    }
+  }
+
+  /**
+   * Analyzes the secondary structure (2D) of the given models using the specified analyzer.
+   *
+   * @param models The list of models (3D structures) to analyze.
+   * @param analyzer The secondary structure analysis tool to use.
+   * @return A list of AnalyzedModel objects containing both 3D and 2D information.
+   */
+  private List<AnalyzedModel> analyzeSecondaryStructures(
+      List<ParsedModel> models, pl.poznan.put.Analyzer analyzer) {
+    logger.info(
+        "Analyzing secondary structures for {} models using {}", models.size(), analyzer.name());
+    return models.parallelStream()
+        .map(
+            model -> {
+              try {
+                logger.debug("Analyzing model: {}", model.name());
+                var jsonResult = analysisClient.analyze(model.name, model.content, analyzer);
+                var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
+                logger.debug("Successfully analyzed model: {}", model.name());
+                return new AnalyzedModel(model.name, model.structure3D, structure2D);
+              } catch (JsonProcessingException e) {
+                logger.error(
+                    "Failed to parse analysis result for file: {}. Error: {}",
+                    model.name(),
+                    e.getMessage());
+                throw new RuntimeException(
+                    "Failed to parse analysis result for file: " + model.name(), e);
+              } catch (Exception e) {
+                logger.error(
+                    "Analysis failed for model: {}. Error: {}", model.name(), e.getMessage());
+                throw new RuntimeException("Analysis failed for model: " + model.name(), e);
+              }
+            })
+        .toList();
+  }
+
+  /**
+   * Orchestrates the parsing, validation, filtering, and analysis of input files.
+   *
+   * @param request The compute request containing files and parameters.
+   * @param task The task entity to update with progress and results.
+   * @return A list of fully analyzed models.
+   */
+  private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request, Task task) {
+    // 1. Parse PDB files into 3D structures
+    List<ParsedModel> parsedModels = parsePdbFiles(request.files());
+
+    // 2. Check consistency and unify models if needed
+    List<ParsedModel> consistentModels = unifyModelsIfNeeded(parsedModels);
+
+    // 3. Filter models using MolProbity
+    List<ParsedModel> validModels =
+        filterModelsWithMolProbity(consistentModels, request.molProbityFilter(), task);
+
+    // 4. Analyze secondary structures for valid models
+    List<AnalyzedModel> analyzedModels =
+        analyzeSecondaryStructures(validModels, request.analyzer());
+
+    logger.info(
+        "Finished parsing and analysis. Resulting in {} analyzed models.", analyzedModels.size());
+    return analyzedModels;
+  }
+
   private DefaultDotBracketFromPdb generateFuzzyDotBracket(
       AnalyzedModel model,
       Map<AnalyzedBasePair, Double> fuzzyCanonicalPairs,
