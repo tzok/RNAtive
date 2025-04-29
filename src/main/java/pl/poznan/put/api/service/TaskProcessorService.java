@@ -265,6 +265,20 @@ public class TaskProcessorService {
                 firstModel,
                 computeCorrectInteractions(
                     ConsensusMode.CANONICAL, canonicalPairsBag, referenceStructure, threshold));
+
+        // Log correct interactions if TRACE is enabled
+        if (logger.isTraceEnabled()) {
+          logger.trace("Correct Interactions (Threshold: {}):", threshold);
+          correctConsideredInteractions.stream()
+              .sorted() // AnalyzedBasePair implements Comparable
+              .collect(Collectors.groupingBy(AnalyzedBasePair::interactionType))
+              .forEach(
+                  (type, interactions) -> {
+                    logger.trace("  Type: {}", type);
+                    interactions.forEach(
+                        interaction -> logger.trace("    {}", interaction.toString()));
+                  });
+        }
       }
 
       logger.info("Creating task result");
@@ -1019,6 +1033,12 @@ public class TaskProcessorService {
     structureData.nucleotides = nucleotides;
     logger.debug("Generated {} nucleotides", nucleotides.size());
 
+    // Log considered base pairs at TRACE level
+    if (logger.isTraceEnabled()) {
+      logger.trace("Considered Base Pairs:");
+      interactionsToVisualize.forEach(bp -> logger.trace("  {}", bp));
+    }
+
     // Create BasePairs using the mapped IDs and calculate confidence color
     var basePairs =
         interactionsToVisualize.stream()
@@ -1093,8 +1113,9 @@ public class TaskProcessorService {
             .collect(Collectors.toList());
 
     // Sort base pairs by id1, then id2
-    basePairs.sort(Comparator.comparingInt((pl.poznan.put.varna.model.BasePair bp) -> bp.id1)
-                       .thenComparingInt(bp -> bp.id2));
+    basePairs.sort(
+        Comparator.comparingInt((pl.poznan.put.varna.model.BasePair bp) -> bp.id1)
+            .thenComparingInt(bp -> bp.id2));
 
     structureData.basePairs = basePairs;
     logger.debug("Generated and sorted {} base pairs for Varna", basePairs.size());
