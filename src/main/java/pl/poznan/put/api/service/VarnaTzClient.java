@@ -23,7 +23,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.w3c.dom.svg.SVGDocument;
 import pl.poznan.put.api.exception.VisualizationException;
-import pl.poznan.put.varna.model.StructureData; // Assuming this path based on package name
+import pl.poznan.put.varna.model.StructureData;
 
 @Service
 public class VarnaTzClient {
@@ -61,9 +61,9 @@ public class VarnaTzClient {
       headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
       MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-      body.add("arguments", "varna-wrapper.py");
+      body.add("arguments", "wrapper.sh");
       body.add("arguments", "input.json");
-      body.add("output_files", "output.svg");
+      body.add("output_files", "clean.svg");
 
       // Add the JSON input file
       ByteArrayResource jsonResource =
@@ -107,7 +107,7 @@ public class VarnaTzClient {
 
           for (Map<String, String> file : outputFiles) {
             String relativePath = file.get("relative_path");
-            if ("output.svg".equals(relativePath) && file.containsKey("content_base64")) {
+            if ("clean.svg".equals(relativePath) && file.containsKey("content_base64")) {
               // Decode Base64 SVG content
               byte[] decodedData = Base64.getDecoder().decode(file.get("content_base64"));
               String svgContent = new String(decodedData, StandardCharsets.UTF_8);

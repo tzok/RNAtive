@@ -76,6 +76,9 @@ services:
   rnapolis:
     image: ghcr.io/tzok/cli2rest-rnapolis:0.8.1
 
+  varna-tz:
+    image: ghcr.io/tzok/cli2rest-varna-tz:1.3.0_0.9.5
+
 volumes:
   postgres_data:
   adapters_cache:
