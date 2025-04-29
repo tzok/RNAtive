@@ -3,13 +3,14 @@ package pl.poznan.put.api.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.orsay.lri.varna.models.rna.ModeleBP;
-import java.awt.Color;
+import java.awt.*;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -26,16 +27,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import pl.poznan.put.AnalyzedModel;
-import pl.poznan.put.ConsensusMode;
-import pl.poznan.put.F1score;
-import pl.poznan.put.InteractionNetworkFidelity;
-import pl.poznan.put.RankedModel;
-import pl.poznan.put.api.dto.*;
+import pl.poznan.put.*;
+import pl.poznan.put.api.dto.ComputeRequest;
+import pl.poznan.put.api.dto.FileData;
+import pl.poznan.put.api.dto.TaskResult;
 import pl.poznan.put.api.exception.TaskNotFoundException;
-import pl.poznan.put.api.model.*;
 import pl.poznan.put.api.model.MolProbityFilter;
 import pl.poznan.put.api.model.Task;
+import pl.poznan.put.api.model.TaskStatus;
+import pl.poznan.put.api.model.VisualizationTool;
 import pl.poznan.put.api.repository.TaskRepository;
 import pl.poznan.put.api.util.DrawerVarnaTz;
 import pl.poznan.put.api.util.ReferenceStructureUtil;
@@ -49,10 +49,15 @@ import pl.poznan.put.pdb.analysis.*;
 import pl.poznan.put.rna.InteractionType;
 import pl.poznan.put.rnalyzer.MolProbityResponse;
 import pl.poznan.put.rnalyzer.RnalyzerClient;
-import pl.poznan.put.structure.*;
-import pl.poznan.put.structure.formats.*;
+import pl.poznan.put.structure.AnalyzedBasePair;
+import pl.poznan.put.structure.formats.BpSeq;
+import pl.poznan.put.structure.formats.DefaultDotBracketFromPdb;
+import pl.poznan.put.structure.formats.DotBracketFromPdb;
+import pl.poznan.put.structure.formats.ImmutableDefaultDotBracketFromPdb;
 import pl.poznan.put.utility.svg.Format;
 import pl.poznan.put.utility.svg.SVGHelper;
+import pl.poznan.put.ConsensusInteraction;
+import pl.poznan.put.ConsensusInteraction.InteractionCategory;
 import pl.poznan.put.varna.model.Nucleotide;
 import pl.poznan.put.varna.model.StructureData;
 
@@ -60,6 +65,7 @@ import pl.poznan.put.varna.model.StructureData;
 @Transactional
 public class TaskProcessorService {
   private static final Logger logger = LoggerFactory.getLogger(TaskProcessorService.class);
+  private static final Colormap COLORMAP = Colormaps.get("Algae");
   private final TaskRepository taskRepository;
   private final ObjectMapper objectMapper;
   private final AnalysisClient analysisClient;
@@ -173,37 +179,16 @@ public class TaskProcessorService {
       var referenceStructure =
           ReferenceStructureUtil.readReferenceStructure(request.dotBracket(), firstModel);
 
-      logger.info("Collecting all interactions");
-      var canonicalPairsBag =
-          analyzedModels.stream()
-              .flatMap(
-                  model ->
-                      model.structure2D().basePairs().stream()
-                          .filter(BasePair::isCanonical)
-                          .map(model::basePairToAnalyzed))
-              .collect(Collectors.toCollection(HashBag::new));
-      var nonCanonicalPairsBag =
-          analyzedModels.stream()
-              .flatMap(
-                  model ->
-                      model.structure2D().basePairs().stream()
-                          .filter(basePair -> !basePair.isCanonical())
-                          .map(model::basePairToAnalyzed))
-              .collect(Collectors.toCollection(HashBag::new));
-      var stackingsBag =
-          analyzedModels.stream()
-              .flatMap(
-                  model -> model.structure2D().stackings().stream().map(model::stackingToAnalyzed))
-              .collect(Collectors.toCollection(HashBag::new));
-      var allInteractionsBag = new HashBag<>(canonicalPairsBag);
-      allInteractionsBag.addAll(nonCanonicalPairsBag);
-      allInteractionsBag.addAll(stackingsBag);
+      logger.info("Collecting and sorting all interactions");
+      var interactionResult = collectInteractions(analyzedModels, referenceStructure);
+      // Access bags via interactionResult.canonicalPairsBag(), etc.
+      // Access sorted list via interactionResult.sortedInteractions()
       var consideredInteractionsBag =
           switch (request.consensusMode()) {
-            case CANONICAL -> canonicalPairsBag;
-            case NON_CANONICAL -> nonCanonicalPairsBag;
-            case STACKING -> stackingsBag;
-            case ALL -> allInteractionsBag;
+            case CANONICAL -> interactionResult.canonicalPairsBag();
+            case NON_CANONICAL -> interactionResult.nonCanonicalPairsBag();
+            case STACKING -> interactionResult.stackingsBag();
+            case ALL -> interactionResult.allInteractionsBag();
           };
 
       List<RankedModel> rankedModels;
@@ -214,12 +199,17 @@ public class TaskProcessorService {
       if (request.confidenceLevel() == null) {
         logger.info("Computing fuzzy interactions");
         var fuzzyCanonicalPairs =
-            computeFuzzyInteractions(canonicalPairsBag, referenceStructure, modelCount);
+            computeFuzzyInteractions(
+                interactionResult.canonicalPairsBag(), referenceStructure, modelCount);
         var fuzzyNonCanonicalPairs =
-            computeFuzzyInteractions(nonCanonicalPairsBag, referenceStructure, modelCount);
-        var fuzzyStackings = computeFuzzyInteractions(stackingsBag, referenceStructure, modelCount);
+            computeFuzzyInteractions(
+                interactionResult.nonCanonicalPairsBag(), referenceStructure, modelCount);
+        var fuzzyStackings =
+            computeFuzzyInteractions(
+                interactionResult.stackingsBag(), referenceStructure, modelCount);
         var fuzzyAllInteractions =
-            computeFuzzyInteractions(allInteractionsBag, referenceStructure, modelCount);
+            computeFuzzyInteractions(
+                interactionResult.allInteractionsBag(), referenceStructure, modelCount);
         fuzzyConsideredInteractions =
             switch (request.consensusMode()) {
               case CANONICAL -> fuzzyCanonicalPairs;
@@ -234,7 +224,9 @@ public class TaskProcessorService {
                 analyzedModels, fuzzyConsideredInteractions, request.consensusMode());
 
         logger.info("Generating fuzzy dot bracket notation");
-        dotBracket = generateFuzzyDotBracket(firstModel, fuzzyCanonicalPairs, canonicalPairsBag);
+        dotBracket =
+            generateFuzzyDotBracket(
+                firstModel, fuzzyCanonicalPairs, interactionResult.canonicalPairsBag());
 
         logger.info("Compute correct fuzzy interaction (for visualization)");
         nonConflictingInteractions =
@@ -242,7 +234,7 @@ public class TaskProcessorService {
                 fuzzyCanonicalPairs,
                 fuzzyNonCanonicalPairs,
                 fuzzyStackings,
-                allInteractionsBag // Pass bag
+                interactionResult.allInteractionsBag() // Pass bag
                 ); // Pass bag
       } else {
         logger.info("Computing correct interactions");
@@ -252,7 +244,10 @@ public class TaskProcessorService {
                 request.consensusMode(), consideredInteractionsBag, referenceStructure, threshold);
         nonConflictingInteractions =
             computeCorrectInteractions(
-                ConsensusMode.ALL, allInteractionsBag, referenceStructure, threshold);
+                ConsensusMode.ALL,
+                interactionResult.allInteractionsBag(),
+                referenceStructure,
+                threshold);
 
         logger.info("Generating ranked models");
         rankedModels =
@@ -264,7 +259,10 @@ public class TaskProcessorService {
             generateDotBracket(
                 firstModel,
                 computeCorrectInteractions(
-                    ConsensusMode.CANONICAL, canonicalPairsBag, referenceStructure, threshold));
+                    ConsensusMode.CANONICAL,
+                    interactionResult.canonicalPairsBag(),
+                    referenceStructure,
+                    threshold));
 
         // Log correct interactions if TRACE is enabled
         if (logger.isTraceEnabled()) {
@@ -295,7 +293,7 @@ public class TaskProcessorService {
               firstModel,
               nonConflictingInteractions,
               dotBracket,
-              consideredInteractionsBag, // Pass the bag
+              interactionResult.allInteractionsBag(), // Pass the bag
               modelCount, // Pass the model count
               (request.confidenceLevel() == null)
                   ? fuzzyConsideredInteractions
@@ -319,8 +317,111 @@ public class TaskProcessorService {
     return CompletableFuture.completedFuture(null);
   }
 
-  /** Internal record to hold intermediate parsing results. */
-  private record ParsedModel(String name, String content, PdbModel structure3D) {}
+  /** Internal record to hold the results of interaction collection and processing. */
+  private record InteractionCollectionResult(
+      List<ConsensusInteraction> sortedInteractions,
+      HashBag<AnalyzedBasePair> canonicalPairsBag,
+      HashBag<AnalyzedBasePair> nonCanonicalPairsBag,
+      HashBag<AnalyzedBasePair> stackingsBag,
+      HashBag<AnalyzedBasePair> allInteractionsBag) {}
+
+  /**
+   * Collects all interactions (canonical, non-canonical, stacking) from the analyzed models,
+   * calculates their frequency, determines if they are part of the reference structure, and returns
+   * them as a sorted list of {@link ConsensusInteraction} objects along with the intermediate bags.
+   *
+   * @param analyzedModels The list of models analyzed by a secondary structure tool.
+   * @param referenceStructure The parsed reference structure (dot-bracket).
+   * @return An {@link InteractionCollectionResult} containing the sorted list and interaction
+   *     bags.
+   */
+  private InteractionCollectionResult collectInteractions(
+      List<AnalyzedModel> analyzedModels,
+      ReferenceStructureUtil.ReferenceParseResult referenceStructure) {
+    logger.debug("Collecting canonical base pairs from {} models", analyzedModels.size());
+    var canonicalPairsBag =
+        analyzedModels.stream()
+            .flatMap(
+                model ->
+                    model.structure2D().basePairs().stream()
+                        .filter(BasePair::isCanonical)
+                        .map(model::basePairToAnalyzed))
+            .collect(Collectors.toCollection(HashBag::new));
+    logger.debug("Found {} unique canonical base pairs", canonicalPairsBag.uniqueSet().size());
+
+    logger.debug("Collecting non-canonical base pairs from {} models", analyzedModels.size());
+    var nonCanonicalPairsBag =
+        analyzedModels.stream()
+            .flatMap(
+                model ->
+                    model.structure2D().basePairs().stream()
+                        .filter(basePair -> !basePair.isCanonical())
+                        .map(model::basePairToAnalyzed))
+            .collect(Collectors.toCollection(HashBag::new));
+    logger.debug(
+        "Found {} unique non-canonical base pairs", nonCanonicalPairsBag.uniqueSet().size());
+
+    logger.debug("Collecting stackings from {} models", analyzedModels.size());
+    var stackingsBag =
+        analyzedModels.stream()
+            .flatMap(
+                model -> model.structure2D().stackings().stream().map(model::stackingToAnalyzed))
+            .collect(Collectors.toCollection(HashBag::new));
+    logger.debug("Found {} unique stackings", stackingsBag.uniqueSet().size());
+
+    var allInteractionsBag = new HashBag<>(canonicalPairsBag);
+    allInteractionsBag.addAll(nonCanonicalPairsBag);
+    allInteractionsBag.addAll(stackingsBag);
+    logger.debug(
+        "Total unique interactions (all types): {}", allInteractionsBag.uniqueSet().size());
+
+    logger.debug("Creating ConsensusInteraction objects");
+    var consensusInteractions =
+        allInteractionsBag.uniqueSet().stream()
+            .map(
+                analyzedPair -> {
+                  var category =
+                      switch (analyzedPair.interactionType()) {
+                        case BASE_BASE -> InteractionCategory.BASE_PAIR;
+                        case STACKING -> InteractionCategory.STACKING;
+                      };
+                  var lw =
+                      (category == InteractionCategory.BASE_PAIR)
+                          ? Optional.of(analyzedPair.leontisWesthof())
+                          : Optional.<LeontisWesthof>empty();
+                  int count = allInteractionsBag.getCount(analyzedPair);
+                  boolean isRef = referenceStructure.basePairs().contains(analyzedPair.basePair());
+
+                  // Ensure partner1 is always "less than" partner2 for consistent sorting
+                  var p1 = analyzedPair.basePair().left();
+                  var p2 = analyzedPair.basePair().right();
+                  if (p1.compareTo(p2) > 0) {
+                    var temp = p1;
+                    p1 = p2;
+                    p2 = temp;
+                  }
+
+                  return new ConsensusInteraction(p1, p2, category, lw, count, isRef);
+                })
+            .toList();
+
+    logger.debug("Sorting {} ConsensusInteraction objects", consensusInteractions.size());
+    var sortedInteractions =
+        consensusInteractions.stream()
+            .sorted(
+                Comparator.comparing(ConsensusInteraction::category)
+                    .thenComparing(ConsensusInteraction::modelCount, Comparator.reverseOrder())
+                    .thenComparing(ConsensusInteraction::partner1)
+                    .thenComparing(ConsensusInteraction::partner2))
+            .toList();
+
+    return new InteractionCollectionResult(
+        sortedInteractions,
+        canonicalPairsBag,
+        nonCanonicalPairsBag,
+        stackingsBag,
+        allInteractionsBag);
+  }
 
   /**
    * Parses PDB files, filters for RNA, and handles basic parsing errors.
@@ -362,10 +463,7 @@ public class TaskProcessorService {
                       StandardOpenOption.TRUNCATE_EXISTING);
                 } catch (IOException ioEx) {
                   logger.error(
-                      "Failed to save content of {} to {}",
-                      fileData.name(),
-                      tempFilePath,
-                      ioEx);
+                      "Failed to save content of {} to {}", fileData.name(), tempFilePath, ioEx);
                 }
                 // Propagate the original parsing exception
                 throw new RuntimeException(
@@ -558,8 +656,7 @@ public class TaskProcessorService {
             String responseJson = objectMapper.writeValueAsString(response);
             task.addMolProbityResponse(model.name(), responseJson);
           } catch (JsonProcessingException e) {
-            logger.error(
-                "Failed to serialize MolProbityResponse for model {}", model.name(), e);
+            logger.error("Failed to serialize MolProbityResponse for model {}", model.name(), e);
             task.addMolProbityResponse(model.name(), "{\"error\": \"Serialization failed\"}");
           }
 
@@ -575,8 +672,7 @@ public class TaskProcessorService {
           if (response == null) { // Only store error if we didn't get a response to serialize
             task.addMolProbityResponse(
                 model.name(),
-                String.format(
-                    "{\"error\": \"MolProbity analysis failed: %s\"}", e.getMessage()));
+                String.format("{\"error\": \"MolProbity analysis failed: %s\"}", e.getMessage()));
           }
           isValid = true; // Include model if analysis fails
         }
@@ -1210,7 +1306,7 @@ public class TaskProcessorService {
                     // Threshold mode: confidence is frequency
                     confidence =
                         (modelCount > 0)
-                            ? (double) consideredInteractionsBag.getCount(analyzedPair) / modelCount
+                            ? (double) allInteractionsBag.getCount(analyzedPair) / modelCount
                             : 0.0;
                   }
                   varnaBp.color = getColorForConfidence(confidence);
@@ -1266,8 +1362,6 @@ public class TaskProcessorService {
     };
   }
 
-  private static final Colormap COLORMAP = Colormaps.get("Algae");
-
   /**
    * Generates a hex color string (#RRGGBB) based on a confidence score (0.0 to 1.0) using the Blues
    * colormap.
@@ -1285,4 +1379,7 @@ public class TaskProcessorService {
     // Format the color as a hex string #RRGGBB
     return String.format("#%02X%02X%02X", color.getRed(), color.getGreen(), color.getBlue());
   }
+
+  /** Internal record to hold intermediate parsing results. */
+  private record ParsedModel(String name, String content, PdbModel structure3D) {}
 }
