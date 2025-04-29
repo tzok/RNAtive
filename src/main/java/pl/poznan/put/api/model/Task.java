@@ -23,7 +23,7 @@ public class Task {
   @CollectionTable(name = "model_svgs", joinColumns = @JoinColumn(name = "task_id"))
   @MapKeyColumn(name = "model_name")
   @Column(name = "svg_content", columnDefinition = "TEXT")
-  private Map<String, String> modelSvgs = new HashMap<>();
+  private Map<String, String> modelSvgs = new ConcurrentHashMap<>(); // Use ConcurrentHashMap
 
   @ElementCollection(fetch = FetchType.EAGER)
   @CollectionTable(name = "removal_reasons", joinColumns = @JoinColumn(name = "task_id"))

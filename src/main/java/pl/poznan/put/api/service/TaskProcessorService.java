@@ -12,6 +12,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -188,56 +189,9 @@ public class TaskProcessorService {
       var resultJson = objectMapper.writeValueAsString(taskResult);
       task.setResult(resultJson);
 
-      logger.info("Generating visualizations for individual models and consensus");
-      // Generate and store SVG for each model
-      for (RankedModel rankedModel : rankedModels) {
-        AnalyzedModel correspondingAnalyzedModel =
-            analyzedModels.stream()
-                .filter(am -> am.name().equals(rankedModel.getName()))
-                .findFirst()
-                .orElse(null); // Should not happen if logic is correct
+      logger.info("Generating visualizations for individual models and consensus in parallel");
 
-        if (correspondingAnalyzedModel != null) {
-          // Find the model-specific interactions from the per-model results
-          InteractionCollectionResult modelInteractionResult =
-              fullInteractionResult.perModelResults().get(rankedModel.getName());
-          if (modelInteractionResult != null) {
-            Set<ConsensusInteraction> modelInteractionsToVisualize =
-                determineConsensusSet(
-                    modelInteractionResult.sortedInteractions(),
-                    request.confidenceLevel(),
-                    ConsensusMode.ALL); // Use ALL mode for visualization
-
-            // Generate dot-bracket specifically for this model's canonical pairs
-            DefaultDotBracketFromPdb modelDotBracket =
-                generateDotBracket(
-                    correspondingAnalyzedModel,
-                    determineConsensusSet(
-                        modelInteractionResult.sortedInteractions(),
-                        request.confidenceLevel(),
-                        ConsensusMode.CANONICAL));
-
-            String modelSvg =
-                generateVisualization(
-                    request.visualizationTool(),
-                    correspondingAnalyzedModel,
-                    modelDotBracket, // Use model-specific dot-bracket
-                    modelInteractionsToVisualize); // Use model-specific interactions
-            task.addModelSvg(rankedModel.getName(), modelSvg);
-            logger.debug("Generated and stored SVG for model: {}", rankedModel.getName());
-          } else {
-            logger.warn(
-                "Could not find interaction results for model {} to generate SVG.",
-                rankedModel.getName());
-          }
-        } else {
-          logger.warn(
-              "Could not find corresponding AnalyzedModel for RankedModel {} to generate SVG.",
-              rankedModel.getName());
-        }
-      }
-
-      // Generate and store the consensus SVG
+      // Generate the consensus SVG first (can be done anytime after consensusDotBracket is ready)
       logger.info("Generating visualization for consensus structure");
       var consensusSvg =
           generateVisualization(
@@ -248,8 +202,69 @@ public class TaskProcessorService {
                   aggregatedInteractionResult.sortedInteractions(),
                   request.confidenceLevel(),
                   ConsensusMode.ALL));
-      task.addModelSvg("consensus", consensusSvg); // Store under special key
-      logger.debug("Generated and stored SVG for consensus");
+      logger.debug("Generated SVG for consensus");
+
+      // Generate model-specific SVGs in parallel and collect them
+      logger.info("Generating visualizations for individual models in parallel");
+      ConcurrentMap<String, String> modelSvgMap =
+          rankedModels.parallelStream()
+              .map(
+                  rankedModel -> {
+                    AnalyzedModel correspondingAnalyzedModel =
+                        analyzedModels.stream()
+                            .filter(am -> am.name().equals(rankedModel.getName()))
+                            .findFirst()
+                            .orElse(null); // Should not happen if logic is correct
+
+                    if (correspondingAnalyzedModel != null) {
+                      InteractionCollectionResult modelInteractionResult =
+                          fullInteractionResult.perModelResults().get(rankedModel.getName());
+                      if (modelInteractionResult != null) {
+                        Set<ConsensusInteraction> modelInteractionsToVisualize =
+                            determineConsensusSet(
+                                modelInteractionResult.sortedInteractions(),
+                                request.confidenceLevel(),
+                                ConsensusMode.ALL); // Use ALL mode for visualization
+
+                        DefaultDotBracketFromPdb modelDotBracket =
+                            generateDotBracket(
+                                correspondingAnalyzedModel,
+                                determineConsensusSet(
+                                    modelInteractionResult.sortedInteractions(),
+                                    request.confidenceLevel(),
+                                    ConsensusMode.CANONICAL));
+
+                        String modelSvg =
+                            generateVisualization(
+                                request.visualizationTool(),
+                                correspondingAnalyzedModel,
+                                modelDotBracket,
+                                modelInteractionsToVisualize);
+                        logger.debug("Generated SVG for model: {}", rankedModel.getName());
+                        return Map.entry(rankedModel.getName(), modelSvg);
+                      } else {
+                        logger.warn(
+                            "Could not find interaction results for model {} to generate SVG.",
+                            rankedModel.getName());
+                      }
+                    } else {
+                      logger.warn(
+                          "Could not find corresponding AnalyzedModel for RankedModel {} to generate"
+                              + " SVG.",
+                          rankedModel.getName());
+                    }
+                    return null; // Return null if SVG generation failed for this model
+                  })
+              .filter(Objects::nonNull) // Filter out entries where SVG generation failed
+              .collect(Collectors.toConcurrentMap(Map.Entry::getKey, Map.Entry::getValue));
+
+      logger.info("Storing all generated SVGs in the task");
+      // Store the consensus SVG
+      task.addModelSvg("consensus", consensusSvg);
+      // Store all model-specific SVGs
+      task.getModelSvgs().putAll(modelSvgMap);
+      logger.debug(
+          "Stored consensus SVG and {} model-specific SVGs", modelSvgMap.size());
 
       logger.info("Task processing completed successfully");
       task.setStatus(TaskStatus.COMPLETED);
