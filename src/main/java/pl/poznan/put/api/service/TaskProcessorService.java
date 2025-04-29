@@ -28,6 +28,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.poznan.put.*;
+import pl.poznan.put.ConsensusInteraction;
+import pl.poznan.put.ConsensusInteraction.InteractionCategory;
 import pl.poznan.put.api.dto.ComputeRequest;
 import pl.poznan.put.api.dto.FileData;
 import pl.poznan.put.api.dto.TaskResult;
@@ -56,8 +58,6 @@ import pl.poznan.put.structure.formats.DotBracketFromPdb;
 import pl.poznan.put.structure.formats.ImmutableDefaultDotBracketFromPdb;
 import pl.poznan.put.utility.svg.Format;
 import pl.poznan.put.utility.svg.SVGHelper;
-import pl.poznan.put.ConsensusInteraction;
-import pl.poznan.put.ConsensusInteraction.InteractionCategory;
 import pl.poznan.put.varna.model.Nucleotide;
 import pl.poznan.put.varna.model.StructureData;
 
@@ -332,8 +332,7 @@ public class TaskProcessorService {
    *
    * @param analyzedModels The list of models analyzed by a secondary structure tool.
    * @param referenceStructure The parsed reference structure (dot-bracket).
-   * @return An {@link InteractionCollectionResult} containing the sorted list and interaction
-   *     bags.
+   * @return An {@link InteractionCollectionResult} containing the sorted list and interaction bags.
    */
   private InteractionCollectionResult collectInteractions(
       List<AnalyzedModel> analyzedModels,
@@ -414,6 +413,11 @@ public class TaskProcessorService {
                     .thenComparing(ConsensusInteraction::partner1)
                     .thenComparing(ConsensusInteraction::partner2))
             .toList();
+
+    if (logger.isTraceEnabled()) {
+      logger.trace("Sorted Consensus Interactions:");
+      sortedInteractions.forEach(interaction -> logger.trace("  {}", interaction));
+    }
 
     return new InteractionCollectionResult(
         sortedInteractions,
