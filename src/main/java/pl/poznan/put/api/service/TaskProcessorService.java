@@ -916,57 +916,10 @@ public class TaskProcessorService {
     logger.trace(
         "{} fuzzy canonical pairs remaining after conflict resolution", resolvedPairs.size());
 
-    return new ArrayList<>(resolvedPairs); // Return as list
+    return new ArrayList<>(resolvedPairs); // Return as list // Will be removed later
   }
 
-  private List<RankedModel> generateFuzzyRankedModels(
-      List<AnalyzedModel> analyzedModels,
-      Map<AnalyzedBasePair, Double> fuzzyInteractions,
-      ConsensusMode consensusMode) {
-    logger.info("Starting to generate fuzzy ranked models");
-    var rankedModels =
-        analyzedModels.stream()
-            .map(
-                model -> {
-                  logger.debug("Processing model: {}", model.name());
-                  var modelInteractions =
-                      model.streamBasePairs(consensusMode).collect(Collectors.toSet());
-                  logger.debug("Calculating fuzzy interaction network fidelity");
-                  var inf =
-                      InteractionNetworkFidelity.calculateFuzzy(
-                          fuzzyInteractions, modelInteractions);
-                  logger.debug("Fuzzy inf score: {}", inf);
-                  logger.debug("Calculating fuzzy f1 score");
-                  var f1score = F1score.calculateFuzzy(fuzzyInteractions, modelInteractions);
-                  logger.debug("Fuzzy F1 score: {}", f1score);
-
-                  logger.debug("Computing canonical base pairs");
-                  var canonicalBasePairs =
-                      computeCorrectInteractions(
-                          ConsensusMode.CANONICAL,
-                          new HashBag<>(model.canonicalBasePairs()),
-                          new ReferenceStructureUtil.ReferenceParseResult(List.of(), List.of()),
-                          0);
-                  logger.debug("Generating dot bracket for model");
-                  var dotBracket = generateDotBracket(model, canonicalBasePairs);
-                  return new RankedModel(model, inf, f1score, dotBracket);
-                })
-            .collect(Collectors.toList());
-
-    logger.info("Ranking models based on interaction network fidelity");
-    var infs =
-        rankedModels.stream()
-            .map(RankedModel::getInteractionNetworkFidelity)
-            .sorted(Comparator.reverseOrder())
-            .toList();
-    rankedModels.forEach(
-        rankedModel ->
-            rankedModel.setRank(infs.indexOf(rankedModel.getInteractionNetworkFidelity()) + 1));
-    rankedModels.sort(Comparator.reverseOrder());
-
-    logger.info("Finished generating ranked models");
-    return rankedModels;
-  }
+  // Removed generateFuzzyRankedModels
 
   // Removed computeCorrectInteractions
 
@@ -1069,30 +1022,7 @@ public class TaskProcessorService {
     return resolvedInteractions; // Return the set of non-conflicting interactions
   }
 
-  private Map<AnalyzedBasePair, Double> computeFuzzyInteractions(
-      HashBag<AnalyzedBasePair> consideredInteractionsBag,
-      ReferenceStructureUtil.ReferenceParseResult referenceStructure,
-      int modelCount) {
-    logger.info("Starting computation of fuzzy interactions");
-    return consideredInteractionsBag.stream()
-        .distinct()
-        .collect(
-            Collectors.toMap(
-                k -> k,
-                v -> {
-                  // If either residue is marked as unpaired in reference, score is 0.0
-                  if (referenceStructure.markedResidues().contains(v.basePair().left())
-                      || referenceStructure.markedResidues().contains(v.basePair().right())) {
-                    return 0.0;
-                  }
-                  // If the pair exists in the reference structure base pairs, score is 1.0
-                  if (referenceStructure.basePairs().contains(v.basePair())) {
-                    return 1.0;
-                  }
-                  // Otherwise, score is the confidence level (frequency)
-                  return (double) (consideredInteractionsBag.getCount(v)) / modelCount;
-                }));
-  }
+  // Removed computeFuzzyInteractions
 
   private boolean isModelValid(
       String modelName,
@@ -1276,55 +1206,9 @@ public class TaskProcessorService {
 
   // Removed validateGoodAndCaution as it's no longer used
 
-  private List<RankedModel> generateRankedModels( // Will be removed later
-      ConsensusMode consensusMode,
-      List<AnalyzedModel> analyzedModels,
-      Collection<AnalyzedBasePair> correctConsideredInteractions) {
-    logger.info("Starting to generate ranked models");
-    var rankedModels =
-        analyzedModels.stream()
-            .map(
-                model -> {
-                  logger.debug("Processing model: {}", model.name());
-                  var modelInteractions =
-                      model.streamBasePairs(consensusMode).collect(Collectors.toSet());
-                  logger.debug("Calculating interaction network fidelity");
-                  var inf =
-                      InteractionNetworkFidelity.calculate(
-                          correctConsideredInteractions, modelInteractions);
-                  logger.debug("Normal INF score: {}", inf);
-                  logger.debug("Calculating interaction network fidelity");
-                  var f1 = F1score.calculate(correctConsideredInteractions, modelInteractions);
-                  logger.debug("Normal F1 score: {}", f1);
-                  logger.debug("Computing canonical base pairs");
-                  var canonicalBasePairs =
-                      computeCorrectInteractions(
-                          ConsensusMode.CANONICAL,
-                          new HashBag<>(model.canonicalBasePairs()),
-                          new ReferenceStructureUtil.ReferenceParseResult(List.of(), List.of()),
-                          0);
-                  logger.debug("Generating dot bracket for model");
-                  var dotBracket = generateDotBracket(model, canonicalBasePairs);
-                  return new RankedModel(model, inf, f1, dotBracket);
-                })
-            .collect(Collectors.toList());
+  // Removed old generateRankedModels
 
-    logger.info("Ranking models based on interaction network fidelity");
-    var infs =
-        rankedModels.stream()
-            .map(RankedModel::getInteractionNetworkFidelity)
-            .sorted(Comparator.reverseOrder())
-            .toList();
-    rankedModels.forEach(
-        rankedModel ->
-            rankedModel.setRank(infs.indexOf(rankedModel.getInteractionNetworkFidelity()) + 1));
-    rankedModels.sort(Comparator.reverseOrder());
-
-    logger.info("Finished generating ranked models");
-    return rankedModels;
-  }
-
-  private String generateVisualization(
+  private String generateVisualization( // Will be modified later
       VisualizationTool visualizationTool,
       AnalyzedModel firstModel,
       Collection<AnalyzedBasePair> correctConsideredInteractions,
