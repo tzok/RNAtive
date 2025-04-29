@@ -40,15 +40,16 @@ import pl.poznan.put.model.BaseInteractions;
 import pl.poznan.put.model.BasePair;
 import pl.poznan.put.notation.LeontisWesthof;
 import pl.poznan.put.notation.NucleobaseEdge;
+import pl.poznan.put.notation.Stericity;
 import pl.poznan.put.pdb.*;
 import pl.poznan.put.pdb.analysis.*;
+import pl.poznan.put.rna.InteractionType;
 import pl.poznan.put.rnalyzer.MolProbityResponse;
 import pl.poznan.put.rnalyzer.RnalyzerClient;
 import pl.poznan.put.structure.*;
 import pl.poznan.put.structure.formats.*;
 import pl.poznan.put.utility.svg.Format;
 import pl.poznan.put.utility.svg.SVGHelper;
-import pl.poznan.put.varna.model.BasePair; // Renamed import to avoid conflict
 import pl.poznan.put.varna.model.Nucleotide;
 import pl.poznan.put.varna.model.StructureData;
 
@@ -995,7 +996,7 @@ public class TaskProcessorService {
                 interaction ->
                     interaction.interactionType()
                         == InteractionType
-                            .BASE_PAIR) // Ensure we only process base pairs for this structure
+                            .BASE_BASE) // Ensure we only process base pairs for this structure
             .map(
                 analyzedPair -> {
                   var varnaBp = new pl.poznan.put.varna.model.BasePair();
@@ -1013,9 +1014,23 @@ public class TaskProcessorService {
 
                   varnaBp.id1 = id1;
                   varnaBp.id2 = id2;
-                  varnaBp.edge5 = translateEdge(lw.edge5());
-                  varnaBp.edge3 = translateEdge(lw.edge3());
-                  varnaBp.stericity = translateStericity(lw);
+
+                  ModeleBP.Edge edge5 = translateEdge(lw.edge5());
+                  ModeleBP.Edge edge3 = translateEdge(lw.edge3());
+                  ModeleBP.Stericity stericity = translateStericity(lw.stericity());
+
+                  // Skip if any part is UNKNOWN
+                  if (edge5 == ModeleBP.Edge.UNKNOWN
+                      || edge3 == ModeleBP.Edge.UNKNOWN
+                      || stericity == ModeleBP.Stericity.UNKNOWN) {
+                    logger.warn(
+                        "Skipping base pair due to UNKNOWN edge or stericity: {}", analyzedPair);
+                    return null;
+                  }
+
+                  varnaBp.edge5 = edge5;
+                  varnaBp.edge3 = edge3;
+                  varnaBp.stericity = stericity;
                   varnaBp.canonical = analyzedPair.isCanonical();
                   // Color and thickness are left null
 
@@ -1048,8 +1063,8 @@ public class TaskProcessorService {
     };
   }
 
-  private ModeleBP.Stericity translateStericity(final LeontisWesthof lw) {
-    return switch (lw.orientation()) {
+  private ModeleBP.Stericity translateStericity(final Stericity stericity) {
+    return switch (stericity) {
       case CIS -> ModeleBP.Stericity.CIS;
       case TRANS -> ModeleBP.Stericity.TRANS;
       case UNKNOWN -> ModeleBP.Stericity.UNKNOWN; // Or handle as needed
