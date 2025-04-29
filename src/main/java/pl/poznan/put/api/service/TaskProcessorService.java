@@ -48,6 +48,9 @@ import pl.poznan.put.rnalyzer.MolProbityResponse;
 import pl.poznan.put.rnalyzer.RnalyzerClient;
 import pl.poznan.put.structure.*;
 import pl.poznan.put.structure.formats.*;
+import java.awt.Color;
+import net.mahdilamb.colormap.Colormap;
+import net.mahdilamb.colormap.Colormaps;
 import pl.poznan.put.utility.svg.Format;
 import pl.poznan.put.utility.svg.SVGHelper;
 import pl.poznan.put.varna.model.Nucleotide;
@@ -208,6 +211,7 @@ public class TaskProcessorService {
       DefaultDotBracketFromPdb dotBracket;
       Set<AnalyzedBasePair> correctConsideredInteractions;
 
+      Map<AnalyzedBasePair, Double> fuzzyConsideredInteractions = null;
       if (request.confidenceLevel() == null) {
         logger.info("Computing fuzzy interactions");
         var fuzzyCanonicalPairs =
@@ -217,7 +221,7 @@ public class TaskProcessorService {
         var fuzzyStackings = computeFuzzyInteractions(stackingsBag, referenceStructure, modelCount);
         var fuzzyAllInteractions =
             computeFuzzyInteractions(allInteractionsBag, referenceStructure, modelCount);
-        var fuzzyConsideredInteractions =
+        fuzzyConsideredInteractions =
             switch (request.consensusMode()) {
               case CANONICAL -> fuzzyCanonicalPairs;
               case NON_CANONICAL -> fuzzyNonCanonicalPairs;
@@ -245,7 +249,7 @@ public class TaskProcessorService {
                 });
       } else {
         logger.info("Computing correct interactions");
-        var threshold = request.confidenceLevel();
+        int threshold = request.confidenceLevel();
         correctConsideredInteractions =
             computeCorrectInteractions(
                 request.consensusMode(), consideredInteractionsBag, referenceStructure, threshold);
@@ -977,7 +981,6 @@ public class TaskProcessorService {
     result.addAll(correctFuzzyNonCanonicalPairs(fuzzyNonCanonicalPairs));
     result.addAll(correctFuzzyStackings(fuzzyStackings));
     return result;
-    return result;
   }
 
   private StructureData createStructureData(
@@ -1112,22 +1115,23 @@ public class TaskProcessorService {
     };
   }
 
+  private static final Colormap COLORMAP = Colormaps.Blues;
+
   /**
-   * Generates a hex color string (#RRGGBB) based on a confidence score (0.0 to 1.0). Interpolates
-   * linearly from Red (0.0) to Green (1.0).
+   * Generates a hex color string (#RRGGBB) based on a confidence score (0.0 to 1.0) using the
+   * Blues colormap.
    *
    * @param confidence The confidence score (0.0 to 1.0).
    * @return A hex color string.
    */
   private String getColorForConfidence(double confidence) {
-    // Clamp confidence to the range [0.0, 1.0]
+    // Clamp confidence to the range [0.0, 1.0] as expected by the colormap
     double clampedConfidence = Math.max(0.0, Math.min(1.0, confidence));
 
-    // Linear interpolation between Red (FF0000) and Green (00FF00)
-    int red = (int) (255 * (1.0 - clampedConfidence));
-    int green = (int) (255 * clampedConfidence);
-    int blue = 0;
+    // Get the color from the colormap
+    Color color = COLORMAP.get(clampedConfidence);
 
-    return String.format("#%02X%02X%02X", red, green, blue);
+    // Format the color as a hex string #RRGGBB
+    return String.format("#%02X%02X%02X", color.getRed(), color.getGreen(), color.getBlue());
   }
 }

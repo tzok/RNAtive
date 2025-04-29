@@ -111,6 +111,12 @@
     </dependency>
 
     <dependency>
+      <groupId>net.mahdilamb</groupId>
+      <artifactId>colormap</artifactId>
+      <version>0.9.511</version>
+    </dependency>
+
+    <dependency>
       <groupId>org.apache.xmlgraphics</groupId>
       <artifactId>batik-dom</artifactId>
       <version>1.17</version>
