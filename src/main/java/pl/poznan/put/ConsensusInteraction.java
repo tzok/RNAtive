@@ -17,17 +17,18 @@ import pl.poznan.put.pdb.PdbNamedResidueIdentifier;
  *     reference structure.
  * @param forbiddenInReference Whether this interaction involves a residue marked as unpaired in the
  *     reference structure.
+ * @param isCanonical Whether this interaction is a canonical base pair.
  */
 public record ConsensusInteraction(
     PdbNamedResidueIdentifier partner1,
     PdbNamedResidueIdentifier partner2,
     InteractionCategory category,
     Optional<LeontisWesthof> leontisWesthof,
+    boolean isCanonical,
     int modelCount,
     double probability,
     boolean presentInReference,
-    boolean forbiddenInReference,
-    boolean isCanonical) {
+    boolean forbiddenInReference) {
 
   /** Defines the main categories of interactions considered. */
   public enum InteractionCategory {

@@ -19,33 +19,33 @@ public class RankedModel implements Comparable<RankedModel> {
 
   private double f1score;
 
- private int rank = -1;
+  private int rank = -1;
 
- private String dotBracket;
+  private String dotBracket;
 
- // Store the object itself for potential reuse (e.g., visualization layout)
- private transient DotBracketFromPdb dotBracketObject; // transient to avoid JSON serialization
+  // Store the object itself for potential reuse (e.g., visualization layout)
+  private transient DotBracketFromPdb dotBracketObject; // transient to avoid JSON serialization
 
- // Default constructor for Jackson
- public RankedModel() {}
+  // Default constructor for Jackson
+  public RankedModel() {}
 
   public RankedModel(
-     AnalyzedModel analyzedModel,
-     double interactionNetworkFidelity,
-     double f1score,
-     DefaultDotBracketFromPdb dotBracketObject) {
-   this.name = analyzedModel.name();
-   this.basePairsAndStackings = analyzedModel.basePairsAndStackings();
-   this.canonicalBasePairs = analyzedModel.canonicalBasePairs();
+      AnalyzedModel analyzedModel,
+      double interactionNetworkFidelity,
+      double f1score,
+      DefaultDotBracketFromPdb dotBracketObject) {
+    this.name = analyzedModel.name();
+    this.basePairsAndStackings = analyzedModel.basePairsAndStackings();
+    this.canonicalBasePairs = analyzedModel.canonicalBasePairs();
     this.nonCanonicalBasePairs = analyzedModel.nonCanonicalBasePairs();
-   this.stackings = analyzedModel.stackings();
-   this.interactionNetworkFidelity = interactionNetworkFidelity;
-   this.f1score = f1score;
-   this.dotBracketObject = dotBracketObject;
-   this.dotBracket = dotBracketObject.toStringWithStrands();
- }
+    this.stackings = analyzedModel.stackings();
+    this.interactionNetworkFidelity = interactionNetworkFidelity;
+    this.f1score = f1score;
+    this.dotBracketObject = dotBracketObject;
+    this.dotBracket = dotBracketObject.toStringWithStrands();
+  }
 
- public String getName() {
+  public String getName() {
     return name;
   }
 
@@ -114,17 +114,17 @@ public class RankedModel implements Comparable<RankedModel> {
   }
 
   public void setDotBracket(String dotBracket) {
-   this.dotBracket = dotBracket;
- }
+    this.dotBracket = dotBracket;
+  }
 
- /** Returns the underlying DotBracketFromPdb object used to generate the string representation. */
- public DotBracketFromPdb getDotBracketObject() {
-   return dotBracketObject;
- }
+  /** Returns the underlying DotBracketFromPdb object used to generate the string representation. */
+  public DotBracketFromPdb getDotBracketObject() {
+    return dotBracketObject;
+  }
 
- @Override
- public int compareTo(final RankedModel t) {
-   if (Double.isNaN(interactionNetworkFidelity) && Double.isNaN(t.interactionNetworkFidelity)) {
+  @Override
+  public int compareTo(final RankedModel t) {
+    if (Double.isNaN(interactionNetworkFidelity) && Double.isNaN(t.interactionNetworkFidelity)) {
       return 0;
     }
     if (Double.isNaN(interactionNetworkFidelity)) {

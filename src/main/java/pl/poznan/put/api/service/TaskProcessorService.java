@@ -13,6 +13,7 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import net.mahdilamb.colormap.Colormap;
@@ -20,7 +21,6 @@ import net.mahdilamb.colormap.Colormaps;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.bag.HashBag;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
-import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +39,6 @@ import pl.poznan.put.api.model.Task;
 import pl.poznan.put.api.model.TaskStatus;
 import pl.poznan.put.api.model.VisualizationTool;
 import pl.poznan.put.api.repository.TaskRepository;
-import pl.poznan.put.api.util.DrawerVarnaTz;
 import pl.poznan.put.api.util.ReferenceStructureUtil;
 import pl.poznan.put.model.BaseInteractions;
 import pl.poznan.put.model.BasePair;
@@ -52,10 +51,9 @@ import pl.poznan.put.rna.InteractionType;
 import pl.poznan.put.rnalyzer.MolProbityResponse;
 import pl.poznan.put.rnalyzer.RnalyzerClient;
 import pl.poznan.put.structure.AnalyzedBasePair;
-import pl.poznan.put.structure.formats.BpSeq;
-import pl.poznan.put.structure.formats.DefaultDotBracketFromPdb;
-import pl.poznan.put.structure.formats.DotBracketFromPdb;
-import pl.poznan.put.structure.formats.ImmutableDefaultDotBracketFromPdb;
+import pl.poznan.put.structure.ImmutableAnalyzedBasePair;
+import pl.poznan.put.structure.ImmutableBasePair;
+import pl.poznan.put.structure.formats.*;
 import pl.poznan.put.utility.svg.Format;
 import pl.poznan.put.utility.svg.SVGHelper;
 import pl.poznan.put.varna.model.Nucleotide;
@@ -70,7 +68,6 @@ public class TaskProcessorService {
   private final ObjectMapper objectMapper;
   private final AnalysisClient analysisClient;
   private final VisualizationClient visualizationClient;
-  private final DrawerVarnaTz drawerVarnaTz;
   private final VisualizationService visualizationService;
   private final ConversionClient conversionClient;
   private final RnapolisClient rnapolisClient;
@@ -84,7 +81,6 @@ public class TaskProcessorService {
       VisualizationClient visualizationClient,
       VisualizationService visualizationService,
       ConversionClient conversionClient,
-      DrawerVarnaTz drawerVarnaTz,
       RnapolisClient rnapolisClient,
       VarnaTzClient varnaTzClient) {
     this.taskRepository = taskRepository;
@@ -93,18 +89,8 @@ public class TaskProcessorService {
     this.visualizationClient = visualizationClient;
     this.visualizationService = visualizationService;
     this.conversionClient = conversionClient;
-    this.drawerVarnaTz = drawerVarnaTz;
     this.rnapolisClient = rnapolisClient;
     this.varnaTzClient = varnaTzClient;
-  }
-
-  private static List<Pair<AnalyzedBasePair, Double>> sortFuzzySet(
-      Map<AnalyzedBasePair, Double> fuzzySet) {
-    // Sort the fuzzy canonical pairs by probability in descending order
-    return fuzzySet.entrySet().stream()
-        .map(entry -> Pair.of(entry.getKey(), entry.getValue()))
-        .sorted(Comparator.comparing(pair -> Pair.of(-pair.getRight(), pair.getLeft())))
-        .toList();
   }
 
   /**
@@ -183,128 +169,35 @@ public class TaskProcessorService {
       var fullInteractionResult = collectInteractions(analyzedModels, referenceStructure);
       var aggregatedInteractionResult = fullInteractionResult.aggregatedResult();
 
-      // Access per-model results via fullInteractionResult.perModelResults() if needed later
+      logger.info("Ranking models");
+      var rankedModels = generateRankedModels(analyzedModels, fullInteractionResult, request);
 
-      // Access bags via aggregatedInteractionResult.canonicalPairsBag(), etc.
-      // Access sorted list via aggregatedInteractionResult.sortedInteractions()
-      var consideredInteractionsBag =
-          switch (request.consensusMode()) {
-            case CANONICAL -> aggregatedInteractionResult.canonicalPairsBag();
-            case NON_CANONICAL -> aggregatedInteractionResult.nonCanonicalPairsBag();
-            case STACKING -> aggregatedInteractionResult.stackingsBag();
-            case ALL -> aggregatedInteractionResult.allInteractionsBag();
-          };
-
-      List<RankedModel> rankedModels;
-      DefaultDotBracketFromPdb dotBracket;
-      Collection<AnalyzedBasePair> nonConflictingInteractions;
-
-      Map<AnalyzedBasePair, Double> fuzzyConsideredInteractions = null;
-      if (request.confidenceLevel() == null) {
-        logger.info("Computing fuzzy interactions");
-        var fuzzyCanonicalPairs =
-            computeFuzzyInteractions(
-                aggregatedInteractionResult.canonicalPairsBag(), referenceStructure, modelCount);
-        var fuzzyNonCanonicalPairs =
-            computeFuzzyInteractions(
-                aggregatedInteractionResult.nonCanonicalPairsBag(), referenceStructure, modelCount);
-        var fuzzyStackings =
-            computeFuzzyInteractions(
-                aggregatedInteractionResult.stackingsBag(), referenceStructure, modelCount);
-        var fuzzyAllInteractions =
-            computeFuzzyInteractions(
-                aggregatedInteractionResult.allInteractionsBag(), referenceStructure, modelCount);
-        fuzzyConsideredInteractions =
-            switch (request.consensusMode()) {
-              case CANONICAL -> fuzzyCanonicalPairs;
-              case NON_CANONICAL -> fuzzyNonCanonicalPairs;
-              case STACKING -> fuzzyStackings;
-              case ALL -> fuzzyAllInteractions;
-            };
-
-        logger.info("Generating fuzzy ranked models");
-        rankedModels =
-            generateFuzzyRankedModels(
-                analyzedModels, fuzzyConsideredInteractions, request.consensusMode());
-
-        logger.info("Generating fuzzy dot bracket notation");
-        dotBracket =
-            generateFuzzyDotBracket(
-                firstModel,
-                fuzzyCanonicalPairs,
-                aggregatedInteractionResult.canonicalPairsBag()); // Pass aggregated bag
-
-        logger.info("Compute correct fuzzy interaction (for visualization)");
-        nonConflictingInteractions =
-            nonConflictingFuzzyInteractions(
-                fuzzyCanonicalPairs,
-                fuzzyNonCanonicalPairs,
-                fuzzyStackings,
-                aggregatedInteractionResult.allInteractionsBag() // Pass aggregated bag
-                );
-      } else {
-        logger.info("Computing correct interactions");
-        int threshold = request.confidenceLevel();
-        Set<AnalyzedBasePair> correctConsideredInteractions =
-            computeCorrectInteractions(
-                request.consensusMode(), consideredInteractionsBag, referenceStructure, threshold);
-        nonConflictingInteractions =
-            computeCorrectInteractions(
-                ConsensusMode.ALL,
-                aggregatedInteractionResult.allInteractionsBag(), // Use aggregated bag
-                referenceStructure,
-                threshold);
-
-        logger.info("Generating ranked models");
-        rankedModels =
-            generateRankedModels(
-                request.consensusMode(), analyzedModels, correctConsideredInteractions);
-
-        logger.info("Generating dot bracket notation");
-        dotBracket =
-            generateDotBracket(
-                firstModel,
-                computeCorrectInteractions(
-                    ConsensusMode.CANONICAL,
-                    aggregatedInteractionResult.canonicalPairsBag(), // Use aggregated bag
-                    referenceStructure,
-                    threshold));
-
-        // Log correct interactions if TRACE is enabled
-        if (logger.isTraceEnabled()) {
-          logger.trace("Correct Interactions (Threshold: {}):", threshold);
-          correctConsideredInteractions.stream()
-              .sorted() // AnalyzedBasePair implements Comparable
-              .collect(Collectors.groupingBy(AnalyzedBasePair::interactionType))
-              .forEach(
-                  (type, interactions) -> {
-                    logger.trace("  Type: {}", type);
-                    interactions.forEach(
-                        interaction -> logger.trace("    {}", interaction.toString()));
-                  });
-        }
-      }
+      logger.info("Generating dot bracket notation for consensus canonical base pairs");
+      var consensusDotBracket =
+          generateDotBracket(
+              firstModel,
+              determineConsensusSet(
+                  aggregatedInteractionResult.sortedInteractions,
+                  request.confidenceLevel(),
+                  ConsensusMode.CANONICAL));
 
       logger.info("Creating task result");
       var taskResult =
-          new TaskResult(rankedModels, referenceStructure, dotBracket.toStringWithStrands());
+          new TaskResult(
+              rankedModels, referenceStructure, consensusDotBracket.toStringWithStrands());
       var resultJson = objectMapper.writeValueAsString(taskResult);
       task.setResult(resultJson);
 
-      logger.info("Generating visualization");
-      // Pass context needed for confidence coloring
+      logger.info("Generating visualization for consensus structure");
       var svg =
           generateVisualization(
               request.visualizationTool(),
               firstModel,
-              nonConflictingInteractions,
-              dotBracket,
-              aggregatedInteractionResult.allInteractionsBag(), // Pass the aggregated bag
-              modelCount, // Pass the model count
-              (request.confidenceLevel() == null)
-                  ? fuzzyConsideredInteractions // Pass fuzzy map
-                  : null // Pass fuzzy map only if in fuzzy mode
-              );
+              consensusDotBracket,
+              determineConsensusSet(
+                  aggregatedInteractionResult.sortedInteractions,
+                  request.confidenceLevel(),
+                  ConsensusMode.ALL));
       task.setSvg(svg);
 
       logger.info("Task processing completed successfully");
@@ -773,7 +666,7 @@ public class TaskProcessorService {
 
       for (ParsedModel model : models) {
         MolProbityResponse response = null;
-        boolean isValid = true; // Assume valid unless proven otherwise or analysis fails
+        boolean isValid; // Assume valid unless proven otherwise or analysis fails
         try {
           response = rnalyzerClient.analyzePdbContent(model.content(), model.name());
 
@@ -887,56 +780,17 @@ public class TaskProcessorService {
     return analyzedModels;
   }
 
-  private DefaultDotBracketFromPdb generateFuzzyDotBracket(
-      AnalyzedModel model,
-      Map<AnalyzedBasePair, Double> fuzzyCanonicalPairs,
-      HashBag<AnalyzedBasePair> canonicalPairsBag) { // Add bag parameter
+  private DefaultDotBracketFromPdb generateDotBracket(
+      AnalyzedModel model, Set<ConsensusInteraction> canonicalInteractions) {
     var residues = model.residueIdentifiers();
-    // Pass bag to fuzzy correction method
-    var canonicalPairs = correctFuzzyCanonicalPairs(fuzzyCanonicalPairs, canonicalPairsBag);
-    logger.trace(
-        "Generating dot-bracket notation for {} residues and {} fuzzy canonical base pairs",
-        residues.size(),
-        canonicalPairs.size());
-    var bpseq = BpSeq.fromBasePairs(residues, canonicalPairs);
-    var converted = conversionClient.convertBpseqToDotBracket(bpseq.toString());
-    var sequence = converted.split("\n")[0];
-    var structure = converted.split("\n")[1];
-    return ImmutableDefaultDotBracketFromPdb.of(sequence, structure, model.structure3D());
-  }
-
-  private List<AnalyzedBasePair> correctFuzzyCanonicalPairs(
-      Map<AnalyzedBasePair, Double> fuzzyCanonicalPairs,
-      HashBag<AnalyzedBasePair> canonicalPairsBag) { // Add bag parameter
-
-    // Filter out pairs with probability 0 before conflict resolution
-    var positiveProbabilityPairs =
-        sortFuzzySet(fuzzyCanonicalPairs).stream()
-            .filter(pair -> pair.getRight() > 0.0)
-            .map(Pair::getKey) // Get the AnalyzedBasePair
-            .collect(Collectors.toSet()); // Collect into a Set
-    logger.trace(
-        "Found {} fuzzy canonical pairs with probability > 0 before conflict resolution",
-        positiveProbabilityPairs.size());
-
-    // Resolve conflicts using the helper method
-    var resolvedPairs =
-        resolveInteractionConflicts(
-            positiveProbabilityPairs, canonicalPairsBag, ConsensusMode.CANONICAL);
-    logger.trace(
-        "{} fuzzy canonical pairs remaining after conflict resolution", resolvedPairs.size());
-
-    return new ArrayList<>(resolvedPairs); // Return as list // Will be removed later
-  }
-
-  // Removed generateFuzzyRankedModels
-
-  // Removed computeCorrectInteractions
-
-  private DefaultDotBracketFromPdb generateDotBracket( // Will be removed later
-      AnalyzedModel model, Collection<AnalyzedBasePair> correctCanonicalBasePairs) {
-    var residues = model.residueIdentifiers();
-    var canonicalPairs = new HashSet<>(correctCanonicalBasePairs);
+    var canonicalPairs =
+        canonicalInteractions.stream()
+            .map(
+                ci ->
+                    ImmutableAnalyzedBasePair.of(
+                        ImmutableBasePair.of(ci.partner1(), ci.partner2())))
+            .distinct()
+            .toList();
     logger.trace(
         "Generating dot-bracket notation for {} residues and {} canonical base pairs",
         residues.size(),
@@ -954,7 +808,6 @@ public class TaskProcessorService {
    * counts. For base-base interactions (non-stacking modes), it iteratively removes the lower-count
    * interaction involved in a conflict for each Leontis-Westhof type until no conflicts remain.
    *
-   * @param interactions The initial set of interactions to resolve.
    * @param interactions The initial collection of consensus interactions to resolve.
    * @param confidenceLevel The confidence level threshold (null for fuzzy mode), used to determine
    *     comparison logic.
@@ -1028,8 +881,6 @@ public class TaskProcessorService {
         "Number of interactions after conflict resolution: {}", resolvedInteractions.size());
     return resolvedInteractions; // Return the set of non-conflicting interactions
   }
-
-  // Removed computeFuzzyInteractions
 
   private boolean isModelValid(
       String modelName,
@@ -1112,39 +963,14 @@ public class TaskProcessorService {
     return message.toString();
   }
 
-  /** Helper method to convert a Set of ConsensusInteraction back to AnalyzedBasePair */
-  private AnalyzedBasePair consensusToAnalyzed(ConsensusInteraction interaction) {
-    // Assumes BASE_PAIR category for now, might need refinement if stackings are needed here
-    if (interaction.category() != ConsensusInteraction.InteractionCategory.BASE_PAIR
-        || interaction.leontisWesthof().isEmpty()) {
-      // This shouldn't happen if called correctly, e.g., for dot-bracket generation
-      throw new IllegalArgumentException(
-          "Cannot convert non-base-pair or LW-missing ConsensusInteraction to AnalyzedBasePair:"
-              + " "
-              + interaction);
-    }
-    var basePair = ImmutableBasePair.of(interaction.partner1(), interaction.partner2());
-    return ImmutableAnalyzedBasePair.of(
-        basePair, interaction.leontisWesthof().get(), InteractionType.BASE_BASE);
-  }
-
-  /** Helper method to convert a Set of ConsensusInteraction to a Set of AnalyzedBasePair */
-  private Set<AnalyzedBasePair> consensusSetToAnalyzedSet(Set<ConsensusInteraction> consensusSet) {
-    return consensusSet.stream().map(this::consensusToAnalyzed).collect(Collectors.toSet());
-  }
-
   /**
    * Helper method to convert a Set of ConsensusInteraction (representing the fuzzy consensus) to a
    * Map suitable for fuzzy scoring functions.
    */
-  private Map<AnalyzedBasePair, Double> consensusSetToFuzzyMap(
+  private Map<ConsensusInteraction, Double> consensusSetToFuzzyMap(
       Set<ConsensusInteraction> consensusSet) {
     return consensusSet.stream()
-        .collect(
-            Collectors.toMap(
-                this::consensusToAnalyzed, // Key: AnalyzedBasePair
-                ConsensusInteraction::probability // Value: Probability
-                ));
+        .collect(Collectors.toMap(Function.identity(), ConsensusInteraction::probability));
   }
 
   /**
@@ -1205,8 +1031,6 @@ public class TaskProcessorService {
     return consensusSet;
   }
 
-  // Removed validateGoodAndCaution as it's no longer used
-
   /**
    * Generates ranked models based on the comparison against a determined consensus set. Handles
    * both threshold and fuzzy modes.
@@ -1214,14 +1038,12 @@ public class TaskProcessorService {
    * @param analyzedModels The list of models to rank.
    * @param fullInteractionResult The complete interaction results (aggregated and per-model).
    * @param request The original compute request containing parameters.
-   * @param referenceStructure The parsed reference structure.
    * @return A list of RankedModel objects, sorted by rank.
    */
   private List<RankedModel> generateRankedModels(
       List<AnalyzedModel> analyzedModels,
       FullInteractionCollectionResult fullInteractionResult,
-      ComputeRequest request,
-      ReferenceStructureUtil.ReferenceParseResult referenceStructure) {
+      ComputeRequest request) {
     logger.info("Starting generation of ranked models (unified logic)");
     Integer confidenceLevel = request.confidenceLevel();
     ConsensusMode consensusMode = request.consensusMode();
@@ -1232,67 +1054,42 @@ public class TaskProcessorService {
             fullInteractionResult.aggregatedResult().sortedInteractions(),
             confidenceLevel,
             consensusMode);
-
-    // Prepare data structures needed for scoring based on mode
-    Map<AnalyzedBasePair, Double> fuzzyTargetMap = null;
-    Set<AnalyzedBasePair> thresholdTargetSet = null;
-    if (confidenceLevel == null) { // Fuzzy mode
-      fuzzyTargetMap = consensusSetToFuzzyMap(targetConsensusSet);
-      logger.debug("Prepared fuzzy target map with {} entries for scoring", fuzzyTargetMap.size());
-    } else { // Threshold mode
-      thresholdTargetSet = consensusSetToAnalyzedSet(targetConsensusSet);
-      logger.debug(
-          "Prepared threshold target set with {} entries for scoring", thresholdTargetSet.size());
-    }
+    logger.debug(
+        "Prepared threshold target set with {} entries for scoring", targetConsensusSet.size());
 
     // 2. Iterate through models, calculate scores, and generate dot-brackets
     var rankedModelsList = new ArrayList<RankedModel>();
     for (AnalyzedModel model : analyzedModels) {
       logger.debug("Processing model for ranking: {}", model.name());
-      InteractionCollectionResult modelResult =
-          fullInteractionResult.perModelResults().get(model.name());
-      if (modelResult == null) {
-        logger.warn(
-            "Could not find per-model interaction results for {}. Skipping ranking.", model.name());
-        continue; // Should not happen ideally
-      }
-
-      // Get the model's interactions matching the consensus mode
-      // Note: We don't need to re-filter by isInteractionConsidered here for scoring,
-      // as scoring functions compare the model's raw interactions against the target set.
-      // We just need the AnalyzedBasePair representation of the model's interactions.
-      Set<AnalyzedBasePair> modelInteractionsAnalyzed =
-          model.streamBasePairs(consensusMode).collect(Collectors.toSet());
-      logger.trace(
-          "Model {} has {} interactions of type {}",
-          model.name(),
-          modelInteractionsAnalyzed.size(),
-          consensusMode);
+      List<ConsensusInteraction> modelConsensusInteractions =
+          fullInteractionResult.perModelResults().get(model.name()).sortedInteractions();
+      Set<ConsensusInteraction> modelConsensusSet =
+          determineConsensusSet(modelConsensusInteractions, confidenceLevel, consensusMode);
 
       // Calculate INF and F1 scores based on mode
-      double inf;
       double inf;
       double f1;
       if (confidenceLevel == null) { // Fuzzy mode
         logger.debug("Calculating fuzzy INF and F1 scores for model {}", model.name());
-        inf =
-            InteractionNetworkFidelity.<AnalyzedBasePair>calculateFuzzy(
-                fuzzyTargetMap, modelInteractionsAnalyzed);
-        f1 = F1score.<AnalyzedBasePair>calculateFuzzy(fuzzyTargetMap, modelInteractionsAnalyzed);
+        Map<ConsensusInteraction, Double> targetConsensusMap =
+            consensusSetToFuzzyMap(targetConsensusSet);
+        inf = InteractionNetworkFidelity.calculateFuzzy(targetConsensusMap, modelConsensusSet);
+        f1 = F1score.calculateFuzzy(targetConsensusMap, modelConsensusSet);
         logger.debug("Model {}: Fuzzy INF = {}, Fuzzy F1 = {}", model.name(), inf, f1);
       } else { // Threshold mode
         logger.debug("Calculating threshold INF and F1 scores for model {}", model.name());
-        inf =
-            InteractionNetworkFidelity.<AnalyzedBasePair>calculate(
-                thresholdTargetSet, modelInteractionsAnalyzed);
-        f1 = F1score.<AnalyzedBasePair>calculate(thresholdTargetSet, modelInteractionsAnalyzed);
+        inf = InteractionNetworkFidelity.calculate(targetConsensusSet, modelConsensusSet);
+        f1 = F1score.calculate(targetConsensusSet, modelConsensusSet);
         logger.debug("Model {}: Threshold INF = {}, Threshold F1 = {}", model.name(), inf, f1);
       }
 
       // Generate dot-bracket for the model
       logger.debug("Generating dot-bracket for model {}", model.name());
       DefaultDotBracketFromPdb dotBracket =
-          generateDotBracketForModel(model, modelResult, confidenceLevel, referenceStructure);
+          generateDotBracket(
+              model,
+              determineConsensusSet(
+                  modelConsensusInteractions, confidenceLevel, ConsensusMode.CANONICAL));
 
       rankedModelsList.add(new RankedModel(model, inf, f1, dotBracket));
     }
@@ -1316,45 +1113,22 @@ public class TaskProcessorService {
     return rankedModelsList;
   }
 
-  // Removed old generateRankedModels
-
-  private String generateVisualization( // Will be modified later
+  private String generateVisualization(
       VisualizationTool visualizationTool,
-      AnalyzedModel firstModel,
-      Collection<AnalyzedBasePair> correctConsideredInteractions,
+      AnalyzedModel model,
       DotBracketFromPdb dotBracket,
-      // Context for confidence coloring
-      HashBag<AnalyzedBasePair> consideredInteractionsBag,
-      int modelCount,
-      Map<AnalyzedBasePair, Double> fuzzyConsideredInteractions) {
+      Set<ConsensusInteraction> interactionsToVisualize) {
     try {
       String svg;
       if (visualizationTool == VisualizationTool.VARNA) {
-        // Note: Local VARNA visualization does not currently support confidence coloring
-        logger.info("Generating visualization using DrawerVarnaTz (local VARNA)");
-        var svgDoc =
-            drawerVarnaTz.drawSecondaryStructure(
-                dotBracket,
-                firstModel.structure3D(),
-                new ArrayList<>(correctConsideredInteractions));
-        var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
-        svg = new String(svgBytes);
-      } else if (visualizationTool == VisualizationTool.VARNA_TZ) {
         logger.info("Generating visualization using VarnaTzClient (remote varna-tz service)");
-        var structureData =
-            createStructureData(
-                firstModel,
-                correctConsideredInteractions,
-                consideredInteractionsBag,
-                modelCount,
-                fuzzyConsideredInteractions); // Pass context
+        var structureData = createStructureData(model, interactionsToVisualize);
         var svgDoc = varnaTzClient.visualize(structureData);
         var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
         svg = new String(svgBytes);
       } else {
         logger.info("Generating visualization using VisualizationClient (remote adapters service)");
-        var visualizationInput =
-            visualizationService.prepareVisualizationInput(firstModel, dotBracket);
+        var visualizationInput = visualizationService.prepareVisualizationInput(model, dotBracket);
         var visualizationJson = objectMapper.writeValueAsString(visualizationInput);
         svg = visualizationClient.visualize(visualizationJson, visualizationTool);
       }
@@ -1367,54 +1141,8 @@ public class TaskProcessorService {
     }
   }
 
-  private List<AnalyzedBasePair> nonConflictingFuzzyInteractions(
-      Map<AnalyzedBasePair, Double> fuzzyCanonicalPairs,
-      Map<AnalyzedBasePair, Double> fuzzyNonCanonicalPairs,
-      Map<AnalyzedBasePair, Double> fuzzyStackings,
-      HashBag<AnalyzedBasePair> allInteractionsBag) {
-    // Combine positive-probability canonical and non-canonical pairs
-    var positiveBasePairs = new HashSet<AnalyzedBasePair>();
-    fuzzyCanonicalPairs.entrySet().stream()
-        .filter(entry -> entry.getValue() > 0.0)
-        .map(Map.Entry::getKey)
-        .forEach(positiveBasePairs::add);
-    fuzzyNonCanonicalPairs.entrySet().stream()
-        .filter(entry -> entry.getValue() > 0.0)
-        .map(Map.Entry::getKey)
-        .forEach(positiveBasePairs::add);
-    logger.trace(
-        "Found {} fuzzy base pairs (canonical + non-canonical) with probability > 0 before"
-            + " conflict resolution",
-        positiveBasePairs.size());
-
-    // Resolve conflicts for base pairs using the helper method
-    var resolvedBasePairs =
-        resolveInteractionConflicts(positiveBasePairs, allInteractionsBag, ConsensusMode.ALL);
-    logger.trace(
-        "{} fuzzy base pairs remaining after conflict resolution", resolvedBasePairs.size());
-
-    // Initialize result with resolved base pairs
-    var filtered = new ArrayList<>(resolvedBasePairs);
-
-    // Add stackings with positive probability (no conflict resolution needed for them here)
-    var positiveStackings =
-        sortFuzzySet(fuzzyStackings).stream()
-            .filter(pair -> pair.getRight() > 0.0)
-            .map(Pair::getLeft)
-            .toList();
-    logger.trace("Adding {} fuzzy stackings with probability > 0", positiveStackings.size());
-    filtered.addAll(positiveStackings);
-
-    logger.trace("Total {} fuzzy interactions (resolved base pairs + stackings)", filtered.size());
-    return filtered;
-  }
-
   private StructureData createStructureData(
-      AnalyzedModel model,
-      Collection<AnalyzedBasePair> interactionsToVisualize,
-      HashBag<AnalyzedBasePair> allInteractionsBag, // Use the full bag for counts
-      int modelCount,
-      Map<AnalyzedBasePair, Double> fuzzyConsideredInteractions) {
+      AnalyzedModel model, Set<ConsensusInteraction> interactionsToVisualize) {
     logger.debug("Creating StructureData for VarnaTzClient with confidence coloring");
     var structureData = new StructureData();
     var nucleotides = new ArrayList<Nucleotide>();
@@ -1456,57 +1184,45 @@ public class TaskProcessorService {
         interactionsToVisualize.stream()
             .filter(
                 interaction ->
-                    interaction.interactionType()
-                        == InteractionType
-                            .BASE_BASE) // Ensure we only process base pairs for this structure
+                    interaction.category()
+                        == InteractionCategory
+                            .BASE_PAIR) // Ensure we only process base pairs for this structure
+            .filter(interaction -> interaction.leontisWesthof().isPresent())
             .map(
-                analyzedPair -> {
+                interaction -> {
                   var varnaBp = new pl.poznan.put.varna.model.BasePair();
-                  var bioCommonsPair = analyzedPair.basePair();
-                  var lw = analyzedPair.leontisWesthof();
+                  var lw = interaction.leontisWesthof();
 
-                  Integer id1 = residueToIdMap.get(bioCommonsPair.left());
-                  Integer id2 = residueToIdMap.get(bioCommonsPair.right());
+                  Integer id1 = residueToIdMap.get(interaction.partner1());
+                  Integer id2 = residueToIdMap.get(interaction.partner2());
 
                   if (id1 == null || id2 == null) {
-                    logger.warn(
-                        "Could not find mapping for base pair: {}. Skipping.", analyzedPair);
+                    logger.warn("Could not find mapping for base pair: {}. Skipping.", interaction);
                     return null; // Skip if mapping not found
                   }
 
                   varnaBp.id1 = id1;
                   varnaBp.id2 = id2;
 
-                  Optional<ModeleBP.Edge> edge5 = translateEdge(lw.edge5());
-                  Optional<ModeleBP.Edge> edge3 = translateEdge(lw.edge3());
-                  Optional<ModeleBP.Stericity> stericity = translateStericity(lw.stericity());
+                  Optional<ModeleBP.Edge> edge5 = translateEdge(lw.get().edge5());
+                  Optional<ModeleBP.Edge> edge3 = translateEdge(lw.get().edge3());
+                  Optional<ModeleBP.Stericity> stericity = translateStericity(lw.get().stericity());
 
                   // Skip if any part is UNKNOWN
                   if (edge5.isEmpty() || edge3.isEmpty() || stericity.isEmpty()) {
                     logger.warn(
-                        "Skipping base pair due to UNKNOWN edge or stericity: {}", analyzedPair);
+                        "Skipping base pair due to UNKNOWN edge or stericity: {}", interaction);
                     return null;
                   }
 
                   varnaBp.edge5 = edge5.get();
                   varnaBp.edge3 = edge3.get();
                   varnaBp.stericity = stericity.get();
-                  varnaBp.canonical = analyzedPair.isCanonical();
+                  varnaBp.canonical = interaction.isCanonical();
 
                   // Calculate confidence and set color
-                  double confidence;
-                  if (fuzzyConsideredInteractions != null) {
-                    // Fuzzy mode: confidence is pre-calculated
-                    confidence = fuzzyConsideredInteractions.getOrDefault(analyzedPair, 0.0);
-                  } else {
-                    // Threshold mode: confidence is frequency
-                    confidence =
-                        (modelCount > 0)
-                            ? (double) allInteractionsBag.getCount(analyzedPair) / modelCount
-                            : 0.0;
-                  }
+                  double confidence = interaction.probability();
                   varnaBp.color = getColorForConfidence(confidence);
-                  // Thickness is left null
 
                   logger.trace(
                       "Created Varna BasePair: id1={}, id2={}, edge5={}, edge3={}, stericity={},"
