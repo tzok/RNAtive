@@ -379,11 +379,20 @@ public class TaskProcessorService {
         allInteractionsBag.uniqueSet().stream()
             .map(
                 analyzedPair -> {
-                  var category =
-                      switch (analyzedPair.interactionType()) {
-                        case BASE_BASE -> InteractionCategory.BASE_PAIR;
-                        case STACKING -> InteractionCategory.STACKING;
-                      };
+                  InteractionCategory category;
+                  switch (analyzedPair.interactionType()) {
+                    case BASE_BASE:
+                      category = InteractionCategory.BASE_PAIR;
+                      break;
+                    case STACKING:
+                      category = InteractionCategory.STACKING;
+                      break;
+                    default:
+                      // Handle unexpected interaction types if necessary, though based on current
+                      // usage, this might be unreachable.
+                      throw new IllegalArgumentException(
+                          "Unexpected InteractionType: " + analyzedPair.interactionType());
+                  }
                   var lw =
                       (category == InteractionCategory.BASE_PAIR)
                           ? Optional.of(analyzedPair.leontisWesthof())
