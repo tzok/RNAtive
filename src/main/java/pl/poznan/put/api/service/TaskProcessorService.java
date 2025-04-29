@@ -378,8 +378,7 @@ public class TaskProcessorService {
         combinedAllBag.uniqueSet().size());
 
     // Step 2: Create the map of AnalyzedBasePair to ConsensusInteraction from aggregated data
-    logger.debug(
-        "Creating map of AnalyzedBasePair to ConsensusInteraction from aggregated bags");
+    logger.debug("Creating map of AnalyzedBasePair to ConsensusInteraction from aggregated bags");
     var allConsensusInteractionsMap =
         combinedAllBag.uniqueSet().stream()
             .filter(
@@ -969,42 +968,9 @@ public class TaskProcessorService {
     return rankedModels;
   }
 
-  private Set<AnalyzedBasePair> computeCorrectInteractions(
-      ConsensusMode consensusMode,
-      HashBag<AnalyzedBasePair> consideredInteractionsBag,
-      ReferenceStructureUtil.ReferenceParseResult referenceStructure,
-      int threshold) {
-    logger.debug("Filtering relevant base pairs based on reference structure and threshold");
-    List<PdbNamedResidueIdentifier> residuesUnpairedInReference =
-        referenceStructure.markedResidues();
-    var correctConsideredInteractions =
-        consideredInteractionsBag.stream()
-            .filter(
-                classifiedBasePair -> {
-                  pl.poznan.put.structure.BasePair pair = classifiedBasePair.basePair();
-                  return !residuesUnpairedInReference.contains(pair.left())
-                      && !residuesUnpairedInReference.contains(pair.right());
-                })
-            .filter(
-                classifiedBasePair ->
-                    referenceStructure.basePairs().contains(classifiedBasePair.basePair())
-                        || consideredInteractionsBag.getCount(classifiedBasePair) >= threshold)
-            .collect(Collectors.toSet());
-    logger.debug(
-        "Number of interactions after initial filtering (threshold {}, reference): {}",
-        threshold,
-        correctConsideredInteractions.size());
+  // Removed computeCorrectInteractions
 
-    // Resolve conflicts using the helper method
-    var resolvedInteractions =
-        resolveInteractionConflicts(
-            correctConsideredInteractions, consideredInteractionsBag, consensusMode);
-
-    logger.info("Finished computing correct interactions");
-    return resolvedInteractions; // Return the resolved set
-  }
-
-  private DefaultDotBracketFromPdb generateDotBracket(
+  private DefaultDotBracketFromPdb generateDotBracket( // Will be removed later
       AnalyzedModel model, Collection<AnalyzedBasePair> correctCanonicalBasePairs) {
     var residues = model.residueIdentifiers();
     var canonicalPairs = new HashSet<>(correctCanonicalBasePairs);
@@ -1026,61 +992,81 @@ public class TaskProcessorService {
    * interaction involved in a conflict for each Leontis-Westhof type until no conflicts remain.
    *
    * @param interactions The initial set of interactions to resolve.
-   * @param interactionCounts A bag containing the counts (frequency or confidence source) for each
-   *     interaction, used for tie-breaking.
+   * @param interactions The initial collection of consensus interactions to resolve.
+   * @param confidenceLevel The confidence level threshold (null for fuzzy mode), used to determine
+   *     comparison logic.
    * @param mode The consensus mode, determining if base-base conflict resolution is needed.
-   * @return A new set containing the interactions after conflict resolution.
+   * @return A new set containing the consensus interactions after conflict resolution.
    */
-  private Set<AnalyzedBasePair> resolveInteractionConflicts(
-      Set<AnalyzedBasePair> interactions,
-      HashBag<AnalyzedBasePair> interactionCounts,
-      ConsensusMode mode) {
-    logger.debug("Resolving conflicts for {} interactions (mode: {})", interactions.size(), mode);
+  private Set<ConsensusInteraction> resolveInteractionConflicts(
+      Collection<ConsensusInteraction> interactions, Integer confidenceLevel, ConsensusMode mode) {
+    logger.debug(
+        "Resolving conflicts for {} interactions (mode: {}, confidenceLevel: {})",
+        interactions.size(),
+        mode,
+        confidenceLevel == null ? "fuzzy" : confidenceLevel);
     var resolvedInteractions = new HashSet<>(interactions); // Work on a mutable copy
 
+    // Only resolve conflicts for base-base interactions if mode is not STACKING
     if (mode != ConsensusMode.STACKING) {
       logger.debug("Resolving base-base conflicts");
+
+      // Define the comparator based on the mode (threshold vs fuzzy)
+      Comparator<ConsensusInteraction> conflictComparator =
+          (confidenceLevel != null)
+              ? Comparator.<ConsensusInteraction, Integer>comparing(
+                      ConsensusInteraction::modelCount) // Threshold: Higher count wins
+                  .thenComparing(ConsensusInteraction::partner1) // Tie-breaker 1
+                  .thenComparing(ConsensusInteraction::partner2) // Tie-breaker 2
+              : Comparator.<ConsensusInteraction, Double>comparing(
+                      ConsensusInteraction::probability) // Fuzzy: Higher probability wins
+                  .thenComparing(ConsensusInteraction::partner1) // Tie-breaker 1
+                  .thenComparing(ConsensusInteraction::partner2); // Tie-breaker 2
+
       for (var leontisWesthof : LeontisWesthof.values()) {
         while (true) {
-          MultiValuedMap<PdbNamedResidueIdentifier, AnalyzedBasePair> map =
+          MultiValuedMap<PdbNamedResidueIdentifier, ConsensusInteraction> map =
               new ArrayListValuedHashMap<>();
           resolvedInteractions.stream() // Operate on the mutable set
-              .filter(candidate -> candidate.interactionType() == InteractionType.BASE_BASE)
-              .filter(candidate -> candidate.leontisWesthof() == leontisWesthof)
+              .filter(
+                  candidate -> candidate.category() == ConsensusInteraction.InteractionCategory.BASE_PAIR)
+              .filter(
+                  candidate ->
+                      candidate.leontisWesthof().isPresent()
+                          && candidate.leontisWesthof().get() == leontisWesthof)
               .forEach(
                   candidate -> {
-                    var basePair = candidate.basePair();
-                    map.put(basePair.left(), candidate);
-                    map.put(basePair.right(), candidate);
+                    map.put(candidate.partner1(), candidate);
+                    map.put(candidate.partner2(), candidate);
                   });
 
           var conflicting =
               map.keySet().stream()
-                  .filter(key -> map.get(key).size() > 1)
-                  .flatMap(key -> map.get(key).stream())
-                  .distinct()
-                  .sorted(
-                      Comparator.comparingInt(interactionCounts::getCount)) // Use passed bag count
+                  .filter(key -> map.get(key).size() > 1) // Find residues involved in >1 interaction
+                  .flatMap(key -> map.get(key).stream()) // Get all interactions involving these residues
+                  .distinct() // Unique interactions
+                  .sorted(conflictComparator) // Sort by count/probability (lowest first)
                   .toList();
 
           if (conflicting.isEmpty()) {
             break; // No more conflicts for this LeontisWesthof type
           }
 
-          // Remove the lowest-count conflicting pair from the mutable set
+          // Remove the interaction with the lowest count/probability involved in the conflict
+          ConsensusInteraction interactionToRemove = conflicting.get(0);
           logger.trace(
-              "Conflict detected for LW {}. Removing lowest count pair: {}",
+              "Conflict detected for LW {}. Removing lowest priority interaction: {}",
               leontisWesthof,
-              conflicting.get(0));
-          resolvedInteractions.remove(conflicting.get(0));
-          // Loop will recalculate conflicts in the next iteration
+              interactionToRemove);
+          resolvedInteractions.remove(interactionToRemove);
+          // Loop will recalculate conflicts in the next iteration with the updated set
         }
       }
     }
 
     logger.debug(
         "Number of interactions after conflict resolution: {}", resolvedInteractions.size());
-    return resolvedInteractions;
+    return resolvedInteractions; // Return the set of non-conflicting interactions
   }
 
   private Map<AnalyzedBasePair, Double> computeFuzzyInteractions(
@@ -1189,9 +1175,108 @@ public class TaskProcessorService {
     return message.toString();
   }
 
+  /** Helper method to convert a Set of ConsensusInteraction back to AnalyzedBasePair */
+  private AnalyzedBasePair consensusToAnalyzed(ConsensusInteraction interaction) {
+    // Assumes BASE_PAIR category for now, might need refinement if stackings are needed here
+    if (interaction.category() != ConsensusInteraction.InteractionCategory.BASE_PAIR
+        || interaction.leontisWesthof().isEmpty()) {
+      // This shouldn't happen if called correctly, e.g., for dot-bracket generation
+      throw new IllegalArgumentException(
+          "Cannot convert non-base-pair or LW-missing ConsensusInteraction to AnalyzedBasePair:"
+              + " "
+              + interaction);
+    }
+    var basePair = ImmutableBasePair.of(interaction.partner1(), interaction.partner2());
+    return ImmutableAnalyzedBasePair.of(
+        basePair, interaction.leontisWesthof().get(), InteractionType.BASE_BASE);
+  }
+
+  /** Helper method to convert a Set of ConsensusInteraction to a Set of AnalyzedBasePair */
+  private Set<AnalyzedBasePair> consensusSetToAnalyzedSet(Set<ConsensusInteraction> consensusSet) {
+    return consensusSet.stream().map(this::consensusToAnalyzed).collect(Collectors.toSet());
+  }
+
+  /**
+   * Helper method to convert a Set of ConsensusInteraction (representing the fuzzy consensus) to a
+   * Map suitable for fuzzy scoring functions.
+   */
+  private Map<AnalyzedBasePair, Double> consensusSetToFuzzyMap(
+      Set<ConsensusInteraction> consensusSet) {
+    return consensusSet.stream()
+        .collect(
+            Collectors.toMap(
+                this::consensusToAnalyzed, // Key: AnalyzedBasePair
+                ConsensusInteraction::probability // Value: Probability
+                ));
+  }
+
+  /**
+   * Determines the final set of consensus interactions based on the specified mode (ALL, CANONICAL,
+   * etc.), analysis type (fuzzy/threshold), and reference structure.
+   *
+   * @param allConsensusInteractions The full list of aggregated ConsensusInteraction objects.
+   * @param confidenceLevel The confidence threshold (null for fuzzy mode).
+   * @param referenceStructure The parsed reference structure.
+   * @param consensusMode The type of interactions to consider (ALL, CANONICAL, etc.).
+   * @return A set of ConsensusInteraction objects representing the final consensus.
+   */
+  private Set<ConsensusInteraction> determineConsensusSet(
+      List<ConsensusInteraction> allConsensusInteractions,
+      Integer confidenceLevel,
+      ReferenceStructureUtil.ReferenceParseResult referenceStructure,
+      ConsensusMode consensusMode) {
+
+    logger.info(
+        "Determining consensus set for mode: {}, confidenceLevel: {}",
+        consensusMode,
+        confidenceLevel == null ? "fuzzy" : confidenceLevel);
+
+    // 1. Filter by interaction category (based on consensusMode) and basic validity
+    // (isInteractionConsidered)
+    var filteredInteractions =
+        allConsensusInteractions.stream()
+            .filter(
+                interaction -> {
+                  // Check if the interaction category matches the requested mode
+                  boolean categoryMatch =
+                      switch (consensusMode) {
+                        case CANONICAL -> interaction.category()
+                                == ConsensusInteraction.InteractionCategory.BASE_PAIR
+                            && interaction.leontisWesthof().isPresent() // Must have LW
+                            && interaction.leontisWesthof().get().isCanonical();
+                        case NON_CANONICAL -> interaction.category()
+                                == ConsensusInteraction.InteractionCategory.BASE_PAIR
+                            && interaction.leontisWesthof().isPresent() // Must have LW
+                            && !interaction.leontisWesthof().get().isCanonical();
+                        case STACKING -> interaction.category()
+                            == ConsensusInteraction.InteractionCategory.STACKING;
+                        case ALL -> true; // Include all categories
+                      };
+                  // Also check if it passes the basic fuzzy/threshold/reference filter
+                  return categoryMatch
+                      && isInteractionConsidered(interaction, confidenceLevel, referenceStructure);
+                })
+            .toList(); // Collect to list first for logging/debugging if needed
+
+    logger.debug(
+        "Found {} interactions matching mode {} and passing initial filters.",
+        filteredInteractions.size(),
+        consensusMode);
+
+    // 2. Resolve conflicts within the filtered set
+    var consensusSet =
+        resolveInteractionConflicts(filteredInteractions, confidenceLevel, consensusMode);
+
+    logger.info(
+        "Determined final consensus set with {} interactions for mode {}",
+        consensusSet.size(),
+        consensusMode);
+    return consensusSet;
+  }
+
   // Removed validateGoodAndCaution as it's no longer used
 
-  private List<RankedModel> generateRankedModels(
+  private List<RankedModel> generateRankedModels( // Will be removed later
       ConsensusMode consensusMode,
       List<AnalyzedModel> analyzedModels,
       Collection<AnalyzedBasePair> correctConsideredInteractions) {
@@ -1497,4 +1582,34 @@ public class TaskProcessorService {
 
   /** Internal record to hold intermediate parsing results. */
   private record ParsedModel(String name, String content, PdbModel structure3D) {}
+
+  /**
+   * Determines if a consensus interaction should be considered based on the analysis mode (fuzzy or
+   * threshold) and reference structure constraints.
+   *
+   * @param interaction The consensus interaction to check.
+   * @param confidenceLevel The confidence level threshold (null for fuzzy mode).
+   * @param referenceStructure The parsed reference structure.
+   * @return True if the interaction should be considered, false otherwise.
+   */
+  private boolean isInteractionConsidered(
+      ConsensusInteraction interaction,
+      Integer confidenceLevel,
+      ReferenceStructureUtil.ReferenceParseResult referenceStructure) {
+    // Never consider interactions involving residues marked as unpaired in the reference
+    if (interaction.forbiddenInReference()) {
+      return false;
+    }
+
+    if (confidenceLevel != null) {
+      // Threshold Mode: Consider if present in reference OR meets the threshold count
+      return interaction.presentInReference() || interaction.modelCount() >= confidenceLevel;
+    } else {
+      // Fuzzy Mode: Consider if present in reference (implicit probability 1.0) or has positive
+      // probability
+      // Note: presentInReference implies probability 1.0 in fuzzy calculation,
+      // so checking probability > 0 covers both cases.
+      return interaction.probability() > 0.0;
+    }
+  }
 }
