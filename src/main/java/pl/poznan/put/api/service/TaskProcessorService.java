@@ -3,6 +3,7 @@ package pl.poznan.put.api.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.orsay.lri.varna.models.rna.ModeleBP;
+import java.awt.Color;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,6 +14,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import net.mahdilamb.colormap.Colormap;
+import net.mahdilamb.colormap.Colormaps;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.bag.HashBag;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
@@ -48,9 +51,6 @@ import pl.poznan.put.rnalyzer.MolProbityResponse;
 import pl.poznan.put.rnalyzer.RnalyzerClient;
 import pl.poznan.put.structure.*;
 import pl.poznan.put.structure.formats.*;
-import java.awt.Color;
-import net.mahdilamb.colormap.Colormap;
-import net.mahdilamb.colormap.Colormaps;
 import pl.poznan.put.utility.svg.Format;
 import pl.poznan.put.utility.svg.SVGHelper;
 import pl.poznan.put.varna.model.Nucleotide;
@@ -1092,8 +1092,18 @@ public class TaskProcessorService {
             .filter(Objects::nonNull) // Remove skipped pairs
             .collect(Collectors.toList());
 
+    // Sort base pairs by id1, then id2
+    basePairs.sort(Comparator.comparingInt((pl.poznan.put.varna.model.BasePair bp) -> bp.id1)
+                       .thenComparingInt(bp -> bp.id2));
+
     structureData.basePairs = basePairs;
-    logger.debug("Generated {} base pairs for Varna", basePairs.size());
+    logger.debug("Generated and sorted {} base pairs for Varna", basePairs.size());
+
+    // Log sorted base pairs at TRACE level
+    if (logger.isTraceEnabled()) {
+      logger.trace("Sorted Varna Base Pairs:");
+      basePairs.forEach(bp -> logger.trace("  {}", bp));
+    }
 
     return structureData;
   }
@@ -1118,8 +1128,8 @@ public class TaskProcessorService {
   private static final Colormap COLORMAP = Colormaps.get("RdYlGn");
 
   /**
-   * Generates a hex color string (#RRGGBB) based on a confidence score (0.0 to 1.0) using the
-   * Blues colormap.
+   * Generates a hex color string (#RRGGBB) based on a confidence score (0.0 to 1.0) using the Blues
+   * colormap.
    *
    * @param confidence The confidence score (0.0 to 1.0).
    * @return A hex color string.
