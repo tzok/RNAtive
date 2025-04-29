@@ -377,64 +377,59 @@ public class TaskProcessorService {
         combinedStackingBag.uniqueSet().size(),
         combinedAllBag.uniqueSet().size());
 
-    // Step 2: Create the full set of ConsensusInteraction objects from aggregated data
-    logger.debug("Creating full set of ConsensusInteraction objects from aggregated bags");
-    var allConsensusInteractions =
+    // Step 2: Create the map of AnalyzedBasePair to ConsensusInteraction from aggregated data
+    logger.debug(
+        "Creating map of AnalyzedBasePair to ConsensusInteraction from aggregated bags");
+    var allConsensusInteractionsMap =
         combinedAllBag.uniqueSet().stream()
-            .map(
-                analyzedPair -> {
-                  InteractionCategory category =
-                      analyzedPair.interactionType() == InteractionType.STACKING
-                          ? InteractionCategory.STACKING
-                          : InteractionCategory.BASE_PAIR;
-                  var lw =
-                      (category == InteractionCategory.BASE_PAIR)
-                          ? Optional.of(analyzedPair.leontisWesthof())
-                          : Optional.<LeontisWesthof>empty();
-                  int count = combinedAllBag.getCount(analyzedPair); // Use combined bag for count
-                  boolean presentInRef =
-                      referenceStructure.basePairs().contains(analyzedPair.basePair());
-                  boolean forbiddenInRef =
-                      referenceStructure.markedResidues().contains(analyzedPair.basePair().left())
-                          || referenceStructure
-                              .markedResidues()
-                              .contains(analyzedPair.basePair().right());
-                  double probability =
-                      analyzedModels.isEmpty() ? 0.0 : (double) count / analyzedModels.size();
-
-                  // Ensure partner1 is always "less than" partner2 for consistent sorting
-                  var p1 = analyzedPair.basePair().left();
-                  var p2 = analyzedPair.basePair().right();
-                  if (p1.compareTo(p2) > 0) {
-                    var temp = p1;
-                    p1 = p2;
-                    p2 = temp;
-                  }
-
-                  return new ConsensusInteraction(
-                      p1, p2, category, lw, count, probability, presentInRef, forbiddenInRef);
-                })
-            .toList();
-
-    // Create a lookup map for efficiency
-    var analyzedPairToConsensusMap =
-        allConsensusInteractions.stream()
+            .filter(
+                analyzedPair ->
+                    analyzedPair.interactionType() == InteractionType.STACKING
+                        || analyzedPair.interactionType() == InteractionType.BASE_BASE)
             .collect(
                 Collectors.toMap(
-                    ci ->
-                        AnalyzedBasePair.of(
-                            ci.partner1(),
-                            ci.partner2(),
-                            ci.category() == InteractionCategory.BASE_PAIR
-                                ? ci.leontisWesthof().orElse(null)
-                                : null), // Reconstruct key AnalyzedBasePair
-                    ci -> ci));
+                    analyzedPair -> analyzedPair, // Key is the AnalyzedBasePair
+                    analyzedPair -> { // Value is the ConsensusInteraction
+                      var category =
+                          analyzedPair.interactionType() == InteractionType.STACKING
+                              ? InteractionCategory.STACKING
+                              : InteractionCategory.BASE_PAIR;
+                      var lw =
+                          (category == InteractionCategory.BASE_PAIR)
+                              ? Optional.of(analyzedPair.leontisWesthof())
+                              : Optional.<LeontisWesthof>empty();
+                      int count =
+                          combinedAllBag.getCount(analyzedPair); // Use combined bag for count
+                      boolean presentInRef =
+                          referenceStructure.basePairs().contains(analyzedPair.basePair());
+                      boolean forbiddenInRef =
+                          referenceStructure
+                                  .markedResidues()
+                                  .contains(analyzedPair.basePair().left())
+                              || referenceStructure
+                                  .markedResidues()
+                                  .contains(analyzedPair.basePair().right());
+                      double probability =
+                          analyzedModels.isEmpty() ? 0.0 : (double) count / analyzedModels.size();
+
+                      // Ensure partner1 is always "less than" partner2 for consistent sorting
+                      var p1 = analyzedPair.basePair().left();
+                      var p2 = analyzedPair.basePair().right();
+                      if (p1.compareTo(p2) > 0) {
+                        var temp = p1;
+                        p1 = p2;
+                        p2 = temp;
+                      }
+
+                      return new ConsensusInteraction(
+                          p1, p2, category, lw, count, probability, presentInRef, forbiddenInRef);
+                    }));
 
     logger.debug(
         "Sorting {} total ConsensusInteraction objects for the aggregated result",
-        allConsensusInteractions.size());
+        allConsensusInteractionsMap.size());
     var sortedAggregatedInteractions =
-        allConsensusInteractions.stream()
+        allConsensusInteractionsMap.values().stream() // Get values from the map
             .sorted(
                 Comparator.comparing(ConsensusInteraction::category)
                     .thenComparing(ConsensusInteraction::modelCount, Comparator.reverseOrder())
@@ -464,10 +459,10 @@ public class TaskProcessorService {
       var modelBags = collectInteractionsForModel(model);
       var modelAnalyzedPairs = modelBags.allInteractionsBag().uniqueSet();
 
-      // Look up the corresponding ConsensusInteraction objects
+      // Look up the corresponding ConsensusInteraction objects from the map
       var modelConsensusInteractions =
           modelAnalyzedPairs.stream()
-              .map(analyzedPairToConsensusMap::get) // Use the pre-built map
+              .map(allConsensusInteractionsMap::get) // Use the main map
               .filter(Objects::nonNull) // Filter out any potential misses (shouldn't happen)
               .sorted( // Sort using the same comparator as the aggregated list
                   Comparator.comparing(ConsensusInteraction::category)
