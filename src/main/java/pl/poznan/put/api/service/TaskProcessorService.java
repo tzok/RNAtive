@@ -485,6 +485,9 @@ public class TaskProcessorService {
       }
     }
 
+    logger.debug(
+        "Number of interactions after conflict resolution: {}",
+        correctConsideredInteractions.size());
     logger.info("Finished computing correct interactions");
     return correctConsideredInteractions;
   }
