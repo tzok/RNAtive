@@ -84,8 +84,8 @@ const analyzerOptions = [
 ];
 const visualizerOptions = [
   {
-    value: "VARNA_TZ",
-    label: "VARNA_TZ",
+    value: "VARNA",
+    label: "VARNA",
   },
   {
     value: "RNAPUZZLER",
