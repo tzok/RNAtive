@@ -270,9 +270,19 @@ public class TaskProcessorService {
       task.setResult(resultJson);
 
       logger.info("Generating visualization");
+      // Pass context needed for confidence coloring
       var svg =
           generateVisualization(
-              request.visualizationTool(), firstModel, correctConsideredInteractions, dotBracket);
+              request.visualizationTool(),
+              firstModel,
+              correctConsideredInteractions,
+              dotBracket,
+              consideredInteractionsBag, // Pass the bag
+              modelCount, // Pass the model count
+              (request.confidenceLevel() == null)
+                  ? fuzzyConsideredInteractions
+                  : null // Pass fuzzy map only if in fuzzy mode
+              );
       task.setSvg(svg);
 
       logger.info("Task processing completed successfully");
@@ -877,10 +887,15 @@ public class TaskProcessorService {
       VisualizationTool visualizationTool,
       AnalyzedModel firstModel,
       Set<AnalyzedBasePair> correctConsideredInteractions,
-      DotBracketFromPdb dotBracket) { // Note: dotBracket might not be needed for VARNA_TZ
+      DotBracketFromPdb dotBracket,
+      // Context for confidence coloring
+      HashBag<AnalyzedBasePair> consideredInteractionsBag,
+      int modelCount,
+      Map<AnalyzedBasePair, Double> fuzzyConsideredInteractions) {
     try {
       String svg;
       if (visualizationTool == VisualizationTool.VARNA) {
+        // Note: Local VARNA visualization does not currently support confidence coloring
         logger.info("Generating visualization using DrawerVarnaTz (local VARNA)");
         var svgDoc =
             drawerVarnaTz.drawSecondaryStructure(
@@ -891,7 +906,13 @@ public class TaskProcessorService {
         svg = new String(svgBytes);
       } else if (visualizationTool == VisualizationTool.VARNA_TZ) {
         logger.info("Generating visualization using VarnaTzClient (remote varna-tz service)");
-        var structureData = createStructureData(firstModel, correctConsideredInteractions);
+        var structureData =
+            createStructureData(
+                firstModel,
+                correctConsideredInteractions,
+                consideredInteractionsBag,
+                modelCount,
+                fuzzyConsideredInteractions); // Pass context
         var svgDoc = varnaTzClient.visualize(structureData);
         var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
         svg = new String(svgBytes);
@@ -956,11 +977,17 @@ public class TaskProcessorService {
     result.addAll(correctFuzzyNonCanonicalPairs(fuzzyNonCanonicalPairs));
     result.addAll(correctFuzzyStackings(fuzzyStackings));
     return result;
+    return result;
   }
 
   private StructureData createStructureData(
-      AnalyzedModel model, Set<AnalyzedBasePair> correctInteractions) {
-    logger.debug("Creating StructureData for VarnaTzClient");
+      AnalyzedModel model,
+      Set<AnalyzedBasePair> interactionsToVisualize,
+      // Context for confidence coloring
+      HashBag<AnalyzedBasePair> consideredInteractionsBag,
+      int modelCount,
+      Map<AnalyzedBasePair, Double> fuzzyConsideredInteractions) {
+    logger.debug("Creating StructureData for VarnaTzClient with confidence coloring");
     var structureData = new StructureData();
     var nucleotides = new ArrayList<Nucleotide>();
     var residueToIdMap = new HashMap<PdbNamedResidueIdentifier, Integer>();
@@ -989,9 +1016,9 @@ public class TaskProcessorService {
     structureData.nucleotides = nucleotides;
     logger.debug("Generated {} nucleotides", nucleotides.size());
 
-    // Create BasePairs using the mapped IDs
+    // Create BasePairs using the mapped IDs and calculate confidence color
     var basePairs =
-        correctInteractions.stream()
+        interactionsToVisualize.stream()
             .filter(
                 interaction ->
                     interaction.interactionType()
@@ -1030,17 +1057,33 @@ public class TaskProcessorService {
                   varnaBp.edge3 = edge3.get();
                   varnaBp.stericity = stericity.get();
                   varnaBp.canonical = analyzedPair.isCanonical();
-                  // Color and thickness are left null
+
+                  // Calculate confidence and set color
+                  double confidence;
+                  if (fuzzyConsideredInteractions != null) {
+                    // Fuzzy mode: confidence is pre-calculated
+                    confidence = fuzzyConsideredInteractions.getOrDefault(analyzedPair, 0.0);
+                  } else {
+                    // Threshold mode: confidence is frequency
+                    confidence =
+                        (modelCount > 0)
+                            ? (double) consideredInteractionsBag.getCount(analyzedPair) / modelCount
+                            : 0.0;
+                  }
+                  varnaBp.color = getColorForConfidence(confidence);
+                  // Thickness is left null
 
                   logger.trace(
                       "Created Varna BasePair: id1={}, id2={}, edge5={}, edge3={}, stericity={},"
-                          + " canonical={}",
+                          + " canonical={}, confidence={}, color={}",
                       varnaBp.id1,
                       varnaBp.id2,
                       varnaBp.edge5,
                       varnaBp.edge3,
                       varnaBp.stericity,
-                      varnaBp.canonical);
+                      varnaBp.canonical,
+                      confidence,
+                      varnaBp.color);
                   return varnaBp;
                 })
             .filter(Objects::nonNull) // Remove skipped pairs
@@ -1067,5 +1110,24 @@ public class TaskProcessorService {
       case TRANS -> Optional.of(ModeleBP.Stericity.TRANS);
       case UNKNOWN -> Optional.empty();
     };
+  }
+
+  /**
+   * Generates a hex color string (#RRGGBB) based on a confidence score (0.0 to 1.0). Interpolates
+   * linearly from Red (0.0) to Green (1.0).
+   *
+   * @param confidence The confidence score (0.0 to 1.0).
+   * @return A hex color string.
+   */
+  private String getColorForConfidence(double confidence) {
+    // Clamp confidence to the range [0.0, 1.0]
+    double clampedConfidence = Math.max(0.0, Math.min(1.0, confidence));
+
+    // Linear interpolation between Red (FF0000) and Green (00FF00)
+    int red = (int) (255 * (1.0 - clampedConfidence));
+    int green = (int) (255 * clampedConfidence);
+    int blue = 0;
+
+    return String.format("#%02X%02X%02X", red, green, blue);
   }
 }
