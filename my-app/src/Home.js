@@ -1671,7 +1671,7 @@ function Home() {
                   </Button>
                 </Tooltip>
               ) : (
-                <Button type="primary" onClick={handleSendData}>
+                <Button type="primary" onClick={() => handleSendData()}>
                   Submit
                 </Button>
               )}
