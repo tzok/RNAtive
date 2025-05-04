@@ -141,6 +141,8 @@ function Home() {
   const [isSequenceOk, setIsSequenceOk] = useState(true);
   const [isDotBracketOk, setIsDotBracketOk] = useState(true);
   const [sequenceList, setSequenceList] = useState([]);
+  const [seqLength, setSeqLength] = useState(0);
+  const [brackLength, setBrackLength] = useState(0);
   const addOrUpdateSequenceList = (name, sequence) => {
     console.log("added or updated file", name);
     console.log("=====================", sequence);
@@ -176,6 +178,8 @@ function Home() {
   const resetDotBracket = (file) => {
     //resets the dotBracket textview
     setDotBracket("");
+    setSeqLength(0);
+    setBrackLength(0);
   };
   // Ensure confidenceLevel is within valid range when fileList updates
   useEffect(() => {
@@ -260,6 +264,7 @@ function Home() {
           ) {
             localSequenceToCheck = file.sequence;
             setSequenceToCheck(file.sequence);
+            checkDotBracket(dotBracket, file.sequence);
           }
           if (localSequenceToCheck === file.sequence) {
             console.log(`File ${index}: seq is ok sequence =`, file.sequence);
@@ -477,15 +482,26 @@ function Home() {
      *  3: structure
      */
     const regex =
-      /(>.+\r?\n)?([ACGUTRYNacgutryn]+)\r?\n([-.()\[\]{}<>A-Za-z]+)/;
+      /(>.+\r?\n)?([ACGUTRYNacgutryn]+)\r?\n([-.()\[\]{}<>A-Za-z]+)/g;
+    const matches = [...string.matchAll(regex)];
     const text = string;
-    const match = text.match(regex);
+    const extractedSequence = matches.map((m) => m[2]).join("");
+    const extractedBrackets = matches.map((m) => m[3]).join("");
+    //const match = text.match(regex);
     if (text === "") {
       setIsDotBracketOk(true);
     } else {
-      if (match) {
-        const extractedSequence = match[2]; // the second capture group
-
+      if (matches) {
+        // const extractedSequence = match[2]; // the second capture group
+        // const extractedBrackets = match[3];
+        // let extractedSequence = ""; // the second capture group
+        // let extractedBrackets = "";
+        // for (let i = 1; i < match.length; i += 3) {
+        //   extractedSequence += match[i + 1]; // the second capture group
+        //   extractedBrackets += match[i + 2];
+        // }
+        console.log("MATCH LEN:", matches.length);
+        console.log("MATCH :", matches);
         console.log("Extracted sequence:", extractedSequence);
         console.log("sequenceToCheck:", seqToCheck);
 
@@ -496,6 +512,8 @@ function Home() {
           console.log("❌ Sequence does not match");
           setIsDotBracketOk(false);
         }
+        setSeqLength(extractedSequence.length);
+        setBrackLength(extractedBrackets.length);
       } else {
         console.log("No match found in input.");
         setIsDotBracketOk(false);
@@ -1434,6 +1452,16 @@ function Home() {
               ) : (
                 <div></div>
               )}
+              {seqLength != brackLength ? (
+                <div style={{ color: "red" }}>
+                  Please ensure that the sequence is of the same length as the
+                  brackets.<br></br>
+                  sequence: {seqLength} signs <br></br>
+                  brackets: {brackLength} signs <br></br>
+                </div>
+              ) : (
+                <div></div>
+              )}
               <div style={{ position: "relative" }}>
                 <TextArea
                   rows={6}
@@ -1658,7 +1686,7 @@ function Home() {
                     Submit
                   </Button>
                 </Tooltip>
-              ) : !isDotBracketOk ? (
+              ) : !isDotBracketOk || seqLength != brackLength ? (
                 <Tooltip title="Fix dot-bracket errors">
                   <Button type="primary" danger disabled>
                     Submit
