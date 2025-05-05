@@ -1456,8 +1456,8 @@ function Home() {
                 <div style={{ color: "red" }}>
                   Please ensure that the sequence is of the same length as the
                   brackets.<br></br>
-                  sequence: {seqLength} signs <br></br>
-                  brackets: {brackLength} signs <br></br>
+                  sequence: {seqLength} characters <br></br>
+                  structure: {brackLength} characters <br></br>
                 </div>
               ) : (
                 <div></div>
