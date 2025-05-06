@@ -143,6 +143,8 @@ function Home() {
   const [sequenceList, setSequenceList] = useState([]);
   const [seqLength, setSeqLength] = useState(0);
   const [brackLength, setBrackLength] = useState(0);
+  const [opBracketsNum, setOpBracketsNum] = useState(0);
+  const [clBracketsNum, setClBracketsNum] = useState(0);
   const addOrUpdateSequenceList = (name, sequence) => {
     console.log("added or updated file", name);
     console.log("=====================", sequence);
@@ -180,6 +182,8 @@ function Home() {
     setDotBracket("");
     setSeqLength(0);
     setBrackLength(0);
+    setOpBracketsNum(0);
+    setClBracketsNum(0);
   };
   // Ensure confidenceLevel is within valid range when fileList updates
   useEffect(() => {
@@ -487,6 +491,16 @@ function Home() {
     const text = string;
     const extractedSequence = matches.map((m) => m[2]).join("");
     const extractedBrackets = matches.map((m) => m[3]).join("");
+    const openRegex = /[([{<]/g;
+    const openings = extractedBrackets.match(openRegex) || [];
+    console.log("Opening brackets:", openings);
+    console.log("Count:", openings.length);
+    const closeRegex = /[)\]}>]/g;
+    const closings = extractedBrackets.match(closeRegex) || [];
+    console.log("Closing brackets:", closings);
+    console.log("Count:", closings.length);
+    setClBracketsNum(closings.length);
+    setOpBracketsNum(openings.length);
     //const match = text.match(regex);
     if (text === "") {
       setIsDotBracketOk(true);
@@ -521,40 +535,6 @@ function Home() {
     }
   };
   const handleDotBracket = (event) => {
-    /*
-     * Regex:
-     * (>.+\r?\n)?([ACGUTRYNacgutryn]+)\r?\n([-.()\[\]{}<>A-Za-z]+)
-     *
-     * Groups:
-     *  1: strand name with leading '>' or null
-     *  2: sequence
-     *  3: structure
-     */
-    // const regex =
-    //   /(>.+\r?\n)?([ACGUTRYNacgutryn]+)\r?\n([-.()\[\]{}<>A-Za-z]+)/;
-    // const text = event.target.value;
-    // const match = text.match(regex);
-    // if (text === "") {
-    //   setIsDotBracketOk(true);
-    // } else {
-    //   if (match) {
-    //     const extractedSequence = match[2]; // the second capture group
-
-    //     console.log("Extracted sequence:", extractedSequence);
-    //     console.log("sequenceToCheck:", sequenceToCheck);
-
-    //     if (extractedSequence === sequenceToCheck) {
-    //       console.log("✅ Sequence matches");
-    //       setIsDotBracketOk(true);
-    //     } else {
-    //       console.log("❌ Sequence does not match");
-    //       setIsDotBracketOk(false);
-    //     }
-    //   } else {
-    //     console.log("No match found in input.");
-    //     setIsDotBracketOk(false);
-    //   }
-    // }
     checkDotBracket(event.target.value, sequenceToCheck);
     setDotBracket(event.target.value);
   };
@@ -1455,9 +1435,19 @@ function Home() {
               {seqLength != brackLength ? (
                 <div style={{ color: "red" }}>
                   Please ensure that the sequence is of the same length as the
-                  brackets.<br></br>
+                  structure.<br></br>
                   sequence: {seqLength} characters <br></br>
                   structure: {brackLength} characters <br></br>
+                </div>
+              ) : (
+                <div></div>
+              )}
+              {opBracketsNum != clBracketsNum ? (
+                <div style={{ color: "red" }}>
+                  Please ensure that the structure has the same number of
+                  opening and closing brackets.<br></br>
+                  opening brackets: {opBracketsNum} <br></br>
+                  closing brackets: {clBracketsNum} <br></br>
                 </div>
               ) : (
                 <div></div>
@@ -1686,7 +1676,9 @@ function Home() {
                     Submit
                   </Button>
                 </Tooltip>
-              ) : !isDotBracketOk || seqLength != brackLength ? (
+              ) : !isDotBracketOk ||
+                seqLength != brackLength ||
+                opBracketsNum != clBracketsNum ? (
                 <Tooltip title="Fix dot-bracket errors">
                   <Button type="primary" danger disabled>
                     Submit
