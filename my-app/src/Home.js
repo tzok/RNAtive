@@ -261,6 +261,8 @@ function Home() {
           //setSequenceToCheck("");
           //setIsSequenceOk(true);
           //setIsDotBracketOk(true);
+          console.log(`File:`, file);
+          console.log(`File:`, file.sequence);
           if (
             localSequenceToCheck === "" &&
             file.sequence != "" &&
@@ -280,7 +282,11 @@ function Home() {
           }
         });
 
-        if (result.files.length > 1 || fileWithUid.isArchive) {
+        if (
+          result.files.length > 1 ||
+          fileWithUid.isArchive ||
+          result.files[0].name !== file.name
+        ) {
           // Sort files by model number if they follow the pattern base_model_n.ext
           const sortedFiles = [...result.files].sort((a, b) => {
             const modelNumberA = a.name.match(/_model_(\d+)\./);
@@ -476,6 +482,10 @@ function Home() {
     }
   }, [id]);
   const checkDotBracket = (string, seqToCheck) => {
+    if (string === "" || string === null) {
+      setIsDotBracketOk(true);
+      return;
+    }
     /*
      * Regex:
      * (>.+\r?\n)?([ACGUTRYNacgutryn]+)\r?\n([-.()\[\]{}<>A-Za-z]+)
