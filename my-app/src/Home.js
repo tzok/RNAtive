@@ -1180,9 +1180,8 @@ function Home() {
           label: key,
           children: (
             <div>
-              <p>
-                <h2>{fileData.structure.description.filename}</h2>
-              </p>
+              <h2>{fileData.structure.description.filename}</h2>
+
               <div>
                 <b>Clashscore: </b> {fileData.structure.clashscore}
               </div>
@@ -1244,16 +1243,16 @@ function Home() {
             >
               <Tabs items={perFileDetails} tabPosition={"left"} />
             </Card>
-            {/* {Object.keys(response.molProbity).length === 0 ? ( */}
-            <Card
-              title={"Model quality filter results:"}
-              style={{ marginBottom: "24px" }}
-            >
-              <Tabs items={molProbityDetails} tabPosition={"left"} />
-            </Card>
-            {/* // ) : (
-            //   <div></div>
-            // )} */}
+
+            {response.molProbity &&
+              Object.keys(response.molProbity).length > 0 && (
+                <Card
+                  title={"Model quality filter results:"}
+                  style={{ marginBottom: "24px" }}
+                >
+                  <Tabs items={molProbityDetails} tabPosition={"left"} />
+                </Card>
+              )}
 
             {removalReasons &&
               Object.keys(removalReasons).length > 0 &&
