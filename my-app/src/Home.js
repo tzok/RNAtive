@@ -688,10 +688,25 @@ function Home() {
       }
       const requestData = await requestResponse.json();
 
+      // Fetch molProbity response
+      const molProbityResponse = await fetch(
+        `${serverAddress}/${taskId}/molprobity`,
+        {
+          method: "GET",
+        }
+      );
+      if (!molProbityResponse.ok) {
+        throw new Error(
+          `Failed to get molProbity. Status: ${molProbityResponse.status}`
+        );
+      }
+      const molProbityData = await molProbityResponse.json();
+      console.log("Mol Probity data: ", molProbityData);
       // Combine results and request parameters
       const combinedData = {
         ...resultData,
         userRequest: requestData, // Add the fetched request data
+        molProbity: molProbityData, // Add the fetched request data
       };
 
       // Set the response state with combined data
@@ -1159,6 +1174,42 @@ function Home() {
         ),
       }));
 
+      const molProbityDetails = Object.entries(response.molProbity).map(
+        ([key, fileData], index) => ({
+          key: index,
+          label: key,
+          children: (
+            <div>
+              <p>
+                <h2>{fileData.structure.description.filename}</h2>
+              </p>
+              <div>
+                <b>Clashscore: </b> {fileData.structure.clashscore}
+              </div>
+              <div>
+                <b>Bad angles: </b> {fileData.structure.pctBadAngles}
+              </div>
+              <div>
+                <b>Bad backbone conformations: </b>{" "}
+                {fileData.structure.pctBadBackboneConformations}
+              </div>
+              <div>
+                <b>Bad bonds: </b> {fileData.structure.pctBadBonds}
+              </div>
+              <div>
+                <b>Probably Wrong Sugar Puckers: </b>{" "}
+                {fileData.structure.pctProbablyWrongSugarPuckers} (category:{" "}
+                <b>{fileData.structure.probablyWrongSugarPuckersCategory}</b>)
+              </div>
+              <div>
+                <b>Rank: </b> {fileData.structure.pctRank} ( category:{" "}
+                <b>{fileData.structure.rankCategory}</b>)
+              </div>
+            </div>
+          ),
+        })
+      );
+
       return (
         <Row justify={"center"}>
           <Col span={20}>
@@ -1193,6 +1244,16 @@ function Home() {
             >
               <Tabs items={perFileDetails} tabPosition={"left"} />
             </Card>
+            {/* {Object.keys(response.molProbity).length === 0 ? ( */}
+            <Card
+              title={"Model quality filter results:"}
+              style={{ marginBottom: "24px" }}
+            >
+              <Tabs items={molProbityDetails} tabPosition={"left"} />
+            </Card>
+            {/* // ) : (
+            //   <div></div>
+            // )} */}
 
             {removalReasons &&
               Object.keys(removalReasons).length > 0 &&
