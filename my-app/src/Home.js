@@ -1186,23 +1186,56 @@ function Home() {
                 <b>Clashscore: </b> {fileData.structure.clashscore}
               </div>
               <div>
-                <b>Bad angles: </b> {fileData.structure.pctBadAngles}
+                <b>Bad angles: </b> {fileData.structure.pctBadAngles}%
               </div>
               <div>
                 <b>Bad backbone conformations: </b>{" "}
-                {fileData.structure.pctBadBackboneConformations}
+                {fileData.structure.pctBadBackboneConformations}%
               </div>
               <div>
-                <b>Bad bonds: </b> {fileData.structure.pctBadBonds}
+                <b>Bad bonds: </b> {fileData.structure.pctBadBonds}%
               </div>
               <div>
                 <b>Probably Wrong Sugar Puckers: </b>{" "}
-                {fileData.structure.pctProbablyWrongSugarPuckers} (category:{" "}
-                <b>{fileData.structure.probablyWrongSugarPuckersCategory}</b>)
+                {fileData.structure.pctProbablyWrongSugarPuckers}% (category:{" "}
+                {fileData.structure.probablyWrongSugarPuckersCategory ===
+                  "Good" && (
+                  <b style={{ color: "green" }}>
+                    {fileData.structure.probablyWrongSugarPuckersCategory}
+                  </b>
+                )}
+                {fileData.structure.probablyWrongSugarPuckersCategory ===
+                  "Warning" && (
+                  <b style={{ color: "orange" }}>
+                    {fileData.structure.probablyWrongSugarPuckersCategory}
+                  </b>
+                )}
+                {fileData.structure.probablyWrongSugarPuckersCategory ===
+                  "Bad" && (
+                  <b style={{ color: "red" }}>
+                    {fileData.structure.probablyWrongSugarPuckersCategory}
+                  </b>
+                )}
+                )
               </div>
               <div>
-                <b>Rank: </b> {fileData.structure.pctRank} ( category:{" "}
-                <b>{fileData.structure.rankCategory}</b>)
+                <b>Rank: </b> {fileData.structure.pctRank}% ( category:{" "}
+                {fileData.structure.rankCategory === "Good" && (
+                  <b style={{ color: "green" }}>
+                    {fileData.structure.rankCategory}
+                  </b>
+                )}
+                {fileData.structure.rankCategory === "Warning" && (
+                  <b style={{ color: "orange" }}>
+                    {fileData.structure.rankCategory}
+                  </b>
+                )}
+                {fileData.structure.rankCategory === "Bad" && (
+                  <b style={{ color: "red" }}>
+                    {fileData.structure.rankCategory}
+                  </b>
+                )}
+                )
               </div>
             </div>
           ),
