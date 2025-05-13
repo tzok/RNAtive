@@ -12,6 +12,8 @@ import puzzles1 from "./assets/F1large.jpg";
 import task_id1 from "./assets/task_id1.png";
 import task_id2 from "./assets/task_id2.png";
 
+import molProbityResults from "./assets/molProbityResults.png";
+
 import A1 from "./assets/a1.png";
 import A2 from "./assets/a2.png";
 import A3 from "./assets/a3.png";
@@ -575,6 +577,27 @@ const Help = () => {
             <img
               src={B4}
               alt="Results"
+              style={{
+                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                maxWidth: "800px", // Prevents overflow
+                height: "auto",
+                display: "inline-block",
+              }}
+            />
+            <Paragraph>
+              <br></br>
+            </Paragraph>
+            <Paragraph>
+              <b>Model quality filter results</b>
+            </Paragraph>
+            <Paragraph>
+              When user selects an option different than "No filter" at Model
+              quality filter section (3.1.1 above), results provided by the
+              filter will also be presented for each file analyzed.
+            </Paragraph>
+            <img
+              src={molProbityResults}
+              alt="Mol probity Results"
               style={{
                 width: imgWidth > 0 ? `${imgWidth}px` : "auto",
                 maxWidth: "800px", // Prevents overflow
