@@ -63,7 +63,7 @@ const analyzerOptions = [
   },
   {
     value: "BPNET",
-    label: "bpnet",
+    label: "BPNet",
   },
   {
     value: "FR3D",
@@ -79,7 +79,7 @@ const analyzerOptions = [
   },
   {
     value: "BARNABA",
-    label: "barnaba",
+    label: "Barnaba",
   },
 ];
 const visualizerOptions = [
