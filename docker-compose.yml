@@ -4,6 +4,7 @@ services:
       context: my-app
       args:
         - REACT_APP_SERVER_ADDRESS=https://rnative.cs.put.poznan.pl/api/compute
+    restart: unless-stopped
 
   backend:
     build: .
@@ -16,6 +17,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - ANALYSIS_SERVICE_URL=https://rnative.cs.put.poznan.pl/adapters
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
@@ -33,6 +35,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   adapters:
     image: rnapdbee-adapters-image
@@ -48,6 +51,7 @@ services:
       - ADAPTERS_SUBPROCESS_TIMEOUT=600
       - ADAPTERS_PSEUDOVIEWER_TIMEOUT=40
       - ADAPTERS_FLASK_LOG_LEVEL=INFO
+    restart: unless-stopped
     volumes:
       - adapters_cache:/var/tmp/adapters_cache
 
@@ -64,6 +68,7 @@ services:
       - frontend
       - backend
       - adapters
+    restart: unless-stopped
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
 
   certbot:
@@ -71,16 +76,20 @@ services:
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
+    restart: unless-stopped
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
   rnapolis:
     image: ghcr.io/tzok/cli2rest-rnapolis:0.8.1
+    restart: unless-stopped
 
   varna-tz:
     image: ghcr.io/tzok/cli2rest-varna-tz:1.5.0_0.9.5
+    restart: unless-stopped
 
   rchie:
     image: ghcr.io/tzok/cli2rest-rchie:1.36.0_0.9.5
+    restart: unless-stopped
 
 volumes:
   postgres_data:
