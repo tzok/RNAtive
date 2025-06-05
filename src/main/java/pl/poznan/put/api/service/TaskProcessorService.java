@@ -1356,7 +1356,8 @@ public class TaskProcessorService {
                 })
             .filter(Objects::nonNull)
             .sorted(
-                Comparator.comparing((pl.poznan.put.varna.model.Stacking s) -> Integer.parseInt(s.id1))
+                Comparator.comparing(
+                        (pl.poznan.put.varna.model.Stacking s) -> Integer.parseInt(s.id1))
                     .thenComparing(s -> Integer.parseInt(s.id2)))
             .collect(Collectors.toList());
 
