@@ -35,7 +35,7 @@ public class RChieClient {
   private final String serviceUrl;
 
   public RChieClient(
-      @Value("${rchie.service.url:http://rchie-service:8000}") String serviceUrl,
+      @Value("${rchie.service.url:http://rchie:8080}") String serviceUrl,
       ObjectMapper objectMapper) {
     this.restTemplate = new RestTemplate();
     this.objectMapper = objectMapper;
