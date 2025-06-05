@@ -83,7 +83,7 @@ services:
     image: ghcr.io/tzok/cli2rest-rnapolis:0.8.1
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -92,7 +92,7 @@ services:
     image: ghcr.io/tzok/cli2rest-varna-tz:1.5.0_0.9.5
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -101,7 +101,7 @@ services:
     image: ghcr.io/tzok/cli2rest-rchie:1.36.0_0.9.5
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 5
