@@ -1317,6 +1317,58 @@ public class TaskProcessorService {
       basePairs.forEach(bp -> logger.trace("  {}", bp));
     }
 
+    // Create Stackings using the mapped IDs and calculate confidence color
+    var stackings =
+        interactionsToVisualize.stream()
+            .filter(
+                interaction ->
+                    interaction.category() == InteractionCategory.STACKING) // Filter for stackings
+            .map(
+                interaction -> {
+                  var varnaStacking = new pl.poznan.put.varna.model.Stacking();
+
+                  Integer id1 = residueToIdMap.get(interaction.partner1());
+                  Integer id2 = residueToIdMap.get(interaction.partner2());
+
+                  if (id1 == null || id2 == null) {
+                    logger.warn(
+                        "Could not find mapping for stacking interaction: {}. Skipping.",
+                        interaction);
+                    return null; // Skip if mapping not found
+                  }
+
+                  varnaStacking.id1 = String.valueOf(id1); // VARNA expects string IDs for stackings
+                  varnaStacking.id2 = String.valueOf(id2);
+
+                  // Calculate confidence and set color
+                  double confidence = interaction.probability();
+                  varnaStacking.color = getColorForConfidence(confidence);
+                  // Thickness can be set if needed, e.g., based on confidence or a fixed value
+                  // varnaStacking.thickness = calculateThicknessForConfidence(confidence);
+
+                  logger.trace(
+                      "Created Varna Stacking: id1={}, id2={}, confidence={}, color={}",
+                      varnaStacking.id1,
+                      varnaStacking.id2,
+                      confidence,
+                      varnaStacking.color);
+                  return varnaStacking;
+                })
+            .filter(Objects::nonNull)
+            .sorted(
+                Comparator.comparing((pl.poznan.put.varna.model.Stacking s) -> Integer.parseInt(s.id1))
+                    .thenComparing(s -> Integer.parseInt(s.id2)))
+            .collect(Collectors.toList());
+
+    structureData.stackings = stackings;
+    logger.debug("Generated and sorted {} stackings for Varna", stackings.size());
+
+    // Log sorted stackings at TRACE level
+    if (logger.isTraceEnabled()) {
+      logger.trace("Sorted Varna Stackings:");
+      stackings.forEach(s -> logger.trace("  {}", s));
+    }
+
     return structureData;
   }
 
