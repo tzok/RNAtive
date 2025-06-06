@@ -68,7 +68,75 @@ const FileDetails = ({
   const details = [
     {
       key: filename + "-2d-structure",
-      label: "Secondary structure",
+      label: (
+        <Tooltip
+          title={
+            <div>
+              <p style={{ marginBottom: "8px" }}>
+                Interaction colors reflect confidence (probability). The{" "}
+                <a
+                  href="https://mahdilamb.github.io/colormap/#algae"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Algae colormap
+                </a>{" "}
+                is used:
+              </p>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginBottom: "5px",
+                }}
+              >
+                <div
+                  style={{
+                    width: "15px",
+                    height: "15px",
+                    backgroundColor: "#2A6A79",
+                    marginRight: "8px",
+                    border: "1px solid #ccc",
+                  }}
+                ></div>
+                <span>Low (e.g., 0%)</span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginBottom: "5px",
+                }}
+              >
+                <div
+                  style={{
+                    width: "15px",
+                    height: "15px",
+                    backgroundColor: "#3E9A70",
+                    marginRight: "8px",
+                    border: "1px solid #ccc",
+                  }}
+                ></div>
+                <span>Medium (e.g., 50%)</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <div
+                  style={{
+                    width: "15px",
+                    height: "15px",
+                    backgroundColor: "#A8D67D",
+                    marginRight: "8px",
+                    border: "1px solid #ccc",
+                  }}
+                ></div>
+                <span>High (e.g., 100%)</span>
+              </div>
+            </div>
+          }
+        >
+          Secondary structure <QuestionCircleOutlined />
+        </Tooltip>
+      ),
       children: (
         <div>
           <Row gutter={16}>
