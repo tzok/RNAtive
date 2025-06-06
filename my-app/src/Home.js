@@ -1089,8 +1089,24 @@ function Home() {
           label: key,
           children: (
             <Descriptions bordered column={1} title={fileData.structure.description.filename}>
-              <Descriptions.Item label="Clashscore">
-                {fileData.structure.clashscore}
+              <Descriptions.Item label="Clashscore / Rank">
+                {fileData.structure.clashscore} / {fileData.structure.pctRank}% (category:{" "}
+                {fileData.structure.rankCategory === "Good" && (
+                    <Text style={{ color: "green", fontWeight: "bold" }}>
+                      {fileData.structure.rankCategory}
+                    </Text>
+                )}
+                {fileData.structure.rankCategory === "Caution" && (
+                    <Text style={{ color: "orange", fontWeight: "bold" }}>
+                      {fileData.structure.rankCategory}
+                    </Text>
+                )}
+                {fileData.structure.rankCategory === "Warning" && (
+                    <Text style={{ color: "red", fontWeight: "bold" }}>
+                      {fileData.structure.rankCategory}
+                    </Text>
+                )}
+                )
               </Descriptions.Item>
               <Descriptions.Item label="Bad angles">
                 {fileData.structure.pctBadAngles}%
@@ -1108,33 +1124,14 @@ function Home() {
                     {fileData.structure.probablyWrongSugarPuckersCategory}
                   </Text>
                 )}
+                {fileData.structure.probablyWrongSugarPuckersCategory === "Caution" && (
+                  <Text style={{ color: "orange", fontWeight: "bold" }}>
+                    {fileData.structure.probablyWrongSugarPuckersCategory}
+                  </Text>
+                )}
                 {fileData.structure.probablyWrongSugarPuckersCategory === "Warning" && (
-                  <Text style={{ color: "orange", fontWeight: "bold" }}>
-                    {fileData.structure.probablyWrongSugarPuckersCategory}
-                  </Text>
-                )}
-                {fileData.structure.probablyWrongSugarPuckersCategory === "Bad" && (
                   <Text style={{ color: "red", fontWeight: "bold" }}>
                     {fileData.structure.probablyWrongSugarPuckersCategory}
-                  </Text>
-                )}
-                )
-              </Descriptions.Item>
-              <Descriptions.Item label="Rank">
-                {fileData.structure.pctRank}% (category:{" "}
-                {fileData.structure.rankCategory === "Good" && (
-                  <Text style={{ color: "green", fontWeight: "bold" }}>
-                    {fileData.structure.rankCategory}
-                  </Text>
-                )}
-                {fileData.structure.rankCategory === "Warning" && (
-                  <Text style={{ color: "orange", fontWeight: "bold" }}>
-                    {fileData.structure.rankCategory}
-                  </Text>
-                )}
-                {fileData.structure.rankCategory === "Bad" && (
-                  <Text style={{ color: "red", fontWeight: "bold" }}>
-                    {fileData.structure.rankCategory}
                   </Text>
                 )}
                 )
