@@ -1104,6 +1104,29 @@ public class TaskProcessorService {
               }
             })
         .toList();
+
+    // After parallel processing, update progress for each model that was input to this stage.
+    for (int i = 0; i < models.size(); i++) {
+      updateTaskProgress(
+          task,
+          currentStepCounter,
+          totalSteps,
+          "Analyzed 2D structure for model %d of %d: %s",
+          i + 1,
+          models.size(),
+          models.get(i).name());
+    }
+    // Adjust counter for any discrepancy if models.size() < initialFileCountForProgress
+    for (int i = models.size(); i < initialFileCountForProgress; i++) {
+      updateTaskProgress(
+          task,
+          currentStepCounter,
+          totalSteps,
+          "Adjusting progress for 2D analysis step (unprocessed allocation %d of %d)",
+          i + 1,
+          initialFileCountForProgress);
+    }
+    return result;
   }
 
   /**
