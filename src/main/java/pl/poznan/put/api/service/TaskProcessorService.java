@@ -246,13 +246,13 @@ public class TaskProcessorService {
 
                     AnalyzedModel correspondingAnalyzedModel =
                         analyzedModels.stream()
-                            .filter(am -> am.name().equals(rankedModel.getName()))
+                            .filter(am -> am.name().equals(rankedModel.name()))
                             .findFirst()
                             .orElse(null);
 
                     if (correspondingAnalyzedModel != null) {
                       InteractionCollectionResult modelInteractionResult =
-                          fullInteractionResult.perModelResults().get(rankedModel.getName());
+                          fullInteractionResult.perModelResults().get(rankedModel.name());
 
                       if (modelInteractionResult != null) {
                         // 1. Generate standard model visualization (Varna/VisualizationClient)
@@ -277,21 +277,19 @@ public class TaskProcessorService {
                                   correspondingAnalyzedModel,
                                   modelDotBracket,
                                   modelInteractionsToVisualize);
-                          logger.debug(
-                              "Generated standard SVG for model: {}", rankedModel.getName());
-                          svgEntries.add(Map.entry(rankedModel.getName(), modelSvg));
+                          logger.debug("Generated standard SVG for model: {}", rankedModel.name());
+                          svgEntries.add(Map.entry(rankedModel.name(), modelSvg));
                         } catch (Exception e) {
                           logger.warn(
                               "Failed to generate standard visualization for model {}: {}",
-                              rankedModel.getName(),
+                              rankedModel.name(),
                               e.getMessage());
                         }
 
                         // 2. Generate RChie SVG for the model
                         try {
                           logger.info(
-                              "Generating RChie visualization for model: {}",
-                              rankedModel.getName());
+                              "Generating RChie visualization for model: {}", rankedModel.name());
                           RChieData rChieModelData =
                               prepareRChieData(
                                   correspondingAnalyzedModel,
@@ -303,15 +301,15 @@ public class TaskProcessorService {
                           byte[] rChieModelSvgBytes =
                               SVGHelper.export(rChieModelSvgDoc, Format.SVG);
                           String rChieModelSvgString = new String(rChieModelSvgBytes);
-                          String rChieSvgKey = "rchie-" + rankedModel.getName();
+                          String rChieSvgKey = "rchie-" + rankedModel.name();
                           svgEntries.add(Map.entry(rChieSvgKey, rChieModelSvgString));
                           logger.info(
                               "Successfully generated RChie visualization SVG for model {}.",
-                              rankedModel.getName());
+                              rankedModel.name());
                         } catch (Exception e) {
                           logger.error(
                               "Failed to generate RChie visualization SVG for model {}",
-                              rankedModel.getName(),
+                              rankedModel.name(),
                               e);
                           // Note: Avoid modifying task.setMessage in parallel stream due to
                           // concurrency
@@ -319,13 +317,13 @@ public class TaskProcessorService {
                       } else {
                         logger.warn(
                             "Could not find interaction results for model {} to generate SVGs.",
-                            rankedModel.getName());
+                            rankedModel.name());
                       }
                     } else {
                       logger.warn(
                           "Could not find corresponding AnalyzedModel for RankedModel {} to"
                               + " generate SVGs.",
-                          rankedModel.getName());
+                          rankedModel.name());
                     }
                     return svgEntries.stream(); // Return a stream of entries
                   })
@@ -1197,10 +1195,7 @@ public class TaskProcessorService {
 
     // 2. Create intermediate data holders for each model
     record IntermediateRankData(
-        AnalyzedModel analyzedModel,
-        double inf,
-        double f1,
-        DefaultDotBracketFromPdb dotBracket) {}
+        AnalyzedModel analyzedModel, double inf, double f1, DefaultDotBracketFromPdb dotBracket) {}
 
     List<IntermediateRankData> intermediateDataList = new ArrayList<>();
     for (AnalyzedModel model : analyzedModels) {
