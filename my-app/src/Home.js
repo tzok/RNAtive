@@ -1088,65 +1088,58 @@ function Home() {
           key: index,
           label: key,
           children: (
-            <div>
-              <h2>{fileData.structure.description.filename}</h2>
-
-              <div>
-                <b>Clashscore: </b> {fileData.structure.clashscore}
-              </div>
-              <div>
-                <b>Bad angles: </b> {fileData.structure.pctBadAngles}%
-              </div>
-              <div>
-                <b>Bad backbone conformations: </b>{" "}
+            <Descriptions bordered column={1} title={fileData.structure.description.filename}>
+              <Descriptions.Item label="Clashscore">
+                {fileData.structure.clashscore}
+              </Descriptions.Item>
+              <Descriptions.Item label="Bad angles">
+                {fileData.structure.pctBadAngles}%
+              </Descriptions.Item>
+              <Descriptions.Item label="Bad backbone conformations">
                 {fileData.structure.pctBadBackboneConformations}%
-              </div>
-              <div>
-                <b>Bad bonds: </b> {fileData.structure.pctBadBonds}%
-              </div>
-              <div>
-                <b>Probably Wrong Sugar Puckers: </b>{" "}
+              </Descriptions.Item>
+              <Descriptions.Item label="Bad bonds">
+                {fileData.structure.pctBadBonds}%
+              </Descriptions.Item>
+              <Descriptions.Item label="Probably Wrong Sugar Puckers">
                 {fileData.structure.pctProbablyWrongSugarPuckers}% (category:{" "}
-                {fileData.structure.probablyWrongSugarPuckersCategory ===
-                  "Good" && (
-                  <b style={{ color: "green" }}>
+                {fileData.structure.probablyWrongSugarPuckersCategory === "Good" && (
+                  <Text style={{ color: "green", fontWeight: "bold" }}>
                     {fileData.structure.probablyWrongSugarPuckersCategory}
-                  </b>
+                  </Text>
                 )}
-                {fileData.structure.probablyWrongSugarPuckersCategory ===
-                  "Warning" && (
-                  <b style={{ color: "orange" }}>
+                {fileData.structure.probablyWrongSugarPuckersCategory === "Warning" && (
+                  <Text style={{ color: "orange", fontWeight: "bold" }}>
                     {fileData.structure.probablyWrongSugarPuckersCategory}
-                  </b>
+                  </Text>
                 )}
-                {fileData.structure.probablyWrongSugarPuckersCategory ===
-                  "Bad" && (
-                  <b style={{ color: "red" }}>
+                {fileData.structure.probablyWrongSugarPuckersCategory === "Bad" && (
+                  <Text style={{ color: "red", fontWeight: "bold" }}>
                     {fileData.structure.probablyWrongSugarPuckersCategory}
-                  </b>
+                  </Text>
                 )}
                 )
-              </div>
-              <div>
-                <b>Rank: </b> {fileData.structure.pctRank}% ( category:{" "}
+              </Descriptions.Item>
+              <Descriptions.Item label="Rank">
+                {fileData.structure.pctRank}% (category:{" "}
                 {fileData.structure.rankCategory === "Good" && (
-                  <b style={{ color: "green" }}>
+                  <Text style={{ color: "green", fontWeight: "bold" }}>
                     {fileData.structure.rankCategory}
-                  </b>
+                  </Text>
                 )}
                 {fileData.structure.rankCategory === "Warning" && (
-                  <b style={{ color: "orange" }}>
+                  <Text style={{ color: "orange", fontWeight: "bold" }}>
                     {fileData.structure.rankCategory}
-                  </b>
+                  </Text>
                 )}
                 {fileData.structure.rankCategory === "Bad" && (
-                  <b style={{ color: "red" }}>
+                  <Text style={{ color: "red", fontWeight: "bold" }}>
                     {fileData.structure.rankCategory}
-                  </b>
+                  </Text>
                 )}
                 )
-              </div>
-            </div>
+              </Descriptions.Item>
+            </Descriptions>
           ),
         })
       );
