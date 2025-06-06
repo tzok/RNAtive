@@ -70,6 +70,7 @@ const Help = () => {
                 }}
               >
                 <Anchor
+                affix={false}
                 items={headings.map((heading) => ({
                   key: heading.id,
                   href: `#${heading.id}`,
