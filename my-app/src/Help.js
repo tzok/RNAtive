@@ -62,16 +62,11 @@ const Help = () => {
         >
           {tocVisible ? "Hide" : "Show"} Table of Contents
         </Button>
-        <div
-          style={{
-            display: "flex",
-          }}
-        >
+        <div>
           {tocVisible && (
             <div
               style={{
-                flex: "0 0 280px", // TOC: Don't grow, don't shrink, initial width 280px
-                marginRight: "20px",
+                marginBottom: "16px", // Space below TOC when visible
               }}
             >
               <Anchor
@@ -85,7 +80,7 @@ const Help = () => {
             </div>
           )}
 
-          <Typography style={{ flex: 1, minWidth: 0, overflowWrap: "break-word" }}>
+          <Typography style={{ overflowWrap: "break-word" }}>
             <CustomTitle level={1}>1. What is RNAtive</CustomTitle>
             {/* <Paragraph>RNAtive is a system that allows its users to rank a set of different models of the same RNA structure to determine which ones are the most realistic. RNAtive will return both the evaluation of individual pdb files provided, and its proposition of the most realistic actual looks of the molecule.</Paragraph> */}
             <Paragraph>
