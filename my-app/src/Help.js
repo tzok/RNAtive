@@ -76,7 +76,7 @@ const Help = () => {
             />
           </div>
 
-          <Typography>
+          <Typography style={{ flex: 1, minWidth: 0, overflowWrap: "break-word" }}>
             <CustomTitle level={1}>1. What is RNAtive</CustomTitle>
             {/* <Paragraph>RNAtive is a system that allows its users to rank a set of different models of the same RNA structure to determine which ones are the most realistic. RNAtive will return both the evaluation of individual pdb files provided, and its proposition of the most realistic actual looks of the molecule.</Paragraph> */}
             <Paragraph>
