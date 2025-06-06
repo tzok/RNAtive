@@ -1584,7 +1584,7 @@ public class TaskProcessorService {
                       int rchieI = Math.min(index1, index2);
                       int rchieJ = Math.max(index1, index2);
                       return new RChieInteraction(
-                          rchieI, rchieJ, Optional.of(RCHIE_REFERENCE_COLOR));
+                          rchieI, rchieJ, Optional.of(getColorForConfidence(1.0)));
                     } catch (Exception e) {
                       logger.warn(
                           "Error processing reference base pair {} for RChieData: {}. Skipping.",
