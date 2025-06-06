@@ -73,20 +73,24 @@ const FileDetails = ({
         <div>
           <Row gutter={16}>
             <Col span={12}>
-              <SvgImg
-                key="svg-varna-model"
-                serverAddress={serverAddress}
-                taskId={taskId}
-                svgName={filename} // VARNA SVG for the model
-              />
+              <div style={{ maxWidth: "100%", overflowX: "auto" }}>
+                <SvgImg
+                  key="svg-varna-model"
+                  serverAddress={serverAddress}
+                  taskId={taskId}
+                  svgName={filename} // VARNA SVG for the model
+                />
+              </div>
             </Col>
             <Col span={12}>
-              <SvgImg
-                key="svg-rchie-model"
-                serverAddress={serverAddress}
-                taskId={taskId}
-                svgName={`rchie-${filename}`} // R-Chie SVG for the model
-              />
+              <div style={{ maxWidth: "100%", overflowX: "auto" }}>
+                <SvgImg
+                  key="svg-rchie-model"
+                  serverAddress={serverAddress}
+                  taskId={taskId}
+                  svgName={`rchie-${filename}`} // R-Chie SVG for the model
+                />
+              </div>
             </Col>
           </Row>
           <pre
