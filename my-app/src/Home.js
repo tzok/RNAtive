@@ -501,6 +501,142 @@ function Home() {
     setDotBracket(event.target.value);
   };
 
+  const pollTaskStatus = async (taskId, pollInterval, setResponse) => {
+    while (true) {
+      const statusResponse = await fetch(`${serverAddress}/${taskId}/status`, {
+        method: "GET",
+      });
+
+      if (!statusResponse.ok) {
+        throw new Error(
+            `Failed to get status. Status: ${statusResponse.status}`
+        );
+      }
+
+      const statusData = await statusResponse.json();
+      const { status, message, removalReasons } = statusData;
+      setRemovalReasons(removalReasons);
+
+      if (status === "FAILED") {
+        console.error("FAILED:", message);
+        console.error("FAILED REASONS:", removalReasons);
+        setResponse({
+          error: message || "Task failed with no additional message.",
+        });
+        setServerError(message);
+        setIsLoading(false);
+        return;
+      }
+
+      if (status === "COMPLETED") {
+        await fetchTaskResult(taskId, setResponse);
+        return;
+      }
+
+      // If still processing, wait and try again
+      await new Promise((resolve) => setTimeout(resolve, pollInterval));
+    }
+  };
+
+  const fetchTaskResult = useCallback(async (taskId, setResponse) => {
+    try {
+      // Fetch main results
+      const resultResponse = await fetch(`${serverAddress}/${taskId}/result`, {
+        method: "GET",
+      });
+      if (!resultResponse.ok) {
+        throw new Error(
+            `Failed to get result. Status: ${resultResponse.status}`
+        );
+      }
+      const resultData = await resultResponse.json();
+
+      // Fetch user request parameters
+      const requestResponse = await fetch(
+          `${serverAddress}/${taskId}/request`,
+          {
+            method: "GET",
+          }
+      );
+      if (!requestResponse.ok) {
+        throw new Error(
+            `Failed to get request parameters. Status: ${requestResponse.status}`
+        );
+      }
+      const requestData = await requestResponse.json();
+
+      // Fetch molProbity response
+      const molProbityResponse = await fetch(
+          `${serverAddress}/${taskId}/molprobity`,
+          {
+            method: "GET",
+          }
+      );
+      if (!molProbityResponse.ok) {
+        throw new Error(
+            `Failed to get molProbity. Status: ${molProbityResponse.status}`
+        );
+      }
+      const molProbityData = await molProbityResponse.json();
+      console.log("Mol Probity data: ", molProbityData);
+      // Combine results and request parameters
+      const combinedData = {
+        ...resultData,
+        userRequest: requestData, // Add the fetched request data
+        molProbity: molProbityData, // Add the fetched request data
+      };
+
+      // Set the response state with combined data
+      setResponse(combinedData);
+    } catch (error) {
+      console.error("Error fetching task data:", error.message);
+      setResponse({ error: error.message }); // Set error state
+    } finally {
+      setIsLoading(false);
+      setTaskIdComplete(taskId);
+    }
+  }, [serverAddress, setIsLoading, setTaskIdComplete /* setResponse is passed as arg */]);
+
+  const pollTaskStatus = useCallback(async (taskId, pollInterval, setResponse) => {
+    while (true) {
+      const statusResponse = await fetch(`${serverAddress}/${taskId}/status`, {
+        method: "GET",
+      });
+
+      if (!statusResponse.ok) {
+        throw new Error(
+            `Failed to get status. Status: ${statusResponse.status}`
+        );
+      }
+
+      const statusData = await statusResponse.json();
+      const { status, message, removalReasons } = statusData;
+      setRemovalReasons(removalReasons);
+
+      if (status === "FAILED") {
+        console.error("FAILED:", message);
+        console.error("FAILED REASONS:", removalReasons);
+        setResponse({
+          error: message || "Task failed with no additional message.",
+        });
+        setServerError(message);
+        setIsLoading(false);
+        return;
+      }
+
+      if (status === "COMPLETED") {
+        // Pass setResponse to fetchTaskResult if it's not already part of its closure
+        // or if fetchTaskResult is not using a local setResponse from its own scope.
+        // In this case, fetchTaskResult takes setResponse as an argument.
+        await fetchTaskResult(taskId, setResponse);
+        return;
+      }
+
+      // If still processing, wait and try again
+      await new Promise((resolve) => setTimeout(resolve, pollInterval));
+    }
+  }, [serverAddress, fetchTaskResult, setRemovalReasons, setIsLoading, setServerError /* setResponse is passed as arg */]);
+
   const handleSendData = useCallback(async (taskIdArg = "") => {
     const POLL_INTERVAL = 3000; // 3 seconds
     let taskId = taskIdArg || null;
@@ -595,102 +731,6 @@ function Home() {
       handleSendData(id);
     }
   }, [handleSendData, id]);
-
-  const pollTaskStatus = async (taskId, pollInterval, setResponse) => {
-    while (true) {
-      const statusResponse = await fetch(`${serverAddress}/${taskId}/status`, {
-        method: "GET",
-      });
-
-      if (!statusResponse.ok) {
-        throw new Error(
-          `Failed to get status. Status: ${statusResponse.status}`
-        );
-      }
-
-      const statusData = await statusResponse.json();
-      const { status, message, removalReasons } = statusData;
-      setRemovalReasons(removalReasons);
-
-      if (status === "FAILED") {
-        console.error("FAILED:", message);
-        console.error("FAILED REASONS:", removalReasons);
-        setResponse({
-          error: message || "Task failed with no additional message.",
-        });
-        setServerError(message);
-        setIsLoading(false);
-        return;
-      }
-
-      if (status === "COMPLETED") {
-        await fetchTaskResult(taskId, setResponse);
-        return;
-      }
-
-      // If still processing, wait and try again
-      await new Promise((resolve) => setTimeout(resolve, pollInterval));
-    }
-  };
-
-  const fetchTaskResult = async (taskId, setResponse) => {
-    try {
-      // Fetch main results
-      const resultResponse = await fetch(`${serverAddress}/${taskId}/result`, {
-        method: "GET",
-      });
-      if (!resultResponse.ok) {
-        throw new Error(
-          `Failed to get result. Status: ${resultResponse.status}`
-        );
-      }
-      const resultData = await resultResponse.json();
-
-      // Fetch user request parameters
-      const requestResponse = await fetch(
-        `${serverAddress}/${taskId}/request`,
-        {
-          method: "GET",
-        }
-      );
-      if (!requestResponse.ok) {
-        throw new Error(
-          `Failed to get request parameters. Status: ${requestResponse.status}`
-        );
-      }
-      const requestData = await requestResponse.json();
-
-      // Fetch molProbity response
-      const molProbityResponse = await fetch(
-        `${serverAddress}/${taskId}/molprobity`,
-        {
-          method: "GET",
-        }
-      );
-      if (!molProbityResponse.ok) {
-        throw new Error(
-          `Failed to get molProbity. Status: ${molProbityResponse.status}`
-        );
-      }
-      const molProbityData = await molProbityResponse.json();
-      console.log("Mol Probity data: ", molProbityData);
-      // Combine results and request parameters
-      const combinedData = {
-        ...resultData,
-        userRequest: requestData, // Add the fetched request data
-        molProbity: molProbityData, // Add the fetched request data
-      };
-
-      // Set the response state with combined data
-      setResponse(combinedData);
-    } catch (error) {
-      console.error("Error fetching task data:", error.message);
-      setResponse({ error: error.message }); // Set error state
-    } finally {
-      setIsLoading(false);
-      setTaskIdComplete(taskId);
-    }
-  };
 
   const loadRNAPuzzlesExample = async () => {
     try {
