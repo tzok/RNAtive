@@ -55,13 +55,12 @@ const Help = () => {
 
   return (
     <Row justify={"center"}>
-      <Col span={20} style={{ maxWidth: "800px", margin: "0 auto", textAlign: "center" }}>
-        <Button
-          onClick={() => setTocVisible(!tocVisible)}
-          style={{ marginBottom: "16px" }}
-        >
-          {tocVisible ? "Hide" : "Show"} Table of Contents
-        </Button>
+      <Col span={20} style={{ maxWidth: "800px", margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: "16px" }}>
+          <Button onClick={() => setTocVisible(!tocVisible)}>
+            {tocVisible ? "Hide" : "Show"} Table of Contents
+          </Button>
+        </div>
         <div>
           {tocVisible && (
             <Typography>
@@ -74,7 +73,7 @@ const Help = () => {
                 items={headings.map((heading) => ({
                   key: heading.id,
                   href: `#${heading.id}`,
-                  title: heading.text,
+                  title: <span style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>{heading.text}</span>,
                   style: { paddingLeft: `${(heading.level - 1) * 15}px` },
                 }))}
               />
