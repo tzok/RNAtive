@@ -115,8 +115,6 @@ function Home() {
   const [opBracketsNum, setOpBracketsNum] = useState(0);
   const [clBracketsNum, setClBracketsNum] = useState(0);
   const addOrUpdateSequenceList = (name, sequence) => {
-    console.log("added or updated file", name);
-    console.log("=====================", sequence);
     setSequenceList((prev) =>
       prev.some((item) => item.name === name)
         ? prev.map((item) =>
@@ -213,8 +211,6 @@ function Home() {
       }
 
       const result = await response.json();
-      console.log("RESPONSE:", result);
-      console.log("SEQUENCE:", result.sequence);
 
       // If we got split files back
       if (result.files && result.files.length > 0) {
@@ -222,11 +218,6 @@ function Home() {
         // or it was an archive that was extracted
         let localSequenceToCheck = sequenceToCheck;
         result.files.forEach((file, index) => {
-          //setSequenceToCheck("");
-          //setIsSequenceOk(true);
-          //setIsDotBracketOk(true);
-          console.log(`File:`, file);
-          console.log(`File:`, file.sequence);
           if (
             localSequenceToCheck === "" &&
             file.sequence !== "" &&
@@ -236,14 +227,7 @@ function Home() {
             setSequenceToCheck(file.sequence);
             checkDotBracket(dotBracket, file.sequence);
           }
-          if (localSequenceToCheck === file.sequence) {
-            console.log(`File ${index}: seq is ok sequence =`, file.sequence);
-            console.log(`Sequence to check =`, localSequenceToCheck);
-          } else {
-            setIsSequenceOk(false);
-            console.log(`File ${index}: seq not ok sequence =`, file.sequence);
-            console.log(`Sequence to check =`, localSequenceToCheck);
-          }
+          setIsSequenceOk(localSequenceToCheck === file.sequence);
         });
 
         if (
@@ -291,18 +275,6 @@ function Home() {
             );
             // Add the split files
             const newList = [...filteredList, ...splitFiles];
-
-            // Log the result for debugging
-            if (fileWithUid.isArchive) {
-              console.log(
-                `Archive ${file.name} extracted into ${splitFiles.length} files`
-              );
-            } else {
-              console.log(
-                `File ${file.name} split into ${splitFiles.length} files`
-              );
-            }
-
             return newList;
           });
 
@@ -368,7 +340,6 @@ function Home() {
         removedFiles.push(file.name);
       }
     });
-    console.log("removed files", removedFiles);
     // We'll let the beforeUpload function handle the file list updates
     // This is mainly for handling file removals
     const hasRemovals = fileList.length > newFileList.length;
@@ -461,12 +432,8 @@ function Home() {
     const extractedBrackets = matches.map((m) => m[3]).join("");
     const openRegex = /[([{<]/g;
     const openings = extractedBrackets.match(openRegex) || [];
-    console.log("Opening brackets:", openings);
-    console.log("Count:", openings.length);
     const closeRegex = /[)\]}>]/g;
     const closings = extractedBrackets.match(closeRegex) || [];
-    console.log("Closing brackets:", closings);
-    console.log("Count:", closings.length);
     setClBracketsNum(closings.length);
     setOpBracketsNum(openings.length);
     //const match = text.match(regex);
@@ -475,16 +442,13 @@ function Home() {
     } else {
       if (matches) {
         if (extractedSequence === seqToCheck) {
-          console.log("✅ Sequence matches");
           setIsDotBracketOk(true);
         } else {
-          console.log("❌ Sequence does not match");
           setIsDotBracketOk(false);
         }
         setSeqLength(extractedSequence.length);
         setBrackLength(extractedBrackets.length);
       } else {
-        console.log("No match found in input.");
         setIsDotBracketOk(false);
       }
     }
@@ -534,7 +498,6 @@ function Home() {
         );
       }
       const molProbityData = await molProbityResponse.json();
-      console.log("Mol Probity data: ", molProbityData);
       // Combine results and request parameters
       const combinedData = {
         ...resultData,
@@ -599,7 +562,7 @@ function Home() {
   }, [serverAddress, fetchTaskResult, setRemovalReasons, setIsLoading, setServerError /* setResponse is passed as arg */]);
 
   const handleSendData = useCallback(async (taskIdFromUrl = "") => {
-    const POLL_INTERVAL = 3000;
+    const POLL_INTERVAL = 1000;
     let currentTaskId = taskIdFromUrl;
 
     setIsLoading(true);

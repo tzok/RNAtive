@@ -945,7 +945,9 @@ public class TaskProcessorService {
       int totalSteps,
       int initialFileCountForProgress) {
     if (filter == MolProbityFilter.ALL) {
-      logger.info("MolProbity filtering is set to ALL, skipping actual filtering and progress updates for this stage.");
+      logger.info(
+          "MolProbity filtering is set to ALL, skipping actual filtering and progress updates for"
+              + " this stage.");
       // Steps for MolProbity were not added to totalSteps if filter is ALL,
       // so no need to call updateTaskProgress here.
       return new ArrayList<>(models); // Return a mutable copy
