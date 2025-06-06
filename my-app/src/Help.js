@@ -55,7 +55,7 @@ const Help = () => {
 
   return (
     <Row justify={"center"}>
-      <Col span={20} style={{ maxWidth: "800px", margin: "0 auto" }}>
+      <Col span={20} style={{ maxWidth: "800px", margin: "0 auto", textAlign: "center" }}>
         <Button
           onClick={() => setTocVisible(!tocVisible)}
           style={{ marginBottom: "16px" }}
