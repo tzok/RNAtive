@@ -51,8 +51,40 @@ public class ComputeService {
     logger.info("Submitting new computation task with {} files", request.files().size());
     var task = new Task();
     task.setRequest(objectMapper.writeValueAsString(request));
-    task.setStatus(TaskStatus.PENDING); // Explicitly set initial status
-    task = taskRepository.save(task);
+    task.setStatus(TaskStatus.PENDING); // Initial status
+
+    // Calculate total estimated steps based on the request
+    int initialFileCount = request.files().size();
+    int totalSteps = 0;
+    totalSteps += 1; // 1. Fetching task from repo (conceptual step in TaskProcessorService)
+    totalSteps += 1; // 2. Parsing task request (conceptual step in TaskProcessorService)
+    if (initialFileCount > 0) {
+      totalSteps += 1; // 3. RNApolis unification service (block)
+    }
+    // parseAndAnalyzeFiles block:
+    totalSteps += initialFileCount; // 4. PDB Parsing (per file)
+    totalSteps += 1;                 // 5. Model Unification (block)
+    totalSteps += initialFileCount; // 6. MolProbity Filtering (per file)
+    totalSteps += initialFileCount; // 7. Secondary Structure Analysis (per file)
+    if (request.dotBracket() != null && !request.dotBracket().isBlank()) {
+      totalSteps += 1; // 8. Reading reference structure
+    }
+    totalSteps += 1; // 9. Collecting and sorting all interactions
+    totalSteps += 1; // 10. Ranking models
+    totalSteps += 1; // 11. Generating dot bracket for consensus
+    totalSteps += 1; // 12. Creating task result object
+    totalSteps += 1; // 13. Generating consensus Varna SVG
+    totalSteps += 1; // 14. Preparing RChieData for consensus
+    totalSteps += 1; // 15. Generating RChie visualization for consensus
+    totalSteps += initialFileCount * 2; // 16. (Varna + RChie) for each model
+    totalSteps += 1; // 17. Storing all generated SVGs
+    totalSteps += 1; // 18. Finalizing task (COMPLETED/FAILED)
+
+    task.setTotalProgressSteps(totalSteps);
+    task.setCurrentProgress(0);
+    task.setProgressMessage("Task submitted, awaiting processing...");
+
+    task = taskRepository.save(task); // Save with initial progress info
     var taskId = task.getId();
 
     // Schedule async processing without waiting

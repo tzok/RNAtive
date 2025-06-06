@@ -139,61 +139,26 @@ public class TaskProcessorService {
   public CompletableFuture<Void> processTaskAsync(String taskId) {
     logger.info("Starting async processing of task {}", taskId);
     AtomicInteger currentStepCounter = new AtomicInteger(0);
-    int totalSteps = 0; // Will be calculated shortly
-    Task task = null; // Will be fetched
+    Task task = null;
 
     try {
       task = taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
+      // totalProgressSteps is already set by ComputeService.submitComputation
 
-      // Immediately parse request to get initialFileCount for totalSteps calculation
       var request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
       int initialFileCount = request.files().size();
+      int totalSteps = task.getTotalProgressSteps(); // Use pre-calculated total steps
 
-      // Calculate total estimated steps
-      // This calculation must be quick and not involve external calls or heavy processing.
-      totalSteps = 0;
-      totalSteps += 1; // 1. Fetching task from repo (conceptual step for progress update)
-      totalSteps += 1; // 2. Parsing task request (conceptual step for progress update)
-
-      if (initialFileCount > 0) {
-        totalSteps += 1; // 3. RNApolis unification service (block)
-      }
-      // parseAndAnalyzeFiles block:
-      totalSteps += initialFileCount; // 4. PDB Parsing (per file)
-      totalSteps += 1; // 5. Model Unification (block)
-      totalSteps += initialFileCount; // 6. MolProbity Filtering (per file)
-      totalSteps += initialFileCount; // 7. Secondary Structure Analysis (per file)
-
-      if (request.dotBracket() != null && !request.dotBracket().isBlank()) {
-        totalSteps += 1; // 8. Reading reference structure
-      }
-
-      totalSteps += 1; // 9. Collecting and sorting all interactions
-      totalSteps += 1; // 10. Ranking models
-      totalSteps += 1; // 11. Generating dot bracket for consensus
-      totalSteps += 1; // 12. Creating task result object
-      totalSteps += 1; // 13. Generating consensus Varna SVG
-      totalSteps += 1; // 14. Preparing RChieData for consensus
-      totalSteps += 1; // 15. Generating RChie visualization for consensus
-
-      // Per-model SVGs: Use initialFileCount as estimate for number of ranked models
-      totalSteps += initialFileCount * 2; // 16. (Varna + RChie) for each model
-
-      totalSteps += 1; // 17. Storing all generated SVGs
-      totalSteps += 1; // 18. Finalizing task (COMPLETED/FAILED)
-
-      // Set initial progress state including status and save immediately.
-      // This ensures that the first poll from the frontend sees non-zero totalProgressSteps.
+      // Set status to PROCESSING and save.
+      // The progress message might be overwritten by the first updateTaskProgress call.
       task.setStatus(TaskStatus.PROCESSING);
-      task.setTotalProgressSteps(totalSteps);
-      task.setCurrentProgress(0); // Current progress is 0 before any step is taken
-      task.setProgressMessage("Initializing task processing...");
-      taskRepository.saveAndFlush(task); // CRITICAL FIRST SAVE WITH PROGRESS INFO
+      // task.setProgressMessage("Task processing started..."); // Optional: override submitComputation message
+      taskRepository.saveAndFlush(task);
 
       // Now, start actual processing with progress updates.
       // The totalSteps calculation included conceptual steps for fetching and parsing.
       // We'll explicitly update progress for these to align the counter.
-      currentStepCounter.set(0); // Reset counter before these explicit initial steps.
+      // currentStepCounter is already 0.
       updateTaskProgress(task, currentStepCounter, totalSteps, "Fetching task data"); // Step 1
       updateTaskProgress(task, currentStepCounter, totalSteps, "Parsing task parameters"); // Step 2
 
@@ -201,12 +166,11 @@ public class TaskProcessorService {
       List<FileData> processedFiles = request.files(); // Initialize with original files
       if (initialFileCount > 0) {
         updateTaskProgress(
-            task, currentStepCounter, totalSteps, "Unifying file formats with RNApolis");
+            task, currentStepCounter, totalSteps, "Unifying file formats with RNApolis"); // Step 3
         processedFiles = processFilesWithRnapolis(request.files());
       }
-      // Note: The totalSteps calculation `if (initialFileCount > 0) { totalSteps += 1; }`
-      // correctly handles not allocating a step for RNApolis if initialFileCount is 0.
-      // Thus, no special handling is needed here if initialFileCount is 0.
+      // Note: The totalSteps calculation in submitComputation handles not allocating
+      // a step for RNApolis if initialFileCount is 0.
 
       // Create a new request with the processed files
       ComputeRequest processedRequest =
@@ -217,6 +181,7 @@ public class TaskProcessorService {
               request.dotBracket(),
               request.molProbityFilter());
 
+      // parseAndAnalyzeFiles will handle steps 4, 5, 6, 7
       var analyzedModels =
           parseAndAnalyzeFiles(
               processedRequest, task, currentStepCounter, totalSteps, initialFileCount);
