@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Alert, Collapse, Spin, Table, Row, Tooltip } from "antd";
+import { Alert, Col, Collapse, Spin, Table, Row, Tooltip } from "antd";
 import { getTableColumns, getTableRows } from "./utils/tableUtils";
 import DownloadButton from "./DownloadButton";
 import SvgImg from "./SvgImg"; // Import SvgImg
