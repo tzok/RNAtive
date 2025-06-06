@@ -34,6 +34,20 @@ public class TaskProgressPersistenceService {
     task.setCurrentProgress(currentStep);
     task.setTotalProgressSteps(totalSteps); // Ensure consistency
     task.setProgressMessage(progressMessage);
+
+    logger.info(
+        "Task {} [persistProgressUpdate]: Attempting to persist: currentStep={}, totalSteps={}, message='{}'",
+        taskId,
+        currentStep,
+        totalSteps,
+        progressMessage);
+    if (totalSteps <= 0) {
+      logger.error("Task {} [persistProgressUpdate]: totalSteps is {} during persist. This is problematic for progress display.", taskId, totalSteps);
+    }
+    // It's possible currentStep was clamped to totalSteps if currentStepCounter > totalSteps.
+    // Math.min(currentStepCounterValue, totalSteps) was used to calculate 'currentStep' passed here.
+    // So, currentStep should not be > totalSteps unless totalSteps is 0 or negative.
+
     taskRepository.saveAndFlush(task); // Ensures data hits DB and new transaction commits.
     logger.info(
         "Task {} progress (persisted in new tx): [{}/{}] {}",

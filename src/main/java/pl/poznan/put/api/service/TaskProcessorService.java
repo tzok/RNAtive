@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import pl.poznan.put.*;
 import pl.poznan.put.ConsensusInteraction;
@@ -156,6 +155,10 @@ public class TaskProcessorService {
       var request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
       int initialFileCount = request.files().size();
       totalSteps = task.getTotalProgressSteps(); // Use pre-calculated total steps
+      logger.info("Task {} [processTaskAsync]: Initial totalSteps fetched from task entity: {}", taskId, totalSteps);
+      if (totalSteps <= 0) {
+        logger.error("Task {} [processTaskAsync]: totalSteps is {} which is invalid. Progress will likely not advance correctly.", taskId, totalSteps);
+      }
 
       // Set status to PROCESSING and save.
       // The progress message might be overwritten by the first updateTaskProgress call.
