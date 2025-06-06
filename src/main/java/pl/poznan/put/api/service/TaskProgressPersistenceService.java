@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import pl.poznan.put.api.exception.TaskNotFoundException;
 import pl.poznan.put.api.model.Task;
+import pl.poznan.put.api.model.TaskStatus;
 import pl.poznan.put.api.repository.TaskRepository;
 
 @Service
