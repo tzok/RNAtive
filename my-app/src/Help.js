@@ -1,5 +1,5 @@
 import { Anchor, Col, Row, Typography } from "antd";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react"; // Removed useRef
 import flowDiff from "./assets/rnative-flow-diff.png";
 import uploadScreen from "./assets/upload.png";
 import fuzzyMode from "./assets/fuzzy-mode.png";
@@ -25,8 +25,8 @@ const { Title, Paragraph, Text, Link } = Typography;
 
 const Help = () => {
   const [headings, setHeadings] = useState([]);
-  const [imgWidth, setImgWidth] = useState(0);
-  const containerRef = useRef(null);
+  // const [imgWidth, setImgWidth] = useState(0); // Removed imgWidth state
+  // const containerRef = useRef(null); // Removed containerRef
   useEffect(() => {
     // Get all Title elements
     const elements = document.querySelectorAll("h1, h2, h3, h4, h5");
@@ -36,17 +36,7 @@ const Help = () => {
       level: parseInt(element.tagName.charAt(1)),
     }));
     setHeadings(items);
-    const updateWidth = () => {
-      if (containerRef.current) {
-        const containerRect = containerRef.current.getBoundingClientRect();
-        const availableWidth = window.innerWidth - containerRect.right - 10; // 10px margin
-        setImgWidth(Math.max(0, availableWidth)); // Ensure non-negative width
-      }
-    };
-
-    updateWidth();
-    window.addEventListener("resize", updateWidth);
-    return () => window.removeEventListener("resize", updateWidth);
+    // Removed updateWidth function and related event listeners for imgWidth
   }, []);
 
   const generateId = (text) => {
@@ -141,7 +131,7 @@ const Help = () => {
               src={flowDiff}
               alt="rnative flow"
               style={{
-                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                width: "auto",
                 maxWidth: "100%", // Prevents overflow
                 height: "auto",
                 display: "inline-block",
@@ -193,7 +183,7 @@ const Help = () => {
                 src={puzzles1}
                 alt="RNA Puzzles structure"
                 style={{
-                  width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                  width: "auto",
                   maxWidth: "100%", // Prevents overflow
                   height: "auto",
                   display: "inline-block",
@@ -245,7 +235,7 @@ const Help = () => {
               src={uploadScreen}
               alt="Uploading example"
               style={{
-                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                width: "auto",
                 maxWidth: "600px", // Prevents overflow
                 height: "auto",
                 display: "inline-block",
@@ -378,7 +368,7 @@ const Help = () => {
               src={fuzzyMode}
               alt="Fuzzy Mode and Confidence level"
               style={{
-                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                width: "auto",
                 maxWidth: "800px", // Prevents overflow
                 height: "auto",
                 display: "inline-block",
@@ -409,7 +399,7 @@ const Help = () => {
               src={task_id1}
               alt="task  id example"
               style={{
-                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                width: "auto",
                 maxWidth: "800px", // Prevents overflow
                 height: "auto",
                 display: "inline-block",
@@ -419,7 +409,7 @@ const Help = () => {
               src={task_id2}
               alt="task id example 2"
               style={{
-                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                width: "auto",
                 maxWidth: "800px", // Prevents overflow
                 height: "auto",
                 display: "inline-block",
@@ -430,7 +420,7 @@ const Help = () => {
               src={results0}
               alt="Results"
               style={{
-                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                width: "auto",
                 maxWidth: "800px", // Prevents overflow
                 height: "auto",
                 display: "inline-block",
@@ -445,7 +435,7 @@ const Help = () => {
               src={results2}
               alt="Results"
               style={{
-                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                width: "auto",
                 maxWidth: "800px", // Prevents overflow
                 height: "auto",
                 display: "inline-block",
@@ -465,7 +455,7 @@ const Help = () => {
               src={results1}
               alt="Results"
               style={{
-                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                width: "auto",
                 maxWidth: "800px", // Prevents overflow
                 height: "auto",
                 display: "inline-block",
@@ -483,7 +473,7 @@ const Help = () => {
               src={results2b}
               alt="Results"
               style={{
-                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                width: "auto",
                 maxWidth: "800px", // Prevents overflow
                 height: "auto",
                 display: "inline-block",
@@ -518,7 +508,7 @@ const Help = () => {
               src={A1}
               alt="Results"
               style={{
-                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                width: "auto",
                 maxWidth: "800px", // Prevents overflow
                 height: "auto",
                 display: "inline-block",
@@ -528,7 +518,7 @@ const Help = () => {
               src={A2}
               alt="Results"
               style={{
-                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                width: "auto",
                 maxWidth: "800px", // Prevents overflow
                 height: "auto",
                 display: "inline-block",
@@ -538,7 +528,7 @@ const Help = () => {
               src={A3}
               alt="Results"
               style={{
-                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                width: "auto",
                 maxWidth: "800px", // Prevents overflow
                 height: "auto",
                 display: "inline-block",
@@ -548,7 +538,7 @@ const Help = () => {
               src={A4}
               alt="Results"
               style={{
-                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                width: "auto",
                 maxWidth: "800px", // Prevents overflow
                 height: "auto",
                 display: "inline-block",
@@ -558,7 +548,7 @@ const Help = () => {
               src={B1}
               alt="Results"
               style={{
-                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                width: "auto",
                 maxWidth: "800px", // Prevents overflow
                 height: "auto",
                 display: "inline-block",
@@ -568,7 +558,7 @@ const Help = () => {
               src={B3}
               alt="Results"
               style={{
-                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                width: "auto",
                 maxWidth: "800px", // Prevents overflow
                 height: "auto",
                 display: "inline-block",
@@ -578,7 +568,7 @@ const Help = () => {
               src={B4}
               alt="Results"
               style={{
-                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                width: "auto",
                 maxWidth: "800px", // Prevents overflow
                 height: "auto",
                 display: "inline-block",
@@ -599,7 +589,7 @@ const Help = () => {
               src={molProbityResults}
               alt="Mol probity Results"
               style={{
-                width: imgWidth > 0 ? `${imgWidth}px` : "auto",
+                width: "auto",
                 maxWidth: "800px", // Prevents overflow
                 height: "auto",
                 display: "inline-block",
