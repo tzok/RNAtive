@@ -981,7 +981,7 @@ function Home() {
           children: (
             <div>
               <Row gutter={16}>
-                <Col xs={24} md={12}>
+                <Col xs={24} md={{ flex: '0 1 auto' }}>
                   <div style={{ maxWidth: "100%", overflowX: "auto" }}>
                     <SvgImg
                       key="svg-varna-consensus"
@@ -991,7 +991,7 @@ function Home() {
                     />
                   </div>
                 </Col>
-                <Col xs={24} md={12}>
+                <Col xs={24} md={{ flex: '1 1 auto' }}>
                   <div style={{ maxWidth: "100%", overflowX: "auto" }}>
                     <SvgImg
                       key="svg-rchie-consensus"
