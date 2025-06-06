@@ -76,6 +76,7 @@ public class TaskProcessorService {
   private final ConversionClient conversionClient;
   private final RnapolisClient rnapolisClient;
   private final VarnaTzClient varnaTzClient;
+  private final RChieClient rChieClient;
 
   @Autowired
   public TaskProcessorService(
@@ -86,7 +87,8 @@ public class TaskProcessorService {
       VisualizationService visualizationService,
       ConversionClient conversionClient,
       RnapolisClient rnapolisClient,
-      VarnaTzClient varnaTzClient) {
+      VarnaTzClient varnaTzClient,
+      RChieClient rChieClient) {
     this.taskRepository = taskRepository;
     this.objectMapper = objectMapper;
     this.analysisClient = analysisClient;
@@ -95,6 +97,7 @@ public class TaskProcessorService {
     this.conversionClient = conversionClient;
     this.rnapolisClient = rnapolisClient;
     this.varnaTzClient = varnaTzClient;
+    this.rChieClient = rChieClient;
   }
 
   /**
@@ -215,6 +218,23 @@ public class TaskProcessorService {
           "Prepared RChieData with {} top and {} bottom interactions.",
           rChieData.top().size(),
           rChieData.bottom().size());
+
+      // Generate RChie visualization
+      try {
+        logger.info("Generating RChie visualization");
+        org.w3c.dom.svg.SVGDocument rChieSvgDoc = rChieClient.visualize(rChieData);
+        byte[] rChieSvgBytes = SVGHelper.export(rChieSvgDoc, Format.SVG);
+        String rChieSvgString = new String(rChieSvgBytes);
+        task.addModelSvg("rchie-visualization", rChieSvgString);
+        logger.info("Successfully generated and stored RChie visualization SVG.");
+      } catch (Exception e) {
+        logger.error("Failed to generate or store RChie visualization SVG", e);
+        // Optionally, add a message to the task or handle the error appropriately
+        task.setMessage(
+            (task.getMessage() == null ? "" : task.getMessage() + "; ")
+                + "Failed to generate RChie visualization: "
+                + e.getMessage());
+      }
 
       // Generate model-specific SVGs in parallel and collect them
       logger.info("Generating visualizations for individual models in parallel");
