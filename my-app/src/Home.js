@@ -1018,20 +1018,24 @@ function Home() {
             <div>
               <Row gutter={16}>
                 <Col span={12}>
-                  <SvgImg
-                    key="svg-varna-consensus"
-                    serverAddress={serverAddress}
-                    taskId={taskIdComplete}
-                    svgName={"consensus"}
-                  />
+                  <div style={{ maxWidth: "100%", overflowX: "auto" }}>
+                    <SvgImg
+                      key="svg-varna-consensus"
+                      serverAddress={serverAddress}
+                      taskId={taskIdComplete}
+                      svgName={"consensus"}
+                    />
+                  </div>
                 </Col>
                 <Col span={12}>
-                  <SvgImg
-                    key="svg-rchie-consensus"
-                    serverAddress={serverAddress}
-                    taskId={taskIdComplete}
-                    svgName={"rchie-consensus"}
-                  />
+                  <div style={{ maxWidth: "100%", overflowX: "auto" }}>
+                    <SvgImg
+                      key="svg-rchie-consensus"
+                      serverAddress={serverAddress}
+                      taskId={taskIdComplete}
+                      svgName={"rchie-consensus"}
+                    />
+                  </div>
                 </Col>
               </Row>
               <pre
