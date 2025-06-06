@@ -1003,7 +1003,7 @@ function Home() {
                       style={{
                         width: "15px",
                         height: "15px",
-                        backgroundColor: "#2A6A79",
+                        backgroundColor: "#d7f9d0",
                         marginRight: "8px",
                         border: "1px solid #ccc",
                       }}
@@ -1021,7 +1021,7 @@ function Home() {
                       style={{
                         width: "15px",
                         height: "15px",
-                        backgroundColor: "#3E9A70",
+                        backgroundColor: "#129450",
                         marginRight: "8px",
                         border: "1px solid #ccc",
                       }}
@@ -1035,7 +1035,7 @@ function Home() {
                       style={{
                         width: "15px",
                         height: "15px",
-                        backgroundColor: "#A8D67D",
+                        backgroundColor: "#122414",
                         marginRight: "8px",
                         border: "1px solid #ccc",
                       }}
