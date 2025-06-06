@@ -182,7 +182,7 @@ public class ComputeService {
             taskResult.referenceStructure());
     var stackingsTable = generateStackingsTable(allStackings, allInteractions, totalModelCount);
 
-    var fileNames = results.stream().map(RankedModel::getName).collect(Collectors.toList());
+    var fileNames = results.stream().map(RankedModel::name).collect(Collectors.toList());
 
     return new TablesResponse(
         rankingTable,
