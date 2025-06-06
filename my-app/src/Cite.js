@@ -5,7 +5,7 @@ const { Paragraph } = Typography;
 const Cite = () => {
   return (
     <Row justify={"center"}>
-      <Col span={20}>
+      <Col span={20} style={{ maxWidth: "800px", margin: "0 auto" }}>
         <Card title="Cite Us">
           <Typography>
             <Paragraph>Any published work which has made use of RNAtive should cite the following paper:</Paragraph>

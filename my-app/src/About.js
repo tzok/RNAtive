@@ -5,7 +5,7 @@ const { Paragraph } = Typography;
 const About = () => {
   return (
     <Row justify={"center"}>
-      <Col span={20}>
+      <Col span={20} style={{ maxWidth: "800px", margin: "0 auto" }}>
         <Card title="About" style={{ marginBottom: "24px" }}>
           <Typography>
             <Paragraph>
