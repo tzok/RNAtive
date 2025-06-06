@@ -22,6 +22,7 @@ import {
   Upload,
   Typography,
   message,
+  Progress, // Added Progress
 } from "antd";
 import {
   getTableColumns,
@@ -94,6 +95,7 @@ function Home() {
   const [response, setResponse] = useState(null);
   const [removalReasons, setRemovalReasons] = useState(null);
   const [serverError, setServerError] = useState(null);
+  const [taskProgress, setTaskProgress] = useState({ current: 0, total: 100, message: "Initializing..." });
   const [taskIdComplete, setTaskIdComplete] = useState(null);
   const [fileList, setFileList] = useState([]);
   const [analyzer, setAnalyzer] = useState(analyzerOptions[0].value);
@@ -564,8 +566,13 @@ function Home() {
       }
 
       const statusData = await statusResponse.json();
-      const { status, message, removalReasons } = statusData;
+      const { status, message, removalReasons, currentProgress, totalProgressSteps, progressMessage: progressMessageText } = statusData;
       setRemovalReasons(removalReasons);
+      setTaskProgress({
+        current: currentProgress || 0,
+        total: totalProgressSteps || 100,
+        message: progressMessageText || "Processing...",
+      });
 
       if (status === "FAILED") {
         console.error("FAILED:", message);
@@ -598,6 +605,7 @@ function Home() {
     try {
       // Step 1: Create and send the payload if taskId is not provided
       if (!taskId) {
+        setTaskProgress({ current: 0, total: 100, message: "Initializing..." }); // Reset progress
         setIsLoading(true);
         setResponse(null);
         setServerError(null);
@@ -897,21 +905,23 @@ function Home() {
               </Text>
             </div>
             <div style={{ marginBottom: 24, textAlign: "center" }}></div>
-            <Spin
-              size="large"
-              spinning={true}
-              style={{ transform: "scale(1.5)" }} // Increase spinner size
-            >
-              <div style={{ width: "100vw", height: 1 }} />
-            </Spin>
+            <Progress
+              type="circle"
+              percent={taskProgress.total > 0 ? Math.round((taskProgress.current / taskProgress.total) * 100) : 0}
+              style={{ marginBottom: 16 }}
+            />
+            <div style={{ textAlign: "center", marginTop: 8 }}>
+              <Text>{taskProgress.message}</Text>
+            </div>
           </Row>
         );
       }
+      // This Spin is for the initial POST before taskId is known, so it remains.
       return (
         <Row justify={"center"}>
           <Spin
             spinning={true}
-            style={{ transform: "scale(1.5)" }} // Increase spinner size
+            style={{ transform: "scale(1.5)" }} 
             tip={"Sending data to the server"}
             size="large"
           >
