@@ -434,14 +434,14 @@ const Help = () => {
               <li>Non-canonical base pairs (A3)</li>
               <li>Stackings for the consensus molecule(A4)</li>
             </ol>
-            <img
+            <Image
               src={results1}
               alt="Results"
               style={{
                 width: "auto",
                 maxWidth: "800px", // Prevents overflow
                 height: "auto",
-                display: "inline-block",
+                display: "inline-block", // Keep display style if needed, or Image default might suffice
               }}
             />
             <Paragraph>
