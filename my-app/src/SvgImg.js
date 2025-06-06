@@ -53,7 +53,7 @@ const SvgImg = ({ serverAddress, taskId, svgName }) => {
   const blob = new Blob([svgContent], { type: "image/svg+xml" });
   const blobUrl = URL.createObjectURL(blob);
 
-  return <Image src={blobUrl} style={{ width: "30vh" }} />;
+  return <Image src={blobUrl} />;
 };
 
 export default SvgImg;
