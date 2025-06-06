@@ -9,6 +9,7 @@ const FileDetails = ({
   serverAddress,
   filename,
   fileCount,
+  // rchieSvgName prop is not used here as svgName is constructed directly
 }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -68,36 +69,38 @@ const FileDetails = ({
     {
       key: filename + "-2d-structure",
       label: "Secondary structure",
-      children: [
-        <SvgImg
-          key="svg"
-          serverAddress={serverAddress}
-          taskId={taskId}
-          svgName={filename} // Pass the filename as modelName
-        />,
-        <pre
-          key="dotbracket"
-          style={{
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-            marginTop: "16px",
-          }} // Add some margin
-        >
-          {data.dotBracket}
-        </pre>,
-      ],
-    },
-    {
-      key: filename + "-rchie-visualization",
-      label: "R-Chie Visualization",
-      children: [
-        <SvgImg
-          key="svg-rchie-model" // Unique key for this SvgImg instance
-          serverAddress={serverAddress}
-          taskId={taskId}
-          svgName={`rchie-${filename}`}
-        />,
-      ],
+      children: (
+        <div>
+          <Row gutter={16}>
+            <Col span={12}>
+              <SvgImg
+                key="svg-varna-model"
+                serverAddress={serverAddress}
+                taskId={taskId}
+                svgName={filename} // VARNA SVG for the model
+              />
+            </Col>
+            <Col span={12}>
+              <SvgImg
+                key="svg-rchie-model"
+                serverAddress={serverAddress}
+                taskId={taskId}
+                svgName={`rchie-${filename}`} // R-Chie SVG for the model
+              />
+            </Col>
+          </Row>
+          <pre
+            key="dotbracket"
+            style={{
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              marginTop: "16px",
+            }}
+          >
+            {data.dotBracket}
+          </pre>
+        </div>
+      ),
     },
     {
       key: filename + "-base-pairs",

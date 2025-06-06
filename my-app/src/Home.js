@@ -104,16 +104,16 @@ const visualizerOptions = [
 const molProbityOptions = [
   {
     value: "ALL",
-    label: "No filter (keep all models).",
+    label: "No filter (keep all models)",
   },
   {
     value: "CLASHSCORE",
-    label: "Clashscore filter (remove models with poor clashscore).",
+    label: "Clashscore filter (remove models with poor clashscore)",
   },
   {
     value: "CLASHSCORE_BONDS_ANGLES",
     label:
-      "Strict filter (remove models with poor clashscore, bond, or angle geometry).",
+      "Strict filter (remove models with poor clashscore, bond, or angle geometry)",
   },
 ];
 
@@ -1044,32 +1044,38 @@ function Home() {
         {
           key: "consensus-2d-structure",
           label: "Secondary structure",
-          children: [
-            <SvgImg
-              key="svg-varna-consensus" // Unique key
-              serverAddress={serverAddress}
-              taskId={taskIdComplete}
-              svgName={"consensus"} // Explicitly name the main consensus SVG
-            />,
-            <pre
-              key="dotbracket"
-              style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-            >
-              {response.dotBracket}
-            </pre>,
-          ],
-        },
-        {
-          key: "consensus-rchie-visualization",
-          label: "R-Chie Visualization",
-          children: [
-            <SvgImg
-                key="svg-rchie-consensus"
-                serverAddress={serverAddress}
-                taskId={taskIdComplete}
-                svgName={"rchie-consensus"} // Name of the R-Chie consensus SVG
-            />,
-          ],
+          children: (
+            <div>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <SvgImg
+                    key="svg-varna-consensus"
+                    serverAddress={serverAddress}
+                    taskId={taskIdComplete}
+                    svgName={"consensus"}
+                  />
+                </Col>
+                <Col span={12}>
+                  <SvgImg
+                    key="svg-rchie-consensus"
+                    serverAddress={serverAddress}
+                    taskId={taskIdComplete}
+                    svgName={"rchie-consensus"}
+                  />
+                </Col>
+              </Row>
+              <pre
+                key="dotbracket"
+                style={{
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  marginTop: "16px",
+                }}
+              >
+                {response.dotBracket}
+              </pre>
+            </div>
+          ),
         },
         {
           key: "consensus-base-pairs",
@@ -1206,6 +1212,12 @@ function Home() {
               style={{ marginBottom: "24px" }}
             >
               <Descriptions bordered column={1}>
+                <Descriptions.Item label="Model quality filter">
+                  {molProbityOptions.find(
+                      (option) =>
+                          option.value === response.userRequest?.molProbityFilter
+                  )?.label || "Unknown"}
+                </Descriptions.Item>
                 <Descriptions.Item label="2D structure constraints">
                   {response.userRequest.dotBracket ? (
                     <pre
@@ -1221,27 +1233,21 @@ function Home() {
                     "Not provided"
                   )}
                 </Descriptions.Item>
-                <Descriptions.Item label="Model quality filter">
-                  {molProbityOptions.find(
-                    (option) =>
-                      option.value === response.userRequest?.molProbityFilter
+                <Descriptions.Item label="Base pair analyzer">
+                  {analyzerOptions.find(
+                      (option) => option.value === response.userRequest?.analyzer
+                  )?.label || "Unknown"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Consensus structure based on">
+                  {consensusOptions.find(
+                      (option) =>
+                          option.value === response.userRequest?.consensusMode
                   )?.label || "Unknown"}
                 </Descriptions.Item>
                 <Descriptions.Item label="Consensus weighting">
                   {response.userRequest?.confidenceLevel != null
                     ? `Confidence level: ${response.userRequest.confidenceLevel}`
                     : "Conditionally weighted consensus"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Base pair analyzer">
-                  {analyzerOptions.find(
-                    (option) => option.value === response.userRequest?.analyzer
-                  )?.label || "Unknown"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Consensus structure based on">
-                  {consensusOptions.find(
-                    (option) =>
-                      option.value === response.userRequest?.consensusMode
-                  )?.label || "Unknown"}
                 </Descriptions.Item>
                 <Descriptions.Item label="2D structure viewer">
                   {visualizerOptions.find(
