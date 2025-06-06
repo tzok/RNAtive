@@ -984,7 +984,7 @@ function Home() {
                   <p style={{ marginBottom: "8px" }}>
                     Interaction colors reflect confidence (probability). The{" "}
                     <a
-                      href="https://mahdilamb.github.io/colormap/#algae"
+                      href="https://matplotlib.org/cmocean/#algae"
                       target="_blank"
                       rel="noopener noreferrer"
                     >
