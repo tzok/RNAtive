@@ -48,6 +48,16 @@ public class ComputeService {
     this.rnapolisClient = rnapolisClient;
   }
 
+  private String getConsensusModeDisplayName(ConsensusMode mode) {
+    return switch (mode) {
+      case ALL -> "All";
+      case CANONICAL -> "Canonical";
+      case NON_CANONICAL -> "Non-canonical";
+      case STACKING -> "Stacking";
+      default -> mode.name(); // Fallback to enum name if new modes are added
+    };
+  }
+
   public ComputeResponse submitComputation(ComputeRequest request) throws Exception {
     logger.info("Submitting new computation task with {} files", request.files().size());
     var task = new Task();
@@ -248,9 +258,10 @@ public class ComputeService {
     }
 
     for (ConsensusMode mode : orderedModes) {
-      headers.add(String.format("Rank (%s)", mode.name()));
-      headers.add(String.format("INF (%s)", mode.name()));
-      headers.add(String.format("F1 (%s)", mode.name()));
+      String displayName = getConsensusModeDisplayName(mode);
+      headers.add(String.format("Rank (%s)", displayName));
+      headers.add(String.format("INF (%s)", displayName));
+      headers.add(String.format("F1 (%s)", displayName));
     }
 
     var rows =
