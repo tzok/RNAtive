@@ -32,7 +32,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
+      interval: 30s
       timeout: 5s
       retries: 5
     restart: unless-stopped
@@ -84,7 +84,7 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import requests; requests.get('http://localhost:8000/health').raise_for_status()\" || exit 1"]
-      interval: 5s
+      interval: 30s
       timeout: 5s
       retries: 5
 
@@ -93,7 +93,7 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import requests; requests.get('http://localhost:8000/health').raise_for_status()\" || exit 1"]
-      interval: 5s
+      interval: 30s
       timeout: 5s
       retries: 5
 
@@ -102,7 +102,7 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import requests; requests.get('http://localhost:8000/health').raise_for_status()\" || exit 1"]
-      interval: 5s
+      interval: 30s
       timeout: 5s
       retries: 5
 
