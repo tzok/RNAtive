@@ -9,7 +9,7 @@ const FileDetails = ({
   serverAddress,
   filename,
   fileCount,
-  rchieSvgName,
+  rchieSvgName, // Ensure this prop is accepted
 }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -93,7 +93,7 @@ const FileDetails = ({
       label: "R-Chie Visualization",
       children: [
         <SvgImg
-          key="svg-rchie-model"
+          key="svg-rchie-model" // Unique key for this SvgImg instance
           serverAddress={serverAddress}
           taskId={taskId}
           modelName={rchieSvgName} // Use the passed R-Chie SVG name

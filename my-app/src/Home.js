@@ -1045,9 +1045,10 @@ function Home() {
           label: "Secondary structure",
           children: [
             <SvgImg
-              key="svg"
+              key="svg-varna-consensus" // Unique key
               serverAddress={serverAddress}
               taskId={taskIdComplete}
+              svgName={"consensus"} // Explicitly name the main consensus SVG
             />,
             <pre
               key="dotbracket"
@@ -1101,6 +1102,18 @@ function Home() {
               />
             </>
           ),
+        },
+        {
+          key: "consensus-rchie-visualization",
+          label: "R-Chie Visualization",
+          children: [
+            <SvgImg
+              key="svg-rchie-consensus"
+              serverAddress={serverAddress}
+              taskId={taskIdComplete}
+              svgName={"rchie-consensus"} // Name of the R-Chie consensus SVG
+            />,
+          ],
         },
       ];
       const usersRequestDotBracket = [
@@ -1170,6 +1183,7 @@ function Home() {
             serverAddress={serverAddress}
             filename={filename}
             fileCount={totalFiles}
+            rchieSvgName={`rchie-${filename}`} // Pass the R-Chie SVG name
           />
         ),
       }));
