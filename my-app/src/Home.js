@@ -1330,7 +1330,11 @@ function Home() {
             </p>
           </div>
 
-          <Form labelCol={{ span: 6 }} wrapperCol={{ span: 14 }}>
+          <Form
+            labelCol={{ span: 6 }}
+            wrapperCol={{ span: 14 }}
+            style={{ maxWidth: "800px", margin: "0 auto" }}
+          >
             <Form.Item
               label={
                 <span>
