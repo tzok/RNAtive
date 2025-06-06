@@ -209,13 +209,12 @@ public class TaskProcessorService {
 
       // Prepare RChieData
       RChieData rChieData =
-          prepareRChieData(
-              firstModel,
-              aggregatedInteractionResult.aggregatedResult(),
-              referenceStructure);
+          prepareRChieData(firstModel, aggregatedInteractionResult, referenceStructure);
       // At this point, rChieData is prepared. It can be added to TaskResult or Task entity later.
-      logger.info("Prepared RChieData with {} top and {} bottom interactions.",
-              rChieData.top().size(), rChieData.bottom().size());
+      logger.info(
+          "Prepared RChieData with {} top and {} bottom interactions.",
+          rChieData.top().size(),
+          rChieData.bottom().size());
 
       // Generate model-specific SVGs in parallel and collect them
       logger.info("Generating visualizations for individual models in parallel");
@@ -1504,14 +1503,11 @@ public class TaskProcessorService {
     if (referenceStructure != null && referenceStructure.basePairs() != null) {
       bottomInteractions =
           referenceStructure.basePairs().stream()
-              .filter(BasePair::isCanonical)
               .map(
                   bp -> {
                     try {
-                      PdbNamedResidueIdentifier refNt1 =
-                          firstModel.residueToNamedIdentifier(bp.nt1());
-                      PdbNamedResidueIdentifier refNt2 =
-                          firstModel.residueToNamedIdentifier(bp.nt2());
+                      PdbNamedResidueIdentifier refNt1 = bp.left();
+                      PdbNamedResidueIdentifier refNt2 = bp.right();
 
                       Integer index1 = residueToIndexMap.get(refNt1);
                       Integer index2 = residueToIndexMap.get(refNt2);

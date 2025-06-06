@@ -35,8 +35,7 @@ public class VarnaTzClient {
   private final String serviceUrl;
 
   public VarnaTzClient(
-      @Value("${varna-tz.service.url}") String serviceUrl,
-      ObjectMapper objectMapper) {
+      @Value("${varna-tz.service.url}") String serviceUrl, ObjectMapper objectMapper) {
     this.restTemplate = new RestTemplate();
     this.objectMapper = objectMapper;
     this.serviceUrl = serviceUrl;

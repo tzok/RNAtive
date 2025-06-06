@@ -34,9 +34,7 @@ public class RChieClient {
   private final ObjectMapper objectMapper;
   private final String serviceUrl;
 
-  public RChieClient(
-      @Value("${rchie.service.url}") String serviceUrl,
-      ObjectMapper objectMapper) {
+  public RChieClient(@Value("${rchie.service.url}") String serviceUrl, ObjectMapper objectMapper) {
     this.restTemplate = new RestTemplate();
     this.objectMapper = objectMapper;
     this.serviceUrl = serviceUrl;
@@ -95,7 +93,8 @@ public class RChieClient {
         if (exitCode != null && exitCode != 0) {
           String stderr = (String) response.getOrDefault("stderr", "No stderr provided.");
           throw new VisualizationException(
-              String.format("RChie command failed with exit code: %d. Stderr: %s", exitCode, stderr),
+              String.format(
+                  "RChie command failed with exit code: %d. Stderr: %s", exitCode, stderr),
               null);
         }
 
