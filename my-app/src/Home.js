@@ -1507,7 +1507,12 @@ function Home() {
                   placeholder="Optional"
                   value={dotBracket}
                   onChange={handleDotBracket}
-                  style={{ fontFamily: "monospace", paddingRight: "30px" }} // Make space for the "x"
+                  style={{
+                    fontFamily: "monospace",
+                    paddingRight: "30px",
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "break-word",
+                  }} // Make space for the "x"
                 />
                 {dotBracket && (
                   <CloseOutlined
