@@ -64,7 +64,9 @@ public class ComputeService {
     // parseAndAnalyzeFiles block:
     totalSteps += initialFileCount; // 4. PDB Parsing (per file)
     totalSteps += 1; // 5. Model Unification (block)
-    totalSteps += initialFileCount; // 6. MolProbity Filtering (per file)
+    if (request.molProbityFilter() != MolProbityFilter.ALL) {
+      totalSteps += initialFileCount; // 6. MolProbity Filtering (per file) - conditional
+    }
     totalSteps += initialFileCount; // 7. Secondary Structure Analysis (per file)
     if (request.dotBracket() != null && !request.dotBracket().isBlank()) {
       totalSteps += 1; // 8. Reading reference structure

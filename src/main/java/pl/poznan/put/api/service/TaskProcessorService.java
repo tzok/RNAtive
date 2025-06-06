@@ -945,19 +945,9 @@ public class TaskProcessorService {
       int totalSteps,
       int initialFileCountForProgress) {
     if (filter == MolProbityFilter.ALL) {
-      logger.info("MolProbity filtering is set to ALL, skipping filtering.");
-      // Still need to advance the progress counter for allocated steps
-      for (int i = 0; i < initialFileCountForProgress; i++) {
-        String modelName = (i < models.size()) ? models.get(i).name() : "N/A";
-        updateTaskProgress(
-            task,
-            currentStepCounter,
-            totalSteps,
-            "Skipping MolProbity for model (estimate %d of %d): %s (filter ALL)",
-            i + 1,
-            initialFileCountForProgress,
-            modelName);
-      }
+      logger.info("MolProbity filtering is set to ALL, skipping actual filtering and progress updates for this stage.");
+      // Steps for MolProbity were not added to totalSteps if filter is ALL,
+      // so no need to call updateTaskProgress here.
       return new ArrayList<>(models); // Return a mutable copy
     }
 
@@ -1042,17 +1032,20 @@ public class TaskProcessorService {
               + " {}. Proceeding without MolProbity filtering.",
           e.getMessage());
       // If the RNAlyzer service fails entirely, return all original models
-      // and consume allocated steps
-      for (int i = 0; i < initialFileCountForProgress; i++) {
-        String modelName = (i < models.size()) ? models.get(i).name() : "N/A";
-        updateTaskProgress(
-            task,
-            currentStepCounter,
-            totalSteps,
-            "Skipping MolProbity due to service error for model (estimate %d of %d): %s",
-            i + 1,
-            initialFileCountForProgress,
-            modelName);
+      // and consume allocated steps if they were part of totalSteps.
+      // If MolProbityFilter was not ALL, steps were allocated.
+      if (filter != MolProbityFilter.ALL) {
+        for (int i = 0; i < initialFileCountForProgress; i++) {
+          String modelName = (i < models.size()) ? models.get(i).name() : "N/A";
+          updateTaskProgress(
+              task,
+              currentStepCounter,
+              totalSteps,
+              "Skipping MolProbity due to service error for model (estimate %d of %d): %s",
+              i + 1,
+              initialFileCountForProgress,
+              modelName);
+        }
       }
       return new ArrayList<>(models); // Return a mutable copy
     }
