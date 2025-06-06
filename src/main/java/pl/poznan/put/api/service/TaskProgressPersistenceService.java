@@ -31,21 +31,37 @@ public class TaskProgressPersistenceService {
                 () ->
                     new TaskNotFoundException(
                         taskId + " (while attempting to persist progress update)"));
+
+    // If task is PENDING, transition it to PROCESSING along with this progress update.
+    // This ensures the status change is atomic with the first meaningful progress step.
+    if (task.getStatus() == TaskStatus.PENDING) {
+      task.setStatus(TaskStatus.PROCESSING);
+      logger.info(
+          "Task {} [persistProgressUpdate]: Transitioning status from PENDING to PROCESSING.",
+          taskId);
+    }
+
     task.setCurrentProgress(currentStep);
     task.setTotalProgressSteps(totalSteps); // Ensure consistency
     task.setProgressMessage(progressMessage);
 
     logger.info(
-        "Task {} [persistProgressUpdate]: Attempting to persist: currentStep={}, totalSteps={}, message='{}'",
+        "Task {} [persistProgressUpdate]: Attempting to persist: currentStep={}, totalSteps={},"
+            + " message='{}'",
         taskId,
         currentStep,
         totalSteps,
         progressMessage);
     if (totalSteps <= 0) {
-      logger.error("Task {} [persistProgressUpdate]: totalSteps is {} during persist. This is problematic for progress display.", taskId, totalSteps);
+      logger.error(
+          "Task {} [persistProgressUpdate]: totalSteps is {} during persist. This is problematic"
+              + " for progress display.",
+          taskId,
+          totalSteps);
     }
     // It's possible currentStep was clamped to totalSteps if currentStepCounter > totalSteps.
-    // Math.min(currentStepCounterValue, totalSteps) was used to calculate 'currentStep' passed here.
+    // Math.min(currentStepCounterValue, totalSteps) was used to calculate 'currentStep' passed
+    // here.
     // So, currentStep should not be > totalSteps unless totalSteps is 0 or negative.
 
     taskRepository.saveAndFlush(task); // Ensures data hits DB and new transaction commits.

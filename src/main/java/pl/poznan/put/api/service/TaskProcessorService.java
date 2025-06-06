@@ -155,19 +155,21 @@ public class TaskProcessorService {
       var request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
       int initialFileCount = request.files().size();
       totalSteps = task.getTotalProgressSteps(); // Use pre-calculated total steps
-      logger.info("Task {} [processTaskAsync]: Initial totalSteps fetched from task entity: {}", taskId, totalSteps);
+      logger.info(
+          "Task {} [processTaskAsync]: Initial totalSteps fetched from task entity: {}",
+          taskId,
+          totalSteps);
       if (totalSteps <= 0) {
-        logger.error("Task {} [processTaskAsync]: totalSteps is {} which is invalid. Progress will likely not advance correctly.", taskId, totalSteps);
+        logger.error(
+            "Task {} [processTaskAsync]: totalSteps is {} which is invalid. Progress will likely"
+                + " not advance correctly.",
+            taskId,
+            totalSteps);
       }
 
-      // Set status to PROCESSING and save.
-      // The progress message might be overwritten by the first updateTaskProgress call.
-      task.setStatus(TaskStatus.PROCESSING);
-      // task.setProgressMessage("Task processing started..."); // Optional: override
-      // submitComputation message
-      taskRepository.saveAndFlush(task);
-
       // Now, start actual processing with progress updates.
+      // The status will be set to PROCESSING by the first call to updateTaskProgress
+      // (via TaskProgressPersistenceService) if it's currently PENDING.
       // The totalSteps calculation included conceptual steps for fetching and parsing.
       // We'll explicitly update progress for these to align the counter.
       // currentStepCounter is already 0.
