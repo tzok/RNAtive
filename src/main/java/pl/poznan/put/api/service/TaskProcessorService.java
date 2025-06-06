@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import pl.poznan.put.*;
 import pl.poznan.put.ConsensusInteraction;
@@ -74,7 +75,7 @@ public class TaskProcessorService {
   private final RnapolisClient rnapolisClient;
   private final VarnaTzClient varnaTzClient;
   private final RChieClient rChieClient;
-  private TaskProcessorService self; // For self-injection
+  private final TaskProgressPersistenceService taskProgressPersistenceService; // Inject new service
 
   @Autowired
   public TaskProcessorService(
@@ -84,7 +85,8 @@ public class TaskProcessorService {
       ConversionClient conversionClient,
       RnapolisClient rnapolisClient,
       VarnaTzClient varnaTzClient,
-      RChieClient rChieClient) {
+      RChieClient rChieClient,
+      TaskProgressPersistenceService taskProgressPersistenceService) { // Add to constructor
     this.taskRepository = taskRepository;
     this.objectMapper = objectMapper;
     this.analysisClient = analysisClient;
@@ -92,35 +94,7 @@ public class TaskProcessorService {
     this.rnapolisClient = rnapolisClient;
     this.varnaTzClient = varnaTzClient;
     this.rChieClient = rChieClient;
-  }
-
-  @Autowired // Setter for self-injection
-  public void setSelf(TaskProcessorService self) {
-    this.self = self;
-  }
-
-  // This method runs in a new transaction to ensure progress is committed immediately.
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
-  public void persistProgressUpdate(
-      String taskId, int currentStep, int totalSteps, String progressMessage) {
-    Task task =
-        taskRepository
-            .findById(taskId)
-            .orElseThrow(
-                () ->
-                    new TaskNotFoundException(
-                        taskId + " (while attempting to persist progress update)"));
-    task.setCurrentProgress(currentStep);
-    // totalSteps is mostly set initially, but ensure it's consistent.
-    task.setTotalProgressSteps(totalSteps);
-    task.setProgressMessage(progressMessage);
-    taskRepository.saveAndFlush(task); // Ensures data hits DB and new transaction commits.
-    logger.info(
-        "Task {} progress (persisted in new tx): [{}/{}] {}",
-        task.getId(),
-        task.getCurrentProgress(),
-        task.getTotalProgressSteps(),
-        progressMessage);
+    this.taskProgressPersistenceService = taskProgressPersistenceService; // Assign injected service
   }
 
   private void updateTaskProgress(
@@ -133,9 +107,10 @@ public class TaskProcessorService {
     int finalCurrentStep = Math.min(currentStepValue, totalSteps);
     String formattedMessage = String.format(messageFormat, args);
 
-    // Call the public method via the self-injected proxy to ensure new transaction starts.
-    // This makes the update visible to other transactions (like status polls) immediately.
-    self.persistProgressUpdate(task.getId(), finalCurrentStep, totalSteps, formattedMessage);
+    // Call the persistProgressUpdate method on the new dedicated service.
+    // This ensures the update runs in a new transaction and is visible immediately.
+    taskProgressPersistenceService.persistProgressUpdate(
+        task.getId(), finalCurrentStep, totalSteps, formattedMessage);
 
     // Also, update the state of the 'task' object instance being used within processTaskAsync.
     // This ensures that any subsequent logic in processTaskAsync that reads these fields
