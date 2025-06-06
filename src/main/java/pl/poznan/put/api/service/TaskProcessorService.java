@@ -48,6 +48,8 @@ import pl.poznan.put.notation.NucleobaseEdge;
 import pl.poznan.put.notation.Stericity;
 import pl.poznan.put.pdb.*;
 import pl.poznan.put.pdb.analysis.*;
+import pl.poznan.put.rchie.model.RChieData;
+import pl.poznan.put.rchie.model.RChieInteraction;
 import pl.poznan.put.rna.InteractionType;
 import pl.poznan.put.rnalyzer.MolProbityResponse;
 import pl.poznan.put.rnalyzer.RnalyzerClient;
@@ -65,6 +67,7 @@ import pl.poznan.put.varna.model.StructureData;
 public class TaskProcessorService {
   private static final Logger logger = LoggerFactory.getLogger(TaskProcessorService.class);
   private static final Colormap COLORMAP = Colormaps.get("Algae");
+  private static final String RCHIE_REFERENCE_COLOR = "#808080"; // Gray
   private final TaskRepository taskRepository;
   private final ObjectMapper objectMapper;
   private final AnalysisClient analysisClient;
@@ -203,6 +206,16 @@ public class TaskProcessorService {
                   request.confidenceLevel(),
                   ConsensusMode.ALL));
       logger.debug("Generated SVG for consensus");
+
+      // Prepare RChieData
+      RChieData rChieData =
+          prepareRChieData(
+              firstModel,
+              aggregatedInteractionResult.aggregatedResult(),
+              referenceStructure);
+      // At this point, rChieData is prepared. It can be added to TaskResult or Task entity later.
+      logger.info("Prepared RChieData with {} top and {} bottom interactions.",
+              rChieData.top().size(), rChieData.bottom().size());
 
       // Generate model-specific SVGs in parallel and collect them
       logger.info("Generating visualizations for individual models in parallel");
@@ -1436,5 +1449,102 @@ public class TaskProcessorService {
       // so checking probability > 0 covers both cases.
       return interaction.probability() > 0.0;
     }
+  }
+
+  private RChieData prepareRChieData(
+      AnalyzedModel firstModel,
+      InteractionCollectionResult aggregatedInteractionResult,
+      ReferenceStructureUtil.ReferenceParseResult referenceStructure) {
+    logger.info("Preparing RChieData");
+
+    List<PdbNamedResidueIdentifier> modelResidues = firstModel.residueIdentifiers();
+    Map<PdbNamedResidueIdentifier, Integer> residueToIndexMap = new HashMap<>();
+    for (int i = 0; i < modelResidues.size(); i++) {
+      residueToIndexMap.put(modelResidues.get(i), i + 1);
+    }
+
+    String sequence =
+        modelResidues.stream()
+            .map(PdbNamedResidueIdentifier::oneLetterName)
+            .map(String::valueOf)
+            .collect(Collectors.joining());
+
+    // Prepare top interactions (aggregated consensus canonical)
+    List<RChieInteraction> topInteractions =
+        aggregatedInteractionResult.sortedInteractions().stream()
+            .filter(
+                ci ->
+                    ci.category() == ConsensusInteraction.InteractionCategory.BASE_PAIR
+                        && ci.isCanonical())
+            .map(
+                ci -> {
+                  Integer index1 = residueToIndexMap.get(ci.partner1());
+                  Integer index2 = residueToIndexMap.get(ci.partner2());
+                  if (index1 == null || index2 == null) {
+                    logger.warn(
+                        "Could not map residues of consensus interaction {} to indices. Skipping.",
+                        ci);
+                    return null;
+                  }
+                  // Ensure i < j for RChieInteraction if needed, though ConsensusInteraction
+                  // already sorts partners.
+                  int rchieI = Math.min(index1, index2);
+                  int rchieJ = Math.max(index1, index2);
+                  return new RChieInteraction(
+                      rchieI, rchieJ, Optional.of(getColorForConfidence(ci.probability())));
+                })
+            .filter(Objects::nonNull)
+            .sorted(
+                Comparator.comparingInt(RChieInteraction::i).thenComparingInt(RChieInteraction::j))
+            .toList();
+    logger.debug("Prepared {} top interactions for RChieData", topInteractions.size());
+
+    // Prepare bottom interactions (reference structure canonical)
+    List<RChieInteraction> bottomInteractions = new ArrayList<>();
+    if (referenceStructure != null && referenceStructure.basePairs() != null) {
+      bottomInteractions =
+          referenceStructure.basePairs().stream()
+              .filter(BasePair::isCanonical)
+              .map(
+                  bp -> {
+                    try {
+                      PdbNamedResidueIdentifier refNt1 =
+                          firstModel.residueToNamedIdentifier(bp.nt1());
+                      PdbNamedResidueIdentifier refNt2 =
+                          firstModel.residueToNamedIdentifier(bp.nt2());
+
+                      Integer index1 = residueToIndexMap.get(refNt1);
+                      Integer index2 = residueToIndexMap.get(refNt2);
+
+                      if (index1 == null || index2 == null) {
+                        logger.warn(
+                            "Could not map residues of reference base pair {} to indices."
+                                + " Skipping.",
+                            bp);
+                        return null;
+                      }
+                      // Ensure i < j
+                      int rchieI = Math.min(index1, index2);
+                      int rchieJ = Math.max(index1, index2);
+                      return new RChieInteraction(
+                          rchieI, rchieJ, Optional.of(RCHIE_REFERENCE_COLOR));
+                    } catch (Exception e) {
+                      logger.warn(
+                          "Error processing reference base pair {} for RChieData: {}. Skipping.",
+                          bp,
+                          e.getMessage());
+                      return null;
+                    }
+                  })
+              .filter(Objects::nonNull)
+              .sorted(
+                  Comparator.comparingInt(RChieInteraction::i)
+                      .thenComparingInt(RChieInteraction::j))
+              .toList();
+    }
+    logger.debug("Prepared {} bottom interactions for RChieData", bottomInteractions.size());
+
+    return new RChieData(
+        sequence, Optional.ofNullable(firstModel.name()), topInteractions, bottomInteractions);
   }
 }
