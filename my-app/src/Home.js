@@ -929,7 +929,11 @@ function Home() {
                 description={
                   <div>
                     <p>{serverError}</p>
-                    <Table dataSource={rows} columns={columns} />
+                    <Table
+                      dataSource={rows}
+                      columns={columns}
+                      scroll={{ x: "max-content" }}
+                    />
                   </div>
                 }
               />
@@ -1043,7 +1047,11 @@ function Home() {
           label: "Canonical base pairs",
           children: (
             <>
-              <Table dataSource={canonicalRows} columns={canonicalColumns} />
+              <Table
+                dataSource={canonicalRows}
+                columns={canonicalColumns}
+                scroll={{ x: "max-content" }}
+              />
               <DownloadButton
                 dataSource={canonicalRows}
                 columns={canonicalColumns}
@@ -1060,6 +1068,7 @@ function Home() {
               <Table
                 dataSource={nonCanonicalRows}
                 columns={nonCanonicalColumns}
+                scroll={{ x: "max-content" }}
               />
               <DownloadButton
                 dataSource={nonCanonicalRows}
@@ -1074,7 +1083,11 @@ function Home() {
           label: "Stacking interactions",
           children: (
             <>
-              <Table dataSource={stackingRows} columns={stackingColumns} />
+              <Table
+                dataSource={stackingRows}
+                columns={stackingColumns}
+                scroll={{ x: "max-content" }}
+              />
               <DownloadButton
                 dataSource={stackingRows}
                 columns={stackingColumns}
@@ -1217,7 +1230,11 @@ function Home() {
               title={"Model ranking by similarity to the consensus"}
               style={{ marginBottom: "24px" }}
             >
-              <Table dataSource={rankingRows} columns={rankingColumns} />
+              <Table
+                dataSource={rankingRows}
+                columns={rankingColumns}
+                scroll={{ x: "max-content" }}
+              />
               <DownloadButton
                 dataSource={rankingRows}
                 columns={rankingColumns}
@@ -1251,7 +1268,11 @@ function Home() {
                     title={"Removed files"}
                     style={{ marginBottom: "24px" }}
                   >
-                    <Table dataSource={rows} columns={columns} />
+                    <Table
+                      dataSource={rows}
+                      columns={columns}
+                      scroll={{ x: "max-content" }}
+                    />
                   </Card>
                 );
               })()}
