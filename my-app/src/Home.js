@@ -1006,7 +1006,8 @@ function Home() {
                 key="dotbracket"
                 style={{
                   whiteSpace: "pre-wrap",
-                  wordBreak: "break-word",
+                  overflowWrap: "break-word",
+                  fontFamily: "monospace",
                   marginTop: "16px",
                 }}
               >
@@ -1160,7 +1161,8 @@ function Home() {
                     <pre
                       style={{
                         whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
+                        overflowWrap: "break-word",
+                        fontFamily: "monospace",
                         margin: 0, // Ensure pre tag doesn't add extra margin
                       }}
                     >
