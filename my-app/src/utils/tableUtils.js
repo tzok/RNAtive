@@ -111,7 +111,7 @@ export const getGroupedRankingTableColumns = (headers, rows) => {
           }
           return text;
         },
-        ...(mode === "ALL" && { defaultSortOrder: "ascend" }),
+        ...(mode === "All" && { defaultSortOrder: "ascend" }),
       },
       {
         title: "INF",
