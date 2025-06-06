@@ -598,74 +598,63 @@ function Home() {
     }
   }, [serverAddress, fetchTaskResult, setRemovalReasons, setIsLoading, setServerError /* setResponse is passed as arg */]);
 
-  const handleSendData = useCallback(async (taskIdArg = "") => {
-    const POLL_INTERVAL = 3000; // 3 seconds
-    let taskId = taskIdArg || null;
+  const handleSendData = useCallback(async (taskIdFromUrl = "") => {
+    const POLL_INTERVAL = 3000;
+    let currentTaskId = taskIdFromUrl;
+
+    setIsLoading(true);
+    setResponse(null);
+    setServerError(null);
+    setRemovalReasons(null);
+    setTaskProgress({ current: 0, total: 100, message: "Initializing..." });
 
     try {
-      // Step 1: Create and send the payload if taskId is not provided
-      if (!taskId) {
-        setTaskProgress({ current: 0, total: 100, message: "Initializing..." }); // Reset progress
-        setIsLoading(true);
-        setResponse(null);
-        setServerError(null);
-        setRemovalReasons(null);
-
-        // Prepare the files data
+      if (!currentTaskId) { // New submission
         const files = await Promise.all(
           fileList.map(async (file) => ({
             name: file.obj.name,
-            content: await file.obj.text(), // Reads file content as text
+            content: await file.obj.text(),
           }))
         );
 
-        // Prepare the payload
-        const payload = {};
-        payload.files = files;
-        payload.analyzer = analyzer;
-        if (isFuzzy) {
-          payload.confidenceLevel = null;
-        } else {
-          payload.confidenceLevel = confidenceLevel;
-        }
-        payload.molProbityFilter = molProbityFilter;
+        const payload = {
+          files,
+          analyzer,
+          confidenceLevel: isFuzzy ? null : confidenceLevel,
+          molProbityFilter,
+        };
         if (dotBracket) {
           payload.dotBracket = dotBracket;
         }
 
-        const response = await fetch(serverAddress, {
+        const postResponse = await fetch(serverAddress, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
 
-        if (!response.ok) {
-          if (response.status === 413) {
-            throw new Error(
-              "Request too large. Please reduce the size or number of files."
-            );
+        if (!postResponse.ok) {
+          if (postResponse.status === 413) {
+            throw new Error("Request too large. Please reduce the size or number of files.");
           }
-          throw new Error(`Server responded with status ${response.status}`);
+          const errorData = await postResponse.text(); // Try to get more error info
+          throw new Error(`Server responded with status ${postResponse.status}: ${errorData}`);
         }
 
-        const { taskId: newTaskId } = await response.json();
-        taskId = newTaskId;
-        navigate(`/${newTaskId}`, { replace: true }); //navigate to new taskid
+        const { taskId: newTaskId } = await postResponse.json();
+        currentTaskId = newTaskId;
+        navigate(`/${currentTaskId}`, { replace: true });
       }
 
-      // Step 2: Poll for task status
-      // Step 2: Poll for task status.
-      // pollTaskStatus will internally call fetchTaskResult when status is COMPLETED.
-      await pollTaskStatus(taskId, POLL_INTERVAL, setResponse);
-
-      // Step 3: Handle the result based on task status is now managed within pollTaskStatus
-      // and fetchTaskResult, so no further action is needed here for COMPLETED status.
+      if (currentTaskId) {
+        await pollTaskStatus(currentTaskId, POLL_INTERVAL, setResponse);
+      } else {
+        throw new Error("Task ID not available for polling.");
+      }
     } catch (error) {
-      console.error("Error in submission process:", error.message);
-      if (taskId) {
-        console.error(`Task ID: ${taskId}`);
+      console.error("Error in submission/polling process:", error.message);
+      if (currentTaskId) {
+        console.error(`Task ID: ${currentTaskId}`);
       }
       setServerError(error.message);
       setIsLoading(false);
@@ -680,19 +669,21 @@ function Home() {
     molProbityFilter,
     dotBracket,
     pollTaskStatus,
-    fetchTaskResult,
-    setIsLoading,
-    setResponse,
-    setServerError,
-    setRemovalReasons,
+    // Dependencies for state setters like setIsLoading, setResponse are not needed
+    // as they are stable. pollTaskStatus is a useCallback, so it's a valid dependency.
   ]);
 
   // Perform actions with the ID if necessary (e.g., fetch data based on the ID)
   useEffect(() => {
-    if (id) {
+    if (id && !isLoading && !response && !serverError) {
+      // If there's an ID in the URL, and we are not currently loading,
+      // and don't have a response or error for it, then start processing.
+      // This prevents re-triggering if handleSendData itself caused the ID to appear.
       handleSendData(id);
     }
-  }, [handleSendData, id]);
+    // If !id, it's the root path, do nothing here, form is shown.
+    // If id and (isLoading or response or serverError), means we are already handling it or have handled it.
+  }, [id, isLoading, response, serverError, handleSendData]);
 
   const loadRNAPuzzlesExample = async () => {
     try {
