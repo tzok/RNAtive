@@ -38,7 +38,6 @@ import pl.poznan.put.api.exception.TaskNotFoundException;
 import pl.poznan.put.api.model.MolProbityFilter;
 import pl.poznan.put.api.model.Task;
 import pl.poznan.put.api.model.TaskStatus;
-import pl.poznan.put.api.model.VisualizationTool;
 import pl.poznan.put.api.repository.TaskRepository;
 import pl.poznan.put.api.util.ReferenceStructureUtil;
 import pl.poznan.put.model.BaseInteractions;
@@ -71,8 +70,6 @@ public class TaskProcessorService {
   private final TaskRepository taskRepository;
   private final ObjectMapper objectMapper;
   private final AnalysisClient analysisClient;
-  private final VisualizationClient visualizationClient;
-  private final VisualizationService visualizationService;
   private final ConversionClient conversionClient;
   private final RnapolisClient rnapolisClient;
   private final VarnaTzClient varnaTzClient;
@@ -83,8 +80,6 @@ public class TaskProcessorService {
       TaskRepository taskRepository,
       ObjectMapper objectMapper,
       AnalysisClient analysisClient,
-      VisualizationClient visualizationClient,
-      VisualizationService visualizationService,
       ConversionClient conversionClient,
       RnapolisClient rnapolisClient,
       VarnaTzClient varnaTzClient,
@@ -92,8 +87,6 @@ public class TaskProcessorService {
     this.taskRepository = taskRepository;
     this.objectMapper = objectMapper;
     this.analysisClient = analysisClient;
-    this.visualizationClient = visualizationClient;
-    this.visualizationService = visualizationService;
     this.conversionClient = conversionClient;
     this.rnapolisClient = rnapolisClient;
     this.varnaTzClient = varnaTzClient;
@@ -142,10 +135,8 @@ public class TaskProcessorService {
               processedFiles,
               request.confidenceLevel(),
               request.analyzer(),
-              request.consensusMode(),
               request.dotBracket(),
-              request.molProbityFilter(),
-              request.visualizationTool());
+              request.molProbityFilter());
 
       logger.info("Parsing, analyzing and filtering files with MolProbity");
       var analyzedModels = parseAndAnalyzeFiles(processedRequest, task);
@@ -201,9 +192,8 @@ public class TaskProcessorService {
       logger.info("Generating visualization for consensus structure");
       var consensusSvg =
           generateVisualization(
-              request.visualizationTool(),
               firstModel, // Use first model as template for consensus
-              consensusDotBracket, // Use the overall consensus dot-bracket
+              // Use the overall consensus dot-bracket
               determineConsensusSet( // Use aggregated interactions for consensus visualization
                   aggregatedInteractionResult.sortedInteractions(),
                   request.confidenceLevel(),
@@ -273,10 +263,7 @@ public class TaskProcessorService {
 
                           String modelSvg =
                               generateVisualization(
-                                  request.visualizationTool(),
-                                  correspondingAnalyzedModel,
-                                  modelDotBracket,
-                                  modelInteractionsToVisualize);
+                                  correspondingAnalyzedModel, modelInteractionsToVisualize);
                           logger.debug("Generated standard SVG for model: {}", rankedModel.name());
                           svgEntries.add(Map.entry(rankedModel.name(), modelSvg));
                         } catch (Exception e) {
@@ -1277,41 +1264,26 @@ public class TaskProcessorService {
             .collect(Collectors.toList());
 
     // 5. Sort the final list based on the rank of the originally requested consensusMode
-    ConsensusMode requestedSortMode = request.consensusMode();
     rankedModelsResult.sort(
         Comparator.comparingInt(
-            rm -> rm.rank().getOrDefault(requestedSortMode, Integer.MAX_VALUE)));
+            rm -> rm.rank().getOrDefault(ConsensusMode.ALL, Integer.MAX_VALUE)));
 
     logger.info(
-        "Finished generating ranked models, sorted by requested mode: {}", requestedSortMode);
+        "Finished generating ranked models, sorted by requested mode: {}", ConsensusMode.ALL);
     return rankedModelsResult;
   }
 
   private String generateVisualization(
-      VisualizationTool visualizationTool,
-      AnalyzedModel model,
-      DotBracketFromPdb dotBracket,
-      Set<ConsensusInteraction> interactionsToVisualize) {
+      AnalyzedModel model, Set<ConsensusInteraction> interactionsToVisualize) {
     try {
-      String svg;
-      if (visualizationTool == VisualizationTool.VARNA) {
-        logger.info("Generating visualization using VarnaTzClient (remote varna-tz service)");
-        var structureData = createStructureData(model, interactionsToVisualize);
-        var svgDoc = varnaTzClient.visualize(structureData);
-        var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
-        svg = new String(svgBytes);
-      } else {
-        logger.info("Generating visualization using VisualizationClient (remote adapters service)");
-        var visualizationInput = visualizationService.prepareVisualizationInput(model, dotBracket);
-        var visualizationJson = objectMapper.writeValueAsString(visualizationInput);
-        svg = visualizationClient.visualize(visualizationJson, visualizationTool);
-      }
-      return svg;
+      logger.info("Generating visualization using VarnaTzClient (remote varna-tz service)");
+      var structureData = createStructureData(model, interactionsToVisualize);
+      var svgDoc = varnaTzClient.visualize(structureData);
+      var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
+      return new String(svgBytes);
     } catch (Exception e) {
-      logger.warn("Visualization generation failed for tool: {}", visualizationTool, e);
-      throw new RuntimeException(
-          "Visualization generation failed for tool " + visualizationTool + ": " + e.getMessage(),
-          e);
+      logger.warn("Visualization generation failed", e);
+      throw new RuntimeException("Visualization generation failed: " + e.getMessage(), e);
     }
   }
 

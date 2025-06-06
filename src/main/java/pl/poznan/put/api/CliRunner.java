@@ -19,7 +19,6 @@ import pl.poznan.put.ConsensusMode;
 import pl.poznan.put.api.dto.*;
 import pl.poznan.put.api.model.MolProbityFilter;
 import pl.poznan.put.api.model.TaskStatus;
-import pl.poznan.put.api.model.VisualizationTool;
 import pl.poznan.put.api.service.ComputeService;
 
 @Component
@@ -186,20 +185,11 @@ public class CliRunner implements CommandLineRunner {
 
       // Create compute request
       ComputeRequest request =
-          new ComputeRequest(
-              files,
-              confidenceLevel,
-              analyzer,
-              consensusMode,
-              dotBracket,
-              molProbityFilter,
-              VisualizationTool.VARNA // Default visualization tool for CLI
-              );
+          new ComputeRequest(files, confidenceLevel, analyzer, dotBracket, molProbityFilter);
 
       System.out.println("Processing with options:");
       System.out.println("- MolProbity filter: " + request.molProbityFilter());
       System.out.println("- Analyzer: " + request.analyzer());
-      System.out.println("- Consensus mode: " + request.consensusMode());
       System.out.println(
           "- Confidence level: "
               + (request.confidenceLevel() != null ? request.confidenceLevel() : "not set"));

@@ -39,24 +39,6 @@ import "./customTextInput.css";
 const { Text } = Typography;
 const { TextArea } = Input;
 
-const consensusOptions = [
-  {
-    value: "ALL",
-    label: "All interactions",
-  },
-  {
-    value: "CANONICAL",
-    label: "Canonical base pairs",
-  },
-  {
-    value: "NON_CANONICAL",
-    label: "Non-canonical base pairs",
-  },
-  {
-    value: "STACKING",
-    label: "Stacking interactions",
-  },
-];
 const analyzerOptions = [
   {
     value: "RNAPOLIS",
@@ -81,24 +63,6 @@ const analyzerOptions = [
   {
     value: "BARNABA",
     label: "Barnaba",
-  },
-];
-const visualizerOptions = [
-  {
-    value: "VARNA",
-    label: "VARNA",
-  },
-  {
-    value: "RNAPUZZLER",
-    label: "RNApuzzler",
-  },
-  {
-    value: "PSEUDOVIEWER",
-    label: "PseudoViewer",
-  },
-  {
-    value: "RCHIE",
-    label: "R-Chie",
   },
 ];
 const molProbityOptions = [
@@ -128,9 +92,7 @@ function Home() {
   const [serverError, setServerError] = useState(null);
   const [taskIdComplete, setTaskIdComplete] = useState(null);
   const [fileList, setFileList] = useState([]);
-  const [consensusMode, setConsensusMode] = useState(consensusOptions[0].value);
   const [analyzer, setAnalyzer] = useState(analyzerOptions[0].value);
-  const [visualizer, setVisualizer] = useState(visualizerOptions[0].value);
   const [molProbityFilter, setMolProbityFilter] = useState(
     molProbityOptions[0].value
   );
@@ -160,17 +122,12 @@ function Home() {
   const removeFromSequenceList = (name) => {
     setSequenceList((prev) => prev.filter((item) => item.name !== name));
   };
-  const findSequenceInSequenceList = (sequence) => {
-    return sequenceList
-      .filter((item) => item.sequence === sequence)
-      .map((item) => item.name);
-  };
   const findSequenceInSequenceList_local = (list, sequence) => {
     return list
       .filter((item) => item.sequence === sequence)
       .map((item) => item.name);
   };
-  const resetFileList = (file) => {
+  const resetFileList = () => {
     //resets both file list and dotBracket textview
     setDotBracket("");
     setFileList([]);
@@ -178,7 +135,7 @@ function Home() {
     setIsSequenceOk(true);
     setIsDotBracketOk(true);
   };
-  const resetDotBracket = (file) => {
+  const resetDotBracket = () => {
     //resets the dotBracket textview
     setDotBracket("");
     setSeqLength(0);
@@ -266,7 +223,7 @@ function Home() {
           console.log(`File:`, file.sequence);
           if (
             localSequenceToCheck === "" &&
-            file.sequence != "" &&
+            file.sequence !== "" &&
             file.sequence != null
           ) {
             localSequenceToCheck = file.sequence;
@@ -411,7 +368,7 @@ function Home() {
     const hasRemovals = fileList.length > newFileList.length;
     if (hasRemovals) {
       setFileList(newFileList);
-      if (newFileList.length == 0) {
+      if (newFileList.length === 0) {
         resetFileList();
       } else {
         //we also check if we removed all problematic files
@@ -446,7 +403,7 @@ function Home() {
           if (filesInSlist.length < sequenceListLocal.length) {
             //there certainly are such files
             //check if no file of old sequence remains:
-            if (filesInSlist.length == 0) {
+            if (filesInSlist.length === 0) {
               setSequenceToCheck(sequenceListLocal[0].sequence);
               checkDotBracket(dotBracket, sequenceListLocal[0].sequence);
               //check if only this sequence is within the list, if so, sequence of files is fine
@@ -454,7 +411,7 @@ function Home() {
                 sequenceListLocal,
                 sequenceListLocal[0].sequence
               );
-              if (filesInSlistNew.length == sequenceListLocal.length) {
+              if (filesInSlistNew.length === sequenceListLocal.length) {
                 setIsSequenceOk(true);
               }
             }
@@ -474,14 +431,8 @@ function Home() {
         URL.revokeObjectURL(file.url);
       });
     };
-  }, []);
+  }, [fileList]);
 
-  // Perform actions with the ID if necessary (e.g., fetch data based on the ID)
-  useEffect(() => {
-    if (id) {
-      handleSendData(id);
-    }
-  }, [id]);
   const checkDotBracket = (string, seqToCheck) => {
     if (string === "" || string === null) {
       setIsDotBracketOk(true);
@@ -550,7 +501,7 @@ function Home() {
     setDotBracket(event.target.value);
   };
 
-  const handleSendData = async (taskIdArg = "") => {
+  const handleSendData = useCallback(async (taskIdArg = "") => {
     const POLL_INTERVAL = 3000; // 3 seconds
     let taskId = taskIdArg || null;
 
@@ -573,9 +524,7 @@ function Home() {
         // Prepare the payload
         const payload = {};
         payload.files = files;
-        payload.consensusMode = consensusMode;
         payload.analyzer = analyzer;
-        payload.visualizationTool = visualizer;
         if (isFuzzy) {
           payload.confidenceLevel = null;
         } else {
@@ -623,7 +572,14 @@ function Home() {
       setServerError(error.message);
       setIsLoading(false);
     }
-  };
+  });
+
+  // Perform actions with the ID if necessary (e.g., fetch data based on the ID)
+  useEffect(() => {
+    if (id) {
+      handleSendData(id);
+    }
+  }, [handleSendData, id]);
 
   const pollTaskStatus = async (taskId, pollInterval, setResponse) => {
     while (true) {
@@ -1238,22 +1194,10 @@ function Home() {
                       (option) => option.value === response.userRequest?.analyzer
                   )?.label || "Unknown"}
                 </Descriptions.Item>
-                <Descriptions.Item label="Consensus structure based on">
-                  {consensusOptions.find(
-                      (option) =>
-                          option.value === response.userRequest?.consensusMode
-                  )?.label || "Unknown"}
-                </Descriptions.Item>
                 <Descriptions.Item label="Consensus weighting">
                   {response.userRequest?.confidenceLevel != null
                     ? `Confidence level: ${response.userRequest.confidenceLevel}`
                     : "Conditionally weighted consensus"}
-                </Descriptions.Item>
-                <Descriptions.Item label="2D structure viewer">
-                  {visualizerOptions.find(
-                    (option) =>
-                      option.value === response.userRequest?.visualizationTool
-                  )?.label || "Unknown"}
                 </Descriptions.Item>
               </Descriptions>
             </Card>
@@ -1541,7 +1485,7 @@ function Home() {
               ) : (
                 <div></div>
               )}
-              {seqLength != brackLength ? (
+              {seqLength !== brackLength ? (
                 <div style={{ color: "red" }}>
                   Please ensure that the sequence is of the same length as the
                   structure.<br></br>
@@ -1551,7 +1495,7 @@ function Home() {
               ) : (
                 <div></div>
               )}
-              {opBracketsNum != clBracketsNum ? (
+              {opBracketsNum !== clBracketsNum ? (
                 <div style={{ color: "red" }}>
                   Please ensure that the structure has the same number of
                   opening and closing brackets.<br></br>
@@ -1613,35 +1557,6 @@ function Home() {
                 options={analyzerOptions}
                 defaultValue={analyzerOptions[0]}
                 onChange={setAnalyzer}
-              />
-            </Form.Item>
-
-            <Form.Item
-              label={
-                <div
-                  style={{
-                    display: "inline-block",
-                    whiteSpace: "normal",
-                    maxWidth: "100%",
-                    lineHeight: "1.5",
-                    paddingBottom: "4px",
-                  }}
-                >
-                  <span>
-                    Consensus structure based on{" "}
-                    <Tooltip title="Choose which interaction types to include when comparing models and constructing the consensus secondary structure: canonical base pairs, stacking interactions, non-canonical pairs, or all.">
-                      <QuestionCircleOutlined
-                        style={{ position: "relative", zIndex: 999 }}
-                      />
-                    </Tooltip>
-                  </span>
-                </div>
-              }
-            >
-              <Select
-                options={consensusOptions}
-                defaultValue={consensusOptions[0]}
-                onChange={setConsensusMode}
               />
             </Form.Item>
 
@@ -1730,53 +1645,9 @@ function Home() {
                       {Math.round((confidenceLevel / fileList.length) * 100)}%
                     </span>
                   )}
-                  {/* {Math.round((confidenceLevel / fileList.length) * 100) > 9 &&
-                    Math.round((confidenceLevel / fileList.length) * 100) <
-                      100 && (
-                      <span style={{ opacity: fileList.length < 2 ? 0.5 : 1 }}>
-                        {"     "}
-                        {Math.round((confidenceLevel / fileList.length) * 100)}%
-                      </span>
-                    )}
-                  {Math.round((confidenceLevel / fileList.length) * 100) <
-                    10 && (
-                    <span style={{ opacity: fileList.length < 2 ? 0.5 : 1 }}>
-                      {"  "}
-                      {Math.round((confidenceLevel / fileList.length) * 100)}%
-                    </span>
-                  )} */}
                 </Row>
               </Form.Item>
             )}
-
-            <Form.Item
-              label={
-                <div
-                  style={{
-                    display: "inline-block",
-                    whiteSpace: "normal",
-                    maxWidth: "100%",
-                    lineHeight: "1.5",
-                    paddingBottom: "4px",
-                  }}
-                >
-                  <span>
-                    2D structure viewer{" "}
-                    <Tooltip title="Choose a viewer to display the consensus 2D structure. Currently, only VARNA supports visualizing non-canonical interactions and annotating their Leontis–Westhof classes with dedicated pictograms.">
-                      <QuestionCircleOutlined
-                        style={{ position: "relative", zIndex: 999 }}
-                      />
-                    </Tooltip>
-                  </span>
-                </div>
-              }
-            >
-              <Select
-                options={visualizerOptions}
-                defaultValue={visualizerOptions[0]}
-                onChange={setVisualizer}
-              />
-            </Form.Item>
 
             <Form.Item wrapperCol={{ offset: 6 }}>
               {fileList.length < 2 ? (
@@ -1786,8 +1657,8 @@ function Home() {
                   </Button>
                 </Tooltip>
               ) : !isDotBracketOk ||
-                seqLength != brackLength ||
-                opBracketsNum != clBracketsNum ? (
+                seqLength !== brackLength ||
+                opBracketsNum !== clBracketsNum ? (
                 <Tooltip title="Fix dot-bracket errors">
                   <Button type="primary" danger disabled>
                     Submit
