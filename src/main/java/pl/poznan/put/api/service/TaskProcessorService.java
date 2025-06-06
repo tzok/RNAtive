@@ -197,13 +197,10 @@ public class TaskProcessorService {
         updateTaskProgress(
             task, currentStepCounter, totalSteps, "Unifying file formats with RNApolis");
         processedFiles = processFilesWithRnapolis(request.files());
-      } else {
-        // If no files, RNApolis step is skipped, but if it was allocated, consume step
-        if (initialFileCount == 0 && totalStepsContainsRnapolisStepPlaceholder(totalSteps)) {
-             // This logic is tricky; safer to ensure totalSteps calculation is precise.
-             // Assuming totalSteps correctly allocated 0 if initialFileCount is 0 for RNApolis.
-        }
       }
+      // Note: The totalSteps calculation `if (initialFileCount > 0) { totalSteps += 1; }`
+      // correctly handles not allocating a step for RNApolis if initialFileCount is 0.
+      // Thus, no special handling is needed here if initialFileCount is 0.
 
 
       // Create a new request with the processed files
