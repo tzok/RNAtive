@@ -199,7 +199,17 @@ public class ComputeService {
   private TableData generateRankingTable(List<RankedModel> models) {
     var headers = new ArrayList<String>();
     headers.add("File name");
+
+    // Define the desired order for ConsensusModes
+    List<ConsensusMode> orderedModes = new ArrayList<>();
+    orderedModes.add(ConsensusMode.ALL);
     for (ConsensusMode mode : ConsensusMode.values()) {
+      if (mode != ConsensusMode.ALL) {
+        orderedModes.add(mode);
+      }
+    }
+
+    for (ConsensusMode mode : orderedModes) {
       headers.add(String.format("Rank (%s)", mode.name()));
       headers.add(String.format("INF (%s)", mode.name()));
       headers.add(String.format("F1 (%s)", mode.name()));
@@ -211,7 +221,7 @@ public class ComputeService {
                 model -> {
                   var row = new ArrayList<>();
                   row.add(model.name());
-                  for (ConsensusMode mode : ConsensusMode.values()) {
+                  for (ConsensusMode mode : orderedModes) {
                     row.add(model.rank().getOrDefault(mode, -1));
                     row.add(model.interactionNetworkFidelity().getOrDefault(mode, Double.NaN));
                     row.add(model.f1score().getOrDefault(mode, Double.NaN));
