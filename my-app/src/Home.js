@@ -23,7 +23,11 @@ import {
   Typography,
   message,
 } from "antd";
-import { getTableColumns, getTableRows } from "./utils/tableUtils";
+import {
+  getTableColumns,
+  getTableRows,
+  getGroupedRankingTableColumns,
+} from "./utils/tableUtils";
 import {
   QuestionCircleOutlined,
   CloseOutlined,
@@ -981,57 +985,10 @@ function Home() {
     if (response) {
       const totalFiles = response.fileNames.length;
 
-      // --- Modifications for Ranking Table ---
-      const rankingTableHeaders = response.ranking.headers;
-      const rankingTableRowsData = response.ranking.rows;
-
-      // Identify Rank column indices
-      const rankColumnIndices = rankingTableHeaders
-        .map((header, index) => (header.startsWith("Rank (") ? index : -1))
-        .filter((index) => index !== -1);
-
-      // Modify rows to make rank values integers
-      const modifiedRankingRowsData = rankingTableRowsData.map((row) => {
-        const newRow = [...row]; // Create a mutable copy
-        rankColumnIndices.forEach((idx) => {
-          if (
-            newRow[idx] !== null &&
-            newRow[idx] !== undefined &&
-            !isNaN(parseFloat(newRow[idx]))
-          ) {
-            newRow[idx] = Math.round(parseFloat(newRow[idx]));
-          }
-        });
-        return newRow;
-      });
-
-      // Generate ranking columns
-      const rankingColumns = getTableColumns(
-        rankingTableHeaders,
-        modifiedRankingRowsData, // Use modified data for consistency if sorters depend on it
-        totalFiles
+      const rankingColumns = getGroupedRankingTableColumns(
+        response.ranking.headers,
+        response.ranking.rows
       );
-
-      // Set default sort order for "Rank (ALL)"
-      const rankAllColumnConfig = rankingColumns.find(
-        (col) => col.title === "Rank (ALL)"
-      );
-      if (rankAllColumnConfig) {
-        rankAllColumnConfig.defaultSortOrder = "ascend";
-        // Ensure sorter is present (getTableColumns should add it)
-        if (!rankAllColumnConfig.sorter) {
-           // This case should ideally not happen if getTableColumns is consistent
-          rankAllColumnConfig.sorter = (a, b) => {
-            const valA = a[rankAllColumnConfig.dataIndex];
-            const valB = b[rankAllColumnConfig.dataIndex];
-            if (!isNaN(valA) && !isNaN(valB)) {
-              return valA - valB;
-            }
-            return String(valA).localeCompare(String(valB));
-          };
-        }
-      }
-      // --- End Modifications for Ranking Table ---
 
       const canonicalColumns = getTableColumns(
         response.canonicalPairs.headers,
@@ -1048,7 +1005,7 @@ function Home() {
         response.stackings.rows,
         totalFiles
       );
-      const rankingRows = getTableRows(modifiedRankingRowsData); // Use modified data for rows
+      const rankingRows = getTableRows(response.ranking.rows);
       const canonicalRows = getTableRows(response.canonicalPairs.rows);
       const nonCanonicalRows = getTableRows(response.nonCanonicalPairs.rows);
       const stackingRows = getTableRows(response.stackings.rows);

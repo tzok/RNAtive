@@ -53,7 +53,7 @@ export const getTableColumns = (headers, rows, fileCount = 100) => {
           }
           // Handle different number formats
           if (typeof text === "number" && !isNaN(text)) {
-            if (header === "Rank") {
+            if (header.startsWith("Rank")) {
               return Number(text);
             }
             if (header === "Confidence") {
@@ -71,6 +71,94 @@ export const getTableColumns = (headers, rows, fileCount = 100) => {
       };
     })
     .filter(Boolean);
+};
+
+export const getGroupedRankingTableColumns = (headers, rows) => {
+  if (!headers || headers.length === 0) {
+    return [];
+  }
+
+  const groupedColumns = [];
+
+  // First column is always "File name"
+  groupedColumns.push({
+    title: headers[0],
+    dataIndex: 0,
+    key: 0,
+    sorter: (a, b) => String(a[0]).localeCompare(String(b[0])),
+    // fixed: 'left', // Optional: if table becomes too wide
+  });
+
+  // Process the rest of the headers which come in triplets
+  for (let i = 1; i < headers.length; i += 3) {
+    const rankHeader = headers[i]; // e.g., "Rank (ALL)"
+    const infHeader = headers[i + 1]; // e.g., "INF (ALL)"
+    const f1Header = headers[i + 2]; // e.g., "F1 (ALL)"
+
+    // Extract mode from header, e.g., "ALL" from "Rank (ALL)"
+    const modeMatch = rankHeader.match(/\(([^)]+)\)/);
+    if (!modeMatch) continue; // Should not happen with expected format
+    const mode = modeMatch[1];
+
+    const children = [
+      {
+        title: "Rank",
+        dataIndex: i,
+        key: i,
+        sorter: (a, b) => {
+          const valA = parseFloat(a[i]);
+          const valB = parseFloat(b[i]);
+          return valA - valB;
+        },
+        render: (text) => {
+          if (text !== null && text !== undefined && !isNaN(parseFloat(text))) {
+            return Math.round(parseFloat(text));
+          }
+          return text;
+        },
+        ...(mode === "ALL" && { defaultSortOrder: "ascend" }),
+      },
+      {
+        title: "INF",
+        dataIndex: i + 1,
+        key: i + 1,
+        sorter: (a, b) => {
+          const valA = parseFloat(a[i + 1]);
+          const valB = parseFloat(b[i + 1]);
+          return valA - valB;
+        },
+        render: (text) => {
+          if (typeof text === "number" && !isNaN(text)) {
+            return Number(text).toFixed(3);
+          }
+          return text;
+        },
+      },
+      {
+        title: "F1",
+        dataIndex: i + 2,
+        key: i + 2,
+        sorter: (a, b) => {
+          const valA = parseFloat(a[i + 2]);
+          const valB = parseFloat(b[i + 2]);
+          return valA - valB;
+        },
+        render: (text) => {
+          if (typeof text === "number" && !isNaN(text)) {
+            return Number(text).toFixed(3);
+          }
+          return text;
+        },
+      },
+    ];
+
+    groupedColumns.push({
+      title: mode,
+      children: children,
+    });
+  }
+
+  return groupedColumns;
 };
 
 export const getTableRows = (rows) => {
