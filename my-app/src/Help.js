@@ -62,6 +62,7 @@ const Help = () => {
         >
           <div
             style={{
+              flex: "0 0 280px", // TOC: Don't grow, don't shrink, initial width 280px
               marginRight: "20px",
             }}
           >
