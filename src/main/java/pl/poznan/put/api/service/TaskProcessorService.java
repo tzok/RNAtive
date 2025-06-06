@@ -191,10 +191,7 @@ public class TaskProcessorService {
       logger.info("Creating task result");
       var taskResult =
           new TaskResult(
-              rankedModels,
-              referenceStructure,
-              consensusDotBracket.toStringWithStrands(),
-              request.consensusMode()); // Add requestedConsensusMode
+              rankedModels, referenceStructure, consensusDotBracket.toStringWithStrands());
       var resultJson = objectMapper.writeValueAsString(taskResult);
       task.setResult(resultJson);
 
@@ -1247,8 +1244,7 @@ public class TaskProcessorService {
         infScoresPerModel.get(model.name()).put(modeToAnalyze, inf);
         f1ScoresPerModel.get(model.name()).put(modeToAnalyze, f1);
         currentModeInfScores.put(model.name(), inf);
-        logger.debug(
-            "Model {}: Mode {}: INF = {}, F1 = {}", model.name(), modeToAnalyze, inf, f1);
+        logger.debug("Model {}: Mode {}: INF = {}, F1 = {}", model.name(), modeToAnalyze, inf, f1);
       }
 
       // 3. Determine ranks for the current modeToAnalyze based on INF scores
@@ -1259,8 +1255,7 @@ public class TaskProcessorService {
         double modelInf = currentModeInfScores.get(model.name());
         int rank = sortedInfsForMode.indexOf(modelInf) + 1;
         ranksPerModel.get(model.name()).put(modeToAnalyze, rank);
-        logger.trace(
-            "Model {}: Mode {}: Assigned rank {}", model.name(), modeToAnalyze, rank);
+        logger.trace("Model {}: Mode {}: Assigned rank {}", model.name(), modeToAnalyze, rank);
       }
     }
 

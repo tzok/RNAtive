@@ -8,5 +8,4 @@ import pl.poznan.put.api.util.ReferenceStructureUtil;
 public record TaskResult(
     List<RankedModel> rankedModels,
     ReferenceStructureUtil.ReferenceParseResult referenceStructure,
-    String dotBracket,
-    ConsensusMode requestedConsensusMode) {}
+    String dotBracket) {}

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.commons.collections4.bag.HashBag;
@@ -12,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import pl.poznan.put.ConsensusMode;
 import pl.poznan.put.RankedModel;
 import pl.poznan.put.api.dto.*;
 import pl.poznan.put.api.exception.ResourceNotFoundException;
@@ -142,7 +144,7 @@ public class ComputeService {
     if (results == null || results.isEmpty()) {
       throw new IllegalStateException("No results available");
     }
-    var requestedMode = taskResult.requestedConsensusMode(); // Get the requested mode
+    // var requestedMode = taskResult.requestedConsensusMode(); // No longer needed here
 
     var totalModelCount = results.size();
     var allInteractions =
@@ -171,7 +173,7 @@ public class ComputeService {
             .collect(Collectors.toList());
 
     // Convert CSV data to structured tables
-    var rankingTable = generateRankingTable(results, requestedMode); // Pass requestedMode
+    var rankingTable = generateRankingTable(results);
     var canonicalTable =
         generatePairsTable(
             allCanonicalPairs, allInteractions, totalModelCount, taskResult.referenceStructure());
@@ -194,18 +196,28 @@ public class ComputeService {
         taskResult.dotBracket());
   }
 
-  private TableData generateRankingTable(
-      List<RankedModel> models, ConsensusMode requestedMode) {
-    var headers = List.of("Rank", "File name", "INF", "F1");
+  private TableData generateRankingTable(List<RankedModel> models) {
+    var headers = new ArrayList<String>();
+    headers.add("File name");
+    for (ConsensusMode mode : ConsensusMode.values()) {
+      headers.add(String.format("Rank (%s)", mode.name()));
+      headers.add(String.format("INF (%s)", mode.name()));
+      headers.add(String.format("F1 (%s)", mode.name()));
+    }
+
     var rows =
         models.stream()
             .map(
-                model ->
-                    List.<Object>of(
-                        model.rank().getOrDefault(requestedMode, -1),
-                        model.name(),
-                        model.interactionNetworkFidelity().getOrDefault(requestedMode, Double.NaN),
-                        model.f1score().getOrDefault(requestedMode, Double.NaN)))
+                model -> {
+                  var row = new ArrayList<>();
+                  row.add(model.name());
+                  for (ConsensusMode mode : ConsensusMode.values()) {
+                    row.add(model.rank().getOrDefault(mode, -1));
+                    row.add(model.interactionNetworkFidelity().getOrDefault(mode, Double.NaN));
+                    row.add(model.f1score().getOrDefault(mode, Double.NaN));
+                  }
+                  return (List<Object>) row;
+                })
             .collect(Collectors.toList());
     return new TableData(headers, rows);
   }
@@ -324,7 +336,10 @@ public class ComputeService {
         generateStackingsTable(targetModel.stackings(), allInteractions, totalModelCount);
 
     return new ModelTablesResponse(
-        canonicalTable, nonCanonicalTable, stackingsTable, targetModel.dotBracket()); // Already correct
+        canonicalTable,
+        nonCanonicalTable,
+        stackingsTable,
+        targetModel.dotBracket()); // Already correct
   }
 
   public JsonNode getTaskRequest(String taskId) throws IOException {
