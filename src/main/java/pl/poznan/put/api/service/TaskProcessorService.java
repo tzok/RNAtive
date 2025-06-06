@@ -140,6 +140,7 @@ public class TaskProcessorService {
     logger.info("Starting async processing of task {}", taskId);
     AtomicInteger currentStepCounter = new AtomicInteger(0);
     Task task = null;
+    int totalSteps = 0; // Declare and initialize totalSteps here
 
     try {
       task = taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
