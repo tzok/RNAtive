@@ -74,6 +74,7 @@ public class TaskProcessorService {
   private final RnapolisClient rnapolisClient;
   private final VarnaTzClient varnaTzClient;
   private final RChieClient rChieClient;
+  private TaskProcessorService self; // For self-injection
 
   @Autowired
   public TaskProcessorService(
@@ -93,27 +94,58 @@ public class TaskProcessorService {
     this.rChieClient = rChieClient;
   }
 
+  @Autowired // Setter for self-injection
+  public void setSelf(TaskProcessorService self) {
+    this.self = self;
+  }
+
+  // This method runs in a new transaction to ensure progress is committed immediately.
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public void persistProgressUpdate(
+      String taskId, int currentStep, int totalSteps, String progressMessage) {
+    Task task =
+        taskRepository
+            .findById(taskId)
+            .orElseThrow(
+                () ->
+                    new TaskNotFoundException(
+                        taskId + " (while attempting to persist progress update)"));
+    task.setCurrentProgress(currentStep);
+    // totalSteps is mostly set initially, but ensure it's consistent.
+    task.setTotalProgressSteps(totalSteps);
+    task.setProgressMessage(progressMessage);
+    taskRepository.saveAndFlush(task); // Ensures data hits DB and new transaction commits.
+    logger.info(
+        "Task {} progress (persisted in new tx): [{}/{}] {}",
+        task.getId(),
+        task.getCurrentProgress(),
+        task.getTotalProgressSteps(),
+        progressMessage);
+  }
+
   private void updateTaskProgress(
       Task task,
       AtomicInteger currentStepCounter,
       int totalSteps,
       String messageFormat,
       Object... args) {
-    int currentStep = currentStepCounter.incrementAndGet();
-    // Ensure currentStep does not visually exceed totalSteps if more updates than planned occur.
-    task.setCurrentProgress(Math.min(currentStep, totalSteps));
-    task.setTotalProgressSteps(totalSteps); // totalProgressSteps is set once initially.
+    int currentStepValue = currentStepCounter.incrementAndGet();
+    int finalCurrentStep = Math.min(currentStepValue, totalSteps);
     String formattedMessage = String.format(messageFormat, args);
+
+    // Call the public method via the self-injected proxy to ensure new transaction starts.
+    // This makes the update visible to other transactions (like status polls) immediately.
+    self.persistProgressUpdate(task.getId(), finalCurrentStep, totalSteps, formattedMessage);
+
+    // Also, update the state of the 'task' object instance being used within processTaskAsync.
+    // This ensures that any subsequent logic in processTaskAsync that reads these fields
+    // from its local 'task' instance sees the updated values.
+    task.setCurrentProgress(finalCurrentStep);
     task.setProgressMessage(formattedMessage);
-    // Use saveAndFlush to ensure the update is written to the DB immediately,
-    // making it visible to UI polling.
-    taskRepository.saveAndFlush(task);
-    logger.info(
-        "Task {} progress: [{}/{}] {}",
-        task.getId(),
-        task.getCurrentProgress(),
-        task.getTotalProgressSteps(),
-        formattedMessage);
+    // The logger line from persistProgressUpdate will now cover the persisted state.
+    // We can add a local log if desired, but it might be redundant.
+    // logger.info("Task {} progress (local instance updated): [{}/{}] {}", task.getId(),
+    // task.getCurrentProgress(), task.getTotalProgressSteps(), formattedMessage);
   }
 
   /**
@@ -148,12 +180,13 @@ public class TaskProcessorService {
 
       var request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
       int initialFileCount = request.files().size();
-      int totalSteps = task.getTotalProgressSteps(); // Use pre-calculated total steps
+      totalSteps = task.getTotalProgressSteps(); // Use pre-calculated total steps
 
       // Set status to PROCESSING and save.
       // The progress message might be overwritten by the first updateTaskProgress call.
       task.setStatus(TaskStatus.PROCESSING);
-      // task.setProgressMessage("Task processing started..."); // Optional: override submitComputation message
+      // task.setProgressMessage("Task processing started..."); // Optional: override
+      // submitComputation message
       taskRepository.saveAndFlush(task);
 
       // Now, start actual processing with progress updates.
