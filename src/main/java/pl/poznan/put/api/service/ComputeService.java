@@ -68,7 +68,10 @@ public class ComputeService {
         task.getStatus(),
         task.getCreatedAt(),
         task.getMessage(),
-        task.getRemovalReasons());
+        task.getRemovalReasons(),
+        task.getCurrentProgress(),
+        task.getTotalProgressSteps(),
+        task.getProgressMessage());
   }
 
   public String getTaskSvg(String taskId) {
