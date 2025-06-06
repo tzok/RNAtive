@@ -64,12 +64,13 @@ const Help = () => {
         </Button>
         <div>
           {tocVisible && (
-            <div
-              style={{
-                marginBottom: "16px", // Space below TOC when visible
-              }}
-            >
-              <Anchor
+            <Typography>
+              <div
+                style={{
+                  marginBottom: "16px", // Space below TOC when visible
+                }}
+              >
+                <Anchor
                 items={headings.map((heading) => ({
                   key: heading.id,
                   href: `#${heading.id}`,
@@ -77,7 +78,8 @@ const Help = () => {
                   style: { paddingLeft: `${(heading.level - 1) * 15}px` },
                 }))}
               />
-            </div>
+              </div>
+            </Typography>
           )}
 
           <Typography style={{ overflowWrap: "break-word" }}>
