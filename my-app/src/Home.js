@@ -7,6 +7,7 @@ import {
   Card,
   Col,
   Collapse,
+  Descriptions,
   Form,
   Input,
   InputNumber,
@@ -1116,64 +1117,6 @@ function Home() {
           ),
         },
       ];
-      const usersRequestDotBracket = [
-        {
-          key: "2D structure constraints",
-          label: "2D structure constraints",
-          children: [
-            <pre
-              key="dotbracket"
-              style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-            >
-              {response.userRequest.dotBracket}
-            </pre>,
-          ],
-        },
-        {
-          key: "other-options",
-          label: "Other options",
-          children: (
-            <>
-              {/* confidenceLevel, analyzer, consensusMode, dotBracket, molProbityFilter, visualizationTool} */}
-              <div>
-                <b>Model quality filter:</b>{" "}
-                {molProbityOptions.find(
-                  (option) =>
-                    option.value === response.userRequest?.molProbityFilter
-                )?.label || "Unknown"}
-              </div>
-              <div>
-                <b>
-                  {response.userRequest?.confidenceLevel != null
-                    ? `confidence level: ${response.userRequest.confidenceLevel}`
-                    : "Conditionally weighted consensus"}
-                </b>
-              </div>
-              <div>
-                <b>Base pair analyzer:</b>{" "}
-                {analyzerOptions.find(
-                  (option) => option.value === response.userRequest?.analyzer
-                )?.label || "Unknown"}
-              </div>
-              <div>
-                <b>Consensus structure based on:</b>{" "}
-                {consensusOptions.find(
-                  (option) =>
-                    option.value === response.userRequest?.consensusMode
-                )?.label || "Unknown"}
-              </div>
-
-              <div>
-                <b>2D structure viewer:</b>{" "}
-                {visualizerOptions.find(
-                  (option) =>
-                    option.value === response.userRequest?.visualizationTool
-                )?.label || "Unknown"}
-              </div>
-            </>
-          ),
-        },
-      ];
       const perFileDetails = response.fileNames.map((filename, index) => ({
         key: index,
         label: filename,
@@ -1262,7 +1205,51 @@ function Home() {
               title={"Overview of input parameters and constraints"}
               style={{ marginBottom: "24px" }}
             >
-              <Collapse items={usersRequestDotBracket} />
+              <Descriptions bordered column={1}>
+                <Descriptions.Item label="2D structure constraints">
+                  {response.userRequest.dotBracket ? (
+                    <pre
+                      style={{
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        margin: 0, // Ensure pre tag doesn't add extra margin
+                      }}
+                    >
+                      {response.userRequest.dotBracket}
+                    </pre>
+                  ) : (
+                    "Not provided"
+                  )}
+                </Descriptions.Item>
+                <Descriptions.Item label="Model quality filter">
+                  {molProbityOptions.find(
+                    (option) =>
+                      option.value === response.userRequest?.molProbityFilter
+                  )?.label || "Unknown"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Consensus weighting">
+                  {response.userRequest?.confidenceLevel != null
+                    ? `Confidence level: ${response.userRequest.confidenceLevel}`
+                    : "Conditionally weighted consensus"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Base pair analyzer">
+                  {analyzerOptions.find(
+                    (option) => option.value === response.userRequest?.analyzer
+                  )?.label || "Unknown"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Consensus structure based on">
+                  {consensusOptions.find(
+                    (option) =>
+                      option.value === response.userRequest?.consensusMode
+                  )?.label || "Unknown"}
+                </Descriptions.Item>
+                <Descriptions.Item label="2D structure viewer">
+                  {visualizerOptions.find(
+                    (option) =>
+                      option.value === response.userRequest?.visualizationTool
+                  )?.label || "Unknown"}
+                </Descriptions.Item>
+              </Descriptions>
             </Card>
             <Card
               title={"Consensus 2D structure"}
