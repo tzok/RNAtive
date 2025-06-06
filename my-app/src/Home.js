@@ -558,12 +558,12 @@ function Home() {
       }
 
       // Step 2: Poll for task status
-      const status = await pollTaskStatus(taskId, POLL_INTERVAL, setResponse);
+      // Step 2: Poll for task status.
+      // pollTaskStatus will internally call fetchTaskResult when status is COMPLETED.
+      await pollTaskStatus(taskId, POLL_INTERVAL, setResponse);
 
-      // Step 3: Handle the result based on task status
-      if (status === "COMPLETED") {
-        await fetchTaskResult(taskId);
-      }
+      // Step 3: Handle the result based on task status is now managed within pollTaskStatus
+      // and fetchTaskResult, so no further action is needed here for COMPLETED status.
     } catch (error) {
       console.error("Error in submission process:", error.message);
       if (taskId) {
@@ -572,7 +572,22 @@ function Home() {
       setServerError(error.message);
       setIsLoading(false);
     }
-  });
+  }, [
+    serverAddress,
+    navigate,
+    fileList,
+    analyzer,
+    isFuzzy,
+    confidenceLevel,
+    molProbityFilter,
+    dotBracket,
+    pollTaskStatus,
+    fetchTaskResult,
+    setIsLoading,
+    setResponse,
+    setServerError,
+    setRemovalReasons,
+  ]);
 
   // Perform actions with the ID if necessary (e.g., fetch data based on the ID)
   useEffect(() => {
