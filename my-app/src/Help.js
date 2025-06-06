@@ -1,4 +1,4 @@
-import { Anchor, Col, Row, Typography } from "antd";
+import { Anchor, Col, Row, Typography, Button } from "antd";
 import { useEffect, useState } from "react"; // Removed useRef
 import flowDiff from "./assets/rnative-flow-diff.png";
 import uploadScreen from "./assets/upload.png";
@@ -25,6 +25,7 @@ const { Title, Paragraph, Text, Link } = Typography;
 
 const Help = () => {
   const [headings, setHeadings] = useState([]);
+  const [tocVisible, setTocVisible] = useState(true); // State for TOC visibility
   // const [imgWidth, setImgWidth] = useState(0); // Removed imgWidth state
   // const containerRef = useRef(null); // Removed containerRef
   useEffect(() => {
@@ -55,26 +56,34 @@ const Help = () => {
   return (
     <Row justify={"center"}>
       <Col span={20}>
+        <Button
+          onClick={() => setTocVisible(!tocVisible)}
+          style={{ marginBottom: "16px" }}
+        >
+          {tocVisible ? "Hide" : "Show"} Table of Contents
+        </Button>
         <div
           style={{
             display: "flex",
           }}
         >
-          <div
-            style={{
-              flex: "0 0 280px", // TOC: Don't grow, don't shrink, initial width 280px
-              marginRight: "20px",
-            }}
-          >
-            <Anchor
-              items={headings.map((heading) => ({
-                key: heading.id,
-                href: `#${heading.id}`,
-                title: heading.text,
-                style: { paddingLeft: `${(heading.level - 1) * 15}px` },
-              }))}
-            />
-          </div>
+          {tocVisible && (
+            <div
+              style={{
+                flex: "0 0 280px", // TOC: Don't grow, don't shrink, initial width 280px
+                marginRight: "20px",
+              }}
+            >
+              <Anchor
+                items={headings.map((heading) => ({
+                  key: heading.id,
+                  href: `#${heading.id}`,
+                  title: heading.text,
+                  style: { paddingLeft: `${(heading.level - 1) * 15}px` },
+                }))}
+              />
+            </div>
+          )}
 
           <Typography style={{ flex: 1, minWidth: 0, overflowWrap: "break-word" }}>
             <CustomTitle level={1}>1. What is RNAtive</CustomTitle>
