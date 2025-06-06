@@ -225,7 +225,7 @@ public class TaskProcessorService {
         org.w3c.dom.svg.SVGDocument rChieSvgDoc = rChieClient.visualize(rChieData);
         byte[] rChieSvgBytes = SVGHelper.export(rChieSvgDoc, Format.SVG);
         String rChieSvgString = new String(rChieSvgBytes);
-        task.addModelSvg("rchie-visualization", rChieSvgString);
+        task.addModelSvg("rchie-consensus", rChieSvgString);
         logger.info("Successfully generated and stored RChie visualization SVG.");
       } catch (Exception e) {
         logger.error("Failed to generate or store RChie visualization SVG", e);
@@ -240,54 +240,95 @@ public class TaskProcessorService {
       logger.info("Generating visualizations for individual models in parallel");
       ConcurrentMap<String, String> modelSvgMap =
           rankedModels.parallelStream()
-              .map(
+              .flatMap( // Changed from map to flatMap
                   rankedModel -> {
+                    List<Map.Entry<String, String>> svgEntries = new ArrayList<>();
+
                     AnalyzedModel correspondingAnalyzedModel =
                         analyzedModels.stream()
                             .filter(am -> am.name().equals(rankedModel.getName()))
                             .findFirst()
-                            .orElse(null); // Should not happen if logic is correct
+                            .orElse(null);
 
                     if (correspondingAnalyzedModel != null) {
                       InteractionCollectionResult modelInteractionResult =
                           fullInteractionResult.perModelResults().get(rankedModel.getName());
+
                       if (modelInteractionResult != null) {
-                        Set<ConsensusInteraction> modelInteractionsToVisualize =
-                            determineConsensusSet(
-                                modelInteractionResult.sortedInteractions(),
-                                request.confidenceLevel(),
-                                ConsensusMode.ALL); // Use ALL mode for visualization
+                        // 1. Generate standard model visualization (Varna/VisualizationClient)
+                        try {
+                          Set<ConsensusInteraction> modelInteractionsToVisualize =
+                              determineConsensusSet(
+                                  modelInteractionResult.sortedInteractions(),
+                                  request.confidenceLevel(),
+                                  ConsensusMode.ALL); // Use ALL mode for visualization
 
-                        DefaultDotBracketFromPdb modelDotBracket =
-                            generateDotBracket(
-                                correspondingAnalyzedModel,
-                                determineConsensusSet(
-                                    modelInteractionResult.sortedInteractions(),
-                                    request.confidenceLevel(),
-                                    ConsensusMode.CANONICAL));
+                          DefaultDotBracketFromPdb modelDotBracket =
+                              generateDotBracket(
+                                  correspondingAnalyzedModel,
+                                  determineConsensusSet(
+                                      modelInteractionResult.sortedInteractions(),
+                                      request.confidenceLevel(),
+                                      ConsensusMode.CANONICAL));
 
-                        String modelSvg =
-                            generateVisualization(
-                                request.visualizationTool(),
-                                correspondingAnalyzedModel,
-                                modelDotBracket,
-                                modelInteractionsToVisualize);
-                        logger.debug("Generated SVG for model: {}", rankedModel.getName());
-                        return Map.entry(rankedModel.getName(), modelSvg);
+                          String modelSvg =
+                              generateVisualization(
+                                  request.visualizationTool(),
+                                  correspondingAnalyzedModel,
+                                  modelDotBracket,
+                                  modelInteractionsToVisualize);
+                          logger.debug(
+                              "Generated standard SVG for model: {}", rankedModel.getName());
+                          svgEntries.add(Map.entry(rankedModel.getName(), modelSvg));
+                        } catch (Exception e) {
+                          logger.warn(
+                              "Failed to generate standard visualization for model {}: {}",
+                              rankedModel.getName(),
+                              e.getMessage());
+                        }
+
+                        // 2. Generate RChie SVG for the model
+                        try {
+                          logger.info(
+                              "Generating RChie visualization for model: {}",
+                              rankedModel.getName());
+                          RChieData rChieModelData =
+                              prepareRChieData(
+                                  correspondingAnalyzedModel,
+                                  modelInteractionResult, // Pass model-specific interactions
+                                  referenceStructure);
+
+                          org.w3c.dom.svg.SVGDocument rChieModelSvgDoc =
+                              rChieClient.visualize(rChieModelData);
+                          byte[] rChieModelSvgBytes =
+                              SVGHelper.export(rChieModelSvgDoc, Format.SVG);
+                          String rChieModelSvgString = new String(rChieModelSvgBytes);
+                          String rChieSvgKey = "rchie-" + rankedModel.getName();
+                          svgEntries.add(Map.entry(rChieSvgKey, rChieModelSvgString));
+                          logger.info(
+                              "Successfully generated RChie visualization SVG for model {}.",
+                              rankedModel.getName());
+                        } catch (Exception e) {
+                          logger.error(
+                              "Failed to generate RChie visualization SVG for model {}",
+                              rankedModel.getName(),
+                              e);
+                          // Note: Avoid modifying task.setMessage in parallel stream due to
+                          // concurrency
+                        }
                       } else {
                         logger.warn(
-                            "Could not find interaction results for model {} to generate SVG.",
+                            "Could not find interaction results for model {} to generate SVGs.",
                             rankedModel.getName());
                       }
                     } else {
                       logger.warn(
                           "Could not find corresponding AnalyzedModel for RankedModel {} to"
-                              + " generate SVG.",
+                              + " generate SVGs.",
                           rankedModel.getName());
                     }
-                    return null; // Return null if SVG generation failed for this model
+                    return svgEntries.stream(); // Return a stream of entries
                   })
-              .filter(Objects::nonNull) // Filter out entries where SVG generation failed
               .collect(Collectors.toConcurrentMap(Map.Entry::getKey, Map.Entry::getValue));
 
       logger.info("Storing all generated SVGs in the task");
