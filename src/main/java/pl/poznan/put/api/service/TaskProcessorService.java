@@ -93,6 +93,25 @@ public class TaskProcessorService {
     this.rChieClient = rChieClient;
   }
 
+  private void updateTaskProgress(
+      Task task, AtomicInteger currentStepCounter, int totalSteps, String messageFormat, Object... args) {
+    int currentStep = currentStepCounter.incrementAndGet();
+    // Ensure currentStep does not visually exceed totalSteps if more updates than planned occur.
+    task.setCurrentProgress(Math.min(currentStep, totalSteps));
+    task.setTotalProgressSteps(totalSteps); // totalProgressSteps is set once initially.
+    String formattedMessage = String.format(messageFormat, args);
+    task.setProgressMessage(formattedMessage);
+    // Use saveAndFlush to ensure the update is written to the DB immediately,
+    // making it visible to UI polling.
+    taskRepository.saveAndFlush(task);
+    logger.info(
+        "Task {} progress: [{}/{}] {}",
+        task.getId(),
+        task.getCurrentProgress(),
+        task.getTotalProgressSteps(),
+        formattedMessage);
+  }
+
   /**
    * Process files through RNApolis service to unify their format.
    *
@@ -115,19 +134,77 @@ public class TaskProcessorService {
   @Async("taskExecutor")
   public CompletableFuture<Void> processTaskAsync(String taskId) {
     logger.info("Starting async processing of task {}", taskId);
-    try {
-      logger.info("Fetching task from repository");
-      var task =
-          taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
-      task.setStatus(TaskStatus.PROCESSING);
-      taskRepository.save(task);
+    AtomicInteger currentStepCounter = new AtomicInteger(0);
+    int totalSteps = 0; // Will be calculated shortly
+    Task task = null; // Will be fetched
 
-      logger.info("Parsing task request");
+    try {
+      // Initial fetch, status update (not counted in progress bar steps yet)
+      task = taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
+      task.setStatus(TaskStatus.PROCESSING);
+      // Save initial status before calculating total steps
+
       var request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
+      int initialFileCount = request.files().size();
+
+      // Calculate total estimated steps
+      totalSteps = 0;
+      totalSteps += 1; // 1. Fetching task from repo (conceptual step for progress update)
+      totalSteps += 1; // 2. Parsing task request (conceptual step for progress update)
+
+      if (initialFileCount > 0) {
+        totalSteps += 1; // 3. RNApolis unification service (block)
+      }
+      // parseAndAnalyzeFiles block:
+      totalSteps += initialFileCount; // 4. PDB Parsing (per file)
+      totalSteps += 1;                 // 5. Model Unification (block)
+      totalSteps += initialFileCount; // 6. MolProbity Filtering (per file)
+      totalSteps += initialFileCount; // 7. Secondary Structure Analysis (per file)
+
+      if (request.dotBracket() != null && !request.dotBracket().isBlank()) {
+        totalSteps += 1; // 8. Reading reference structure
+      }
+
+      totalSteps += 1; // 9. Collecting and sorting all interactions
+      totalSteps += 1; // 10. Ranking models
+      totalSteps += 1; // 11. Generating dot bracket for consensus
+      totalSteps += 1; // 12. Creating task result object
+      totalSteps += 1; // 13. Generating consensus Varna SVG
+      totalSteps += 1; // 14. Preparing RChieData for consensus
+      totalSteps += 1; // 15. Generating RChie visualization for consensus
+
+      // Per-model SVGs: Use initialFileCount as estimate for number of ranked models
+      totalSteps += initialFileCount * 2; // 16. (Varna + RChie) for each model
+
+      totalSteps += 1; // 17. Storing all generated SVGs
+      totalSteps += 1; // 18. Finalizing task (COMPLETED/FAILED)
+
+      task.setTotalProgressSteps(totalSteps);
+      task.setCurrentProgress(0); // Start at 0 before the first increment
+      task.setProgressMessage("Initializing task processing...");
+      taskRepository.saveAndFlush(task); // Save initial total and message
+
+      // Now, start actual processing with progress updates
+      updateTaskProgress(task, currentStepCounter, totalSteps, "Fetching task details");
+      // Task already fetched, this is for progress bar step 1
+
+      updateTaskProgress(task, currentStepCounter, totalSteps, "Parsing task request");
+      // Request already parsed, this is for progress bar step 2
 
       // Process files through RNApolis to unify their format
-      logger.info("Unifying format RNApolis unifier service");
-      List<FileData> processedFiles = processFilesWithRnapolis(request.files());
+      List<FileData> processedFiles = request.files(); // Initialize with original files
+      if (initialFileCount > 0) {
+        updateTaskProgress(
+            task, currentStepCounter, totalSteps, "Unifying file formats with RNApolis");
+        processedFiles = processFilesWithRnapolis(request.files());
+      } else {
+        // If no files, RNApolis step is skipped, but if it was allocated, consume step
+        if (initialFileCount == 0 && totalStepsContainsRnapolisStepPlaceholder(totalSteps)) {
+             // This logic is tricky; safer to ensure totalSteps calculation is precise.
+             // Assuming totalSteps correctly allocated 0 if initialFileCount is 0 for RNApolis.
+        }
+      }
+
 
       // Create a new request with the processed files
       ComputeRequest processedRequest =
@@ -138,39 +215,73 @@ public class TaskProcessorService {
               request.dotBracket(),
               request.molProbityFilter());
 
-      logger.info("Parsing, analyzing and filtering files with MolProbity");
-      var analyzedModels = parseAndAnalyzeFiles(processedRequest, task);
+      var analyzedModels =
+          parseAndAnalyzeFiles(
+              processedRequest, task, currentStepCounter, totalSteps, initialFileCount);
+
       if (analyzedModels.stream().anyMatch(Objects::isNull)) {
+        // This specific error condition might be caught earlier or handled by parseAndAnalyzeFiles
+        // For now, assume parseAndAnalyzeFiles updates progress correctly for its scope.
+        // If it returns nulls, it's an internal error not well-handled by progress steps.
+        String failureMsg = "Internal error: Failed to parse one or more models.";
+        updateTaskProgress(task, currentStepCounter, totalSteps, failureMsg); // Consume a step for failure
         task.setStatus(TaskStatus.FAILED);
-        task.setMessage("Failed to parse one or more models");
+        task.setMessage(failureMsg);
         taskRepository.save(task);
         return CompletableFuture.completedFuture(null);
       }
 
       var modelCount = analyzedModels.size();
-      if (modelCount < 2) {
-        task.setStatus(TaskStatus.FAILED);
-        task.setMessage(
+      if (modelCount < 2 && initialFileCount > 0) { // Check initialFileCount to ensure this is a meaningful failure
+        String failureMsg =
             analyzedModels.isEmpty()
-                ? "All models were filtered out by MolProbity criteria"
-                : "Only one model remained after MolProbity filtering");
-        taskRepository.save(task);
+                ? "All models were filtered out before comparison."
+                : "Only one model remained after filtering; comparison requires at least two.";
+        // Consume remaining steps before failing
+        while(currentStepCounter.get() < totalSteps -1) { // -1 for the final "failed" step
+            updateTaskProgress(task, currentStepCounter, totalSteps, "Skipping remaining steps due to insufficient models.");
+        }
+        updateTaskProgress(task, currentStepCounter, totalSteps, failureMsg);
+        task.setStatus(TaskStatus.FAILED);
+        task.setMessage(failureMsg);
+        taskRepository.saveAndFlush(task);
+        return CompletableFuture.completedFuture(null);
+      }
+       if (initialFileCount == 0) { // No files to process
+        String msg = "No input files provided for analysis.";
+        updateTaskProgress(task, currentStepCounter, totalSteps, msg);
+        task.setStatus(TaskStatus.COMPLETED); // Or FAILED, depending on desired outcome for no input
+        task.setMessage(msg);
+        taskRepository.saveAndFlush(task);
         return CompletableFuture.completedFuture(null);
       }
 
-      logger.info("Reading reference structure");
-      var firstModel = analyzedModels.get(0);
-      var referenceStructure =
-          ReferenceStructureUtil.readReferenceStructure(request.dotBracket(), firstModel);
 
-      logger.info("Collecting and sorting all interactions");
+      var firstModel = analyzedModels.get(0); // Assuming at least one model after previous checks
+      ReferenceStructureUtil.ReferenceParseResult referenceStructure =
+          new ReferenceStructureUtil.ReferenceParseResult(
+              Collections.emptyList(), Collections.emptyList());
+      if (request.dotBracket() != null && !request.dotBracket().isBlank()) {
+        updateTaskProgress(
+            task, currentStepCounter, totalSteps, "Reading reference structure from dot-bracket");
+        referenceStructure =
+            ReferenceStructureUtil.readReferenceStructure(request.dotBracket(), firstModel);
+      } else {
+        // If this step was allocated in totalSteps but skipped, the counter was NOT incremented.
+        // The totalSteps calculation correctly adds this step only if dotBracket is present.
+        // So, no adjustment needed here for the counter itself if the step is skipped.
+      }
+
+      updateTaskProgress(
+          task, currentStepCounter, totalSteps, "Collecting and aggregating interactions");
       var fullInteractionResult = collectInteractions(analyzedModels, referenceStructure);
       var aggregatedInteractionResult = fullInteractionResult.aggregatedResult();
 
-      logger.info("Ranking models");
+      updateTaskProgress(task, currentStepCounter, totalSteps, "Ranking models");
       var rankedModels = generateRankedModels(analyzedModels, fullInteractionResult, request);
 
-      logger.info("Generating dot bracket notation for consensus canonical base pairs");
+      updateTaskProgress(
+          task, currentStepCounter, totalSteps, "Generating dot-bracket for consensus structure");
       var consensusDotBracket =
           generateDotBracket(
               firstModel,
@@ -179,17 +290,15 @@ public class TaskProcessorService {
                   request.confidenceLevel(),
                   ConsensusMode.CANONICAL));
 
-      logger.info("Creating task result");
+      updateTaskProgress(task, currentStepCounter, totalSteps, "Preparing final task result object");
       var taskResult =
           new TaskResult(
               rankedModels, referenceStructure, consensusDotBracket.toStringWithStrands());
       var resultJson = objectMapper.writeValueAsString(taskResult);
       task.setResult(resultJson);
 
-      logger.info("Generating visualizations for individual models and consensus in parallel");
-
-      // Generate the consensus SVG first (can be done anytime after consensusDotBracket is ready)
-      logger.info("Generating visualization for consensus structure");
+      updateTaskProgress(
+          task, currentStepCounter, totalSteps, "Generating 2D visualization for consensus (Varna)");
       var consensusSvg =
           generateVisualization(
               firstModel, // Use first model as template for consensus
@@ -203,7 +312,9 @@ public class TaskProcessorService {
       // Prepare RChieData
       RChieData rChieData =
           prepareRChieData(firstModel, aggregatedInteractionResult, referenceStructure);
-      // At this point, rChieData is prepared. It can be added to TaskResult or Task entity later.
+      // At this point, rChieData is prepared.
+      updateTaskProgress(
+          task, currentStepCounter, totalSteps, "Preparing RChie data for consensus structure");
       logger.info(
           "Prepared RChieData with {} top and {} bottom interactions.",
           rChieData.top().size(),
@@ -211,7 +322,8 @@ public class TaskProcessorService {
 
       // Generate RChie visualization
       try {
-        logger.info("Generating RChie visualization");
+        updateTaskProgress(
+            task, currentStepCounter, totalSteps, "Generating RChie visualization for consensus");
         org.w3c.dom.svg.SVGDocument rChieSvgDoc = rChieClient.visualize(rChieData);
         byte[] rChieSvgBytes = SVGHelper.export(rChieSvgDoc, Format.SVG);
         String rChieSvgString = new String(rChieSvgBytes);
@@ -226,14 +338,13 @@ public class TaskProcessorService {
                 + e.getMessage());
       }
 
-      // Generate model-specific SVGs in parallel and collect them
-      logger.info("Generating visualizations for individual models in parallel");
+      // Generate model-specific SVGs. This block is estimated as (initialFileCount * 2) steps.
       ConcurrentMap<String, String> modelSvgMap =
-          rankedModels.parallelStream()
-              .flatMap( // Changed from map to flatMap
+          rankedModels
+              .parallelStream()
+              .flatMap( 
                   rankedModel -> {
                     List<Map.Entry<String, String>> svgEntries = new ArrayList<>();
-
                     AnalyzedModel correspondingAnalyzedModel =
                         analyzedModels.stream()
                             .filter(am -> am.name().equals(rankedModel.name()))
@@ -251,15 +362,7 @@ public class TaskProcessorService {
                               determineConsensusSet(
                                   modelInteractionResult.sortedInteractions(),
                                   request.confidenceLevel(),
-                                  ConsensusMode.ALL); // Use ALL mode for visualization
-
-                          DefaultDotBracketFromPdb modelDotBracket =
-                              generateDotBracket(
-                                  correspondingAnalyzedModel,
-                                  determineConsensusSet(
-                                      modelInteractionResult.sortedInteractions(),
-                                      request.confidenceLevel(),
-                                      ConsensusMode.CANONICAL));
+                                  ConsensusMode.ALL); 
 
                           String modelSvg =
                               generateVisualization(
@@ -268,19 +371,19 @@ public class TaskProcessorService {
                           svgEntries.add(Map.entry(rankedModel.name(), modelSvg));
                         } catch (Exception e) {
                           logger.warn(
-                              "Failed to generate standard visualization for model {}: {}",
+                              "Failed to generate standard Varna visualization for model {}: {}",
                               rankedModel.name(),
                               e.getMessage());
                         }
 
                         // 2. Generate RChie SVG for the model
                         try {
-                          logger.info(
+                          logger.debug( 
                               "Generating RChie visualization for model: {}", rankedModel.name());
                           RChieData rChieModelData =
                               prepareRChieData(
                                   correspondingAnalyzedModel,
-                                  modelInteractionResult, // Pass model-specific interactions
+                                  modelInteractionResult, 
                                   referenceStructure);
 
                           org.w3c.dom.svg.SVGDocument rChieModelSvgDoc =
@@ -290,7 +393,7 @@ public class TaskProcessorService {
                           String rChieModelSvgString = new String(rChieModelSvgBytes);
                           String rChieSvgKey = "rchie-" + rankedModel.name();
                           svgEntries.add(Map.entry(rChieSvgKey, rChieModelSvgString));
-                          logger.info(
+                          logger.debug( 
                               "Successfully generated RChie visualization SVG for model {}.",
                               rankedModel.name());
                         } catch (Exception e) {
@@ -298,8 +401,6 @@ public class TaskProcessorService {
                               "Failed to generate RChie visualization SVG for model {}",
                               rankedModel.name(),
                               e);
-                          // Note: Avoid modifying task.setMessage in parallel stream due to
-                          // concurrency
                         }
                       } else {
                         logger.warn(
@@ -308,32 +409,69 @@ public class TaskProcessorService {
                       }
                     } else {
                       logger.warn(
-                          "Could not find corresponding AnalyzedModel for RankedModel {} to"
-                              + " generate SVGs.",
+                          "Could not find corresponding AnalyzedModel for RankedModel {} to generate SVGs.",
                           rankedModel.name());
                     }
-                    return svgEntries.stream(); // Return a stream of entries
+                    return svgEntries.stream(); 
                   })
               .collect(Collectors.toConcurrentMap(Map.Entry::getKey, Map.Entry::getValue));
 
-      logger.info("Storing all generated SVGs in the task");
-      // Store the consensus SVG
+      // After parallel SVG generation, iterate to update progress for each allocated step
+      int actualRankedModelsCount = rankedModels.size();
+      for (int i = 0; i < actualRankedModelsCount; i++) {
+        RankedModel rankedModel = rankedModels.get(i);
+        updateTaskProgress(
+            task,
+            currentStepCounter,
+            totalSteps,
+            "Generated Varna SVG for model %d of %d: %s",
+            i + 1,
+            actualRankedModelsCount,
+            rankedModel.name());
+        updateTaskProgress(
+            task,
+            currentStepCounter,
+            totalSteps,
+            "Generated RChie SVG for model %d of %d: %s",
+            i + 1,
+            actualRankedModelsCount,
+            rankedModel.name());
+      }
+      // Consume any remaining allocated steps if fewer models were ranked than initialFileCount
+      int stepsConsumedForModelSVGs = actualRankedModelsCount * 2;
+      int stepsAllocatedForModelSVGs = initialFileCount * 2; 
+      for (int i = stepsConsumedForModelSVGs; i < stepsAllocatedForModelSVGs; i++) {
+        // Increment counter without specific message, or use a generic one
+        updateTaskProgress(task, currentStepCounter, totalSteps, "Adjusting progress for model SVG generation step.");
+      }
+      
+      updateTaskProgress(task, currentStepCounter, totalSteps, "Storing all generated SVGs");
       task.addModelSvg("consensus", consensusSvg);
-      // Store all model-specific SVGs
       task.getModelSvgs().putAll(modelSvgMap);
       logger.debug("Stored consensus SVG and {} model-specific SVGs", modelSvgMap.size());
 
-      logger.info("Task processing completed successfully");
+      updateTaskProgress(task, currentStepCounter, totalSteps, "Task processing completed successfully");
       task.setStatus(TaskStatus.COMPLETED);
-      taskRepository.save(task);
+      taskRepository.saveAndFlush(task); // Final save for COMPLETED
     } catch (Exception e) {
       logger.error("Task {} failed with error", taskId, e);
-      var taskOptional = taskRepository.findById(taskId);
-      if (taskOptional.isPresent()) {
-        var task = taskOptional.get();
+      // Ensure task is not null if exception happened before task was fetched
+      if (task == null) {
+        var taskOptional = taskRepository.findById(taskId);
+        if (taskOptional.isPresent()) task = taskOptional.get();
+      }
+
+      if (task != null) {
+        String finalMessage = "Task failed: " + e.getMessage();
+        // Try to update progress one last time if system is initialized
+        if (currentStepCounter != null && totalSteps > 0 && currentStepCounter.get() < totalSteps) {
+             updateTaskProgress(task, currentStepCounter, totalSteps, finalMessage);
+        } else { 
+            task.setProgressMessage(finalMessage);
+        }
         task.setStatus(TaskStatus.FAILED);
-        task.setMessage("Error processing task: " + e.getMessage());
-        taskRepository.save(task);
+        task.setMessage(finalMessage); // Overwrites progressMessage if needed for final display
+        taskRepository.saveAndFlush(task);
       }
     }
     return CompletableFuture.completedFuture(null);
@@ -569,14 +707,22 @@ public class TaskProcessorService {
    * Parses PDB files, filters for RNA, and handles basic parsing errors.
    *
    * @param files The list of FileData objects to parse.
+   * @param task The task entity for progress updates.
+   * @param currentStepCounter The atomic counter for current step.
+   * @param totalSteps The total estimated steps for the task.
    * @return A list of ParsedModel objects.
    */
-  private List<ParsedModel> parsePdbFiles(List<FileData> files) {
+  private List<ParsedModel> parsePdbFiles(
+      List<FileData> files, Task task, AtomicInteger currentStepCounter, int totalSteps) {
     logger.info("Parsing {} PDB files in parallel", files.size());
-    return files.parallelStream()
-        .map(
-            fileData -> {
-              try {
+    List<ParsedModel> result =
+        files.parallelStream()
+            .map(
+                fileData -> {
+                  // Inside parallel stream, avoid calling updateTaskProgress directly
+                  // to prevent concurrent DB updates. Logging is fine.
+                  logger.debug("Attempting to parse file in parallel: {}", fileData.name());
+                  try {
                 PdbModel structure3D =
                     new PdbParser()
                         .parse(fileData.content()).stream()
@@ -607,12 +753,25 @@ public class TaskProcessorService {
                   logger.error(
                       "Failed to save content of {} to {}", fileData.name(), tempFilePath, ioEx);
                 }
-                // Propagate the original parsing exception
-                throw new RuntimeException(
-                    "Failed to parse file " + fileData.name() + ": " + e.getMessage(), e);
-              }
-            })
-        .toList();
+                    // Propagate the original parsing exception
+                    throw new RuntimeException(
+                        "Failed to parse file " + fileData.name() + ": " + e.getMessage(), e);
+                  }
+                })
+            .toList();
+
+    // After parallel processing, update progress for each file parsed.
+    for (int i = 0; i < files.size(); i++) {
+      updateTaskProgress(
+          task,
+          currentStepCounter,
+          totalSteps,
+          "Parsed PDB file %d of %d: %s",
+          i + 1,
+          files.size(),
+          files.get(i).name());
+    }
+    return result;
   }
 
   /**
@@ -772,22 +931,56 @@ public class TaskProcessorService {
    * @param models The list of models to filter.
    * @param filter The MolProbity filter level.
    * @param task The current task, used to store removal reasons and responses.
+   * @param currentStepCounter The atomic counter for current step.
+   * @param totalSteps The total estimated steps for the task.
+   * @param initialFileCountForProgress The count used by parent for step allocation.
    * @return A list of models that passed the filter.
    */
   private List<ParsedModel> filterModelsWithMolProbity(
-      List<ParsedModel> models, MolProbityFilter filter, Task task) {
+      List<ParsedModel> models,
+      MolProbityFilter filter,
+      Task task,
+      AtomicInteger currentStepCounter,
+      int totalSteps,
+      int initialFileCountForProgress) {
     if (filter == MolProbityFilter.ALL) {
       logger.info("MolProbity filtering is set to ALL, skipping filtering.");
+      // Still need to advance the progress counter for allocated steps
+      for (int i = 0; i < initialFileCountForProgress; i++) {
+        String modelName = (i < models.size()) ? models.get(i).name() : "N/A";
+        updateTaskProgress(
+            task,
+            currentStepCounter,
+            totalSteps,
+            "Skipping MolProbity for model (estimate %d of %d): %s (filter ALL)",
+            i + 1,
+            initialFileCountForProgress,
+            modelName);
+      }
       return new ArrayList<>(models); // Return a mutable copy
     }
 
-    logger.info("Attempting MolProbity filtering with level: {}", filter);
+    logger.info(
+        "Attempting MolProbity filtering with level: {} for {} models (allocated steps: {})",
+        filter,
+        models.size(),
+        initialFileCountForProgress);
     var validModels = new ArrayList<ParsedModel>(); // Use mutable list
 
     try (var rnalyzerClient = new RnalyzerClient()) {
       rnalyzerClient.initializeSession();
 
+      int modelIndex = 0;
       for (ParsedModel model : models) {
+        modelIndex++;
+        updateTaskProgress(
+            task,
+            currentStepCounter,
+            totalSteps,
+            "Applying MolProbity filter to model %d of %d: %s",
+            modelIndex,
+            models.size(), // Current batch size
+            model.name());
         MolProbityResponse response = null;
         boolean isValid; // Assume valid unless proven otherwise or analysis fails
         try {
@@ -829,6 +1022,17 @@ public class TaskProcessorService {
           "MolProbity filtering completed. {} models passed out of {}.",
           validModels.size(),
           models.size());
+
+      // Adjust counter for any discrepancy if models.size() < initialFileCountForProgress
+      for (int i = models.size(); i < initialFileCountForProgress; i++) {
+        updateTaskProgress(
+            task,
+            currentStepCounter,
+            totalSteps,
+            "Adjusting progress for MolProbity step (unprocessed allocation %d of %d)",
+            i + 1,
+            initialFileCountForProgress);
+      }
       return validModels;
 
     } catch (Exception e) {
@@ -837,6 +1041,18 @@ public class TaskProcessorService {
               + " {}. Proceeding without MolProbity filtering.",
           e.getMessage());
       // If the RNAlyzer service fails entirely, return all original models
+      // and consume allocated steps
+      for (int i = 0; i < initialFileCountForProgress; i++) {
+        String modelName = (i < models.size()) ? models.get(i).name() : "N/A";
+        updateTaskProgress(
+            task,
+            currentStepCounter,
+            totalSteps,
+            "Skipping MolProbity due to service error for model (estimate %d of %d): %s",
+            i + 1,
+            initialFileCountForProgress,
+            modelName);
+      }
       return new ArrayList<>(models); // Return a mutable copy
     }
   }
@@ -846,16 +1062,30 @@ public class TaskProcessorService {
    *
    * @param models The list of models (3D structures) to analyze.
    * @param analyzer The secondary structure analysis tool to use.
+   * @param task The task entity for progress updates.
+   * @param currentStepCounter The atomic counter for current step.
+   * @param totalSteps The total estimated steps for the task.
+   * @param initialFileCountForProgress The count used by parent for step allocation.
    * @return A list of AnalyzedModel objects containing both 3D and 2D information.
    */
   private List<AnalyzedModel> analyzeSecondaryStructures(
-      List<ParsedModel> models, pl.poznan.put.Analyzer analyzer) {
+      List<ParsedModel> models,
+      pl.poznan.put.Analyzer analyzer,
+      Task task,
+      AtomicInteger currentStepCounter,
+      int totalSteps,
+      int initialFileCountForProgress) {
     logger.info(
-        "Analyzing secondary structures for {} models using {}", models.size(), analyzer.name());
-    return models.parallelStream()
-        .map(
-            model -> {
-              try {
+        "Analyzing secondary structures for {} models using {} (in parallel, allocated steps: {})",
+        models.size(),
+        analyzer.name(),
+        initialFileCountForProgress);
+    List<AnalyzedModel> result =
+        models.parallelStream()
+            .map(
+                model -> {
+                  logger.debug("Attempting to analyze 2D for model in parallel: {}", model.name());
+                  try {
                 var jsonResult = analysisClient.analyze(model.name, model.content, analyzer);
                 var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
                 logger.debug("Successfully analyzed model: {}", model.name());
@@ -881,22 +1111,47 @@ public class TaskProcessorService {
    *
    * @param request The compute request containing files and parameters.
    * @param task The task entity to update with progress and results.
+   * @param currentStepCounter The atomic counter for current step.
+   * @param totalSteps The total estimated steps for the task.
+   * @param initialFileCountForProgress The number of files based on which parent allocated steps.
    * @return A list of fully analyzed models.
    */
-  private List<AnalyzedModel> parseAndAnalyzeFiles(ComputeRequest request, Task task) {
+  private List<AnalyzedModel> parseAndAnalyzeFiles(
+      ComputeRequest request,
+      Task task,
+      AtomicInteger currentStepCounter,
+      int totalSteps,
+      int initialFileCountForProgress) {
+
     // 1. Parse PDB files into 3D structures
-    List<ParsedModel> parsedModels = parsePdbFiles(request.files());
+    List<ParsedModel> parsedModels =
+        parsePdbFiles(request.files(), task, currentStepCounter, totalSteps);
+    // parsePdbFiles internally updates currentStepCounter for each file in request.files()
 
     // 2. Check consistency and unify models if needed
+    updateTaskProgress(task, currentStepCounter, totalSteps, "Unifying model structures");
     List<ParsedModel> consistentModels = unifyModelsIfNeeded(parsedModels);
+    // This block is 1 step.
 
     // 3. Filter models using MolProbity
     List<ParsedModel> validModels =
-        filterModelsWithMolProbity(consistentModels, request.molProbityFilter(), task);
+        filterModelsWithMolProbity(
+            consistentModels,
+            request.molProbityFilter(),
+            task,
+            currentStepCounter,
+            totalSteps,
+            initialFileCountForProgress); // Pass initialFileCountForProgress for adjustment
 
     // 4. Analyze secondary structures for valid models
     List<AnalyzedModel> analyzedModels =
-        analyzeSecondaryStructures(validModels, request.analyzer());
+        analyzeSecondaryStructures(
+            validModels,
+            request.analyzer(),
+            task,
+            currentStepCounter,
+            totalSteps,
+            initialFileCountForProgress); // Pass initialFileCountForProgress for adjustment
 
     logger.info(
         "Finished parsing and analysis. Resulting in {} analyzed models.", analyzedModels.size());
