@@ -1195,8 +1195,14 @@ public class TaskProcessorService {
     logger.debug(
         "Prepared threshold target set with {} entries for scoring", targetConsensusSet.size());
 
-    // 2. Iterate through models, calculate scores, and generate dot-brackets
-    var rankedModelsList = new ArrayList<RankedModel>();
+    // 2. Create intermediate data holders for each model
+    record IntermediateRankData(
+        AnalyzedModel analyzedModel,
+        double inf,
+        double f1,
+        DefaultDotBracketFromPdb dotBracket) {}
+
+    List<IntermediateRankData> intermediateDataList = new ArrayList<>();
     for (AnalyzedModel model : analyzedModels) {
       logger.debug("Processing model for ranking: {}", model.name());
       List<ConsensusInteraction> modelConsensusInteractions =
@@ -1204,7 +1210,6 @@ public class TaskProcessorService {
       Set<ConsensusInteraction> modelConsensusSet =
           determineConsensusSet(modelConsensusInteractions, confidenceLevel, consensusMode);
 
-      // Calculate INF and F1 scores based on mode
       double inf;
       double f1;
       if (confidenceLevel == null) { // Fuzzy mode
@@ -1221,34 +1226,47 @@ public class TaskProcessorService {
         logger.debug("Model {}: Threshold INF = {}, Threshold F1 = {}", model.name(), inf, f1);
       }
 
-      // Generate dot-bracket for the model
-      logger.debug("Generating dot-bracket for model {}", model.name());
       DefaultDotBracketFromPdb dotBracket =
           generateDotBracket(
               model,
               determineConsensusSet(
                   modelConsensusInteractions, confidenceLevel, ConsensusMode.CANONICAL));
-
-      rankedModelsList.add(new RankedModel(model, inf, f1, dotBracket));
+      intermediateDataList.add(new IntermediateRankData(model, inf, f1, dotBracket));
     }
 
-    // 3. Rank the models based on Interaction Network Fidelity (INF)
-    logger.info("Ranking {} models based on Interaction Network Fidelity", rankedModelsList.size());
-    final var infs = // Use final for lambda capture clarity
-        rankedModelsList.stream()
-            .map(RankedModel::getInteractionNetworkFidelity)
+    // 3. Determine ranks based on INF
+    logger.info(
+        "Determining ranks for {} models based on Interaction Network Fidelity",
+        intermediateDataList.size());
+    final List<Double> sortedInfs =
+        intermediateDataList.stream()
+            .map(IntermediateRankData::inf)
             .sorted(Comparator.reverseOrder())
             .toList();
-    rankedModelsList.forEach(
-        rankedModel -> {
-          int rank = infs.indexOf(rankedModel.getInteractionNetworkFidelity()) + 1;
-          rankedModel.setRank(rank);
-          logger.trace("Model {} assigned rank {}", rankedModel.getName(), rank);
-        });
-    rankedModelsList.sort(Comparator.comparingInt(RankedModel::getRank)); // Sort by rank
+
+    // 4. Create RankedModel records with all data including rank
+    List<RankedModel> rankedModels =
+        intermediateDataList.stream()
+            .map(
+                data -> {
+                  int rank = sortedInfs.indexOf(data.inf()) + 1;
+                  logger.trace("Model {} assigned rank {}", data.analyzedModel().name(), rank);
+                  return new RankedModel(
+                      data.analyzedModel().name(),
+                      data.analyzedModel().basePairsAndStackings(),
+                      data.analyzedModel().canonicalBasePairs(),
+                      data.analyzedModel().nonCanonicalBasePairs(),
+                      data.analyzedModel().stackings(),
+                      data.inf(),
+                      data.f1(),
+                      rank,
+                      data.dotBracket().toStringWithStrands());
+                })
+            .sorted(Comparator.comparingInt(RankedModel::rank)) // Sort by rank
+            .toList();
 
     logger.info("Finished generating ranked models");
-    return rankedModelsList;
+    return rankedModels;
   }
 
   private String generateVisualization(

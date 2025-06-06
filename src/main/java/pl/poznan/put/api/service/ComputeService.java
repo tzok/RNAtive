@@ -146,26 +146,26 @@ public class ComputeService {
     var totalModelCount = results.size();
     var allInteractions =
         results.stream()
-            .map(RankedModel::getBasePairsAndStackings)
+            .map(RankedModel::basePairsAndStackings)
             .flatMap(List::stream)
             .collect(Collectors.toCollection(HashBag::new));
 
     // Collect all interactions from all models
     var allCanonicalPairs =
         results.stream()
-            .map(RankedModel::getCanonicalBasePairs)
+            .map(RankedModel::canonicalBasePairs)
             .flatMap(List::stream)
             .collect(Collectors.toList());
 
     var allNonCanonicalPairs =
         results.stream()
-            .map(RankedModel::getNonCanonicalBasePairs)
+            .map(RankedModel::nonCanonicalBasePairs)
             .flatMap(List::stream)
             .collect(Collectors.toList());
 
     var allStackings =
         results.stream()
-            .map(RankedModel::getStackings)
+            .map(RankedModel::stackings)
             .flatMap(List::stream)
             .collect(Collectors.toList());
 
@@ -200,10 +200,10 @@ public class ComputeService {
             .map(
                 model ->
                     List.<Object>of(
-                        model.getRank(),
-                        model.getName(),
-                        model.getInteractionNetworkFidelity(),
-                        model.getF1score()))
+                        model.rank(),
+                        model.name(),
+                        model.interactionNetworkFidelity(),
+                        model.f1score()))
             .collect(Collectors.toList());
     return new TableData(headers, rows);
   }
@@ -295,34 +295,34 @@ public class ComputeService {
     // Find the model with matching filename
     var targetModel =
         results.stream()
-            .filter(model -> model.getName().equals(filename))
+            .filter(model -> model.name().equals(filename))
             .findFirst()
             .orElseThrow(() -> new IllegalArgumentException("Model not found: " + filename));
 
     var totalModelCount = results.size();
     var allInteractions =
         results.stream()
-            .map(RankedModel::getBasePairsAndStackings)
+            .map(RankedModel::basePairsAndStackings)
             .flatMap(List::stream)
             .collect(Collectors.toCollection(HashBag::new));
 
     var canonicalTable =
         generatePairsTable(
-            targetModel.getCanonicalBasePairs(),
+            targetModel.canonicalBasePairs(),
             allInteractions,
             totalModelCount,
             taskResult.referenceStructure());
     var nonCanonicalTable =
         generatePairsTable(
-            targetModel.getNonCanonicalBasePairs(),
+            targetModel.nonCanonicalBasePairs(),
             allInteractions,
             totalModelCount,
             taskResult.referenceStructure());
     var stackingsTable =
-        generateStackingsTable(targetModel.getStackings(), allInteractions, totalModelCount);
+        generateStackingsTable(targetModel.stackings(), allInteractions, totalModelCount);
 
     return new ModelTablesResponse(
-        canonicalTable, nonCanonicalTable, stackingsTable, targetModel.getDotBracket());
+        canonicalTable, nonCanonicalTable, stackingsTable, targetModel.dotBracket());
   }
 
   public JsonNode getTaskRequest(String taskId) throws IOException {
