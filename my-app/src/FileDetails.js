@@ -72,7 +72,7 @@ const FileDetails = ({
       children: (
         <div>
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <div style={{ maxWidth: "100%", overflowX: "auto" }}>
                 <SvgImg
                   key="svg-varna-model"
@@ -82,7 +82,7 @@ const FileDetails = ({
                 />
               </div>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <div style={{ maxWidth: "100%", overflowX: "auto" }}>
                 <SvgImg
                   key="svg-rchie-model"
