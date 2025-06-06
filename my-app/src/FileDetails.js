@@ -4,7 +4,13 @@ import { getTableColumns, getTableRows } from "./utils/tableUtils";
 import DownloadButton from "./DownloadButton";
 import SvgImg from "./SvgImg"; // Import SvgImg
 import { QuestionCircleOutlined } from "@ant-design/icons";
-const FileDetails = ({ taskId, serverAddress, filename, fileCount }) => {
+const FileDetails = ({
+  taskId,
+  serverAddress,
+  filename,
+  fileCount,
+  rchieSvgName,
+}) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -80,6 +86,18 @@ const FileDetails = ({ taskId, serverAddress, filename, fileCount }) => {
         >
           {data.dotBracket}
         </pre>,
+      ],
+    },
+    {
+      key: filename + "-rchie-visualization",
+      label: "R-Chie Visualization",
+      children: [
+        <SvgImg
+          key="svg-rchie-model"
+          serverAddress={serverAddress}
+          taskId={taskId}
+          modelName={rchieSvgName} // Use the passed R-Chie SVG name
+        />,
       ],
     },
     {
