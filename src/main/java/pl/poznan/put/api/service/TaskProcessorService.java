@@ -143,15 +143,14 @@ public class TaskProcessorService {
     Task task = null; // Will be fetched
 
     try {
-      // Initial fetch, status update (not counted in progress bar steps yet)
       task = taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
-      task.setStatus(TaskStatus.PROCESSING);
-      // Save initial status before calculating total steps
 
+      // Immediately parse request to get initialFileCount for totalSteps calculation
       var request = objectMapper.readValue(task.getRequest(), ComputeRequest.class);
       int initialFileCount = request.files().size();
 
       // Calculate total estimated steps
+      // This calculation must be quick and not involve external calls or heavy processing.
       totalSteps = 0;
       totalSteps += 1; // 1. Fetching task from repo (conceptual step for progress update)
       totalSteps += 1; // 2. Parsing task request (conceptual step for progress update)
@@ -183,17 +182,20 @@ public class TaskProcessorService {
       totalSteps += 1; // 17. Storing all generated SVGs
       totalSteps += 1; // 18. Finalizing task (COMPLETED/FAILED)
 
+      // Set initial progress state including status and save immediately.
+      // This ensures that the first poll from the frontend sees non-zero totalProgressSteps.
+      task.setStatus(TaskStatus.PROCESSING);
       task.setTotalProgressSteps(totalSteps);
-      task.setCurrentProgress(0); // Start at 0 before the first increment
+      task.setCurrentProgress(0); // Current progress is 0 before any step is taken
       task.setProgressMessage("Initializing task processing...");
-      taskRepository.saveAndFlush(task); // Save initial total and message
+      taskRepository.saveAndFlush(task); // CRITICAL FIRST SAVE WITH PROGRESS INFO
 
-      // Now, start actual processing with progress updates
-      updateTaskProgress(task, currentStepCounter, totalSteps, "Fetching task details");
-      // Task already fetched, this is for progress bar step 1
-
-      updateTaskProgress(task, currentStepCounter, totalSteps, "Parsing task request");
-      // Request already parsed, this is for progress bar step 2
+      // Now, start actual processing with progress updates.
+      // The totalSteps calculation included conceptual steps for fetching and parsing.
+      // We'll explicitly update progress for these to align the counter.
+      currentStepCounter.set(0); // Reset counter before these explicit initial steps.
+      updateTaskProgress(task, currentStepCounter, totalSteps, "Fetching task data"); // Step 1
+      updateTaskProgress(task, currentStepCounter, totalSteps, "Parsing task parameters"); // Step 2
 
       // Process files through RNApolis to unify their format
       List<FileData> processedFiles = request.files(); // Initialize with original files
