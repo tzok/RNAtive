@@ -468,19 +468,6 @@ function Home() {
       setIsDotBracketOk(true);
     } else {
       if (matches) {
-        // const extractedSequence = match[2]; // the second capture group
-        // const extractedBrackets = match[3];
-        // let extractedSequence = ""; // the second capture group
-        // let extractedBrackets = "";
-        // for (let i = 1; i < match.length; i += 3) {
-        //   extractedSequence += match[i + 1]; // the second capture group
-        //   extractedBrackets += match[i + 2];
-        // }
-        console.log("MATCH LEN:", matches.length);
-        console.log("MATCH :", matches);
-        console.log("Extracted sequence:", extractedSequence);
-        console.log("sequenceToCheck:", seqToCheck);
-
         if (extractedSequence === seqToCheck) {
           console.log("✅ Sequence matches");
           setIsDotBracketOk(true);
@@ -499,43 +486,6 @@ function Home() {
   const handleDotBracket = (event) => {
     checkDotBracket(event.target.value, sequenceToCheck);
     setDotBracket(event.target.value);
-  };
-
-  const pollTaskStatus = async (taskId, pollInterval, setResponse) => {
-    while (true) {
-      const statusResponse = await fetch(`${serverAddress}/${taskId}/status`, {
-        method: "GET",
-      });
-
-      if (!statusResponse.ok) {
-        throw new Error(
-            `Failed to get status. Status: ${statusResponse.status}`
-        );
-      }
-
-      const statusData = await statusResponse.json();
-      const { status, message, removalReasons } = statusData;
-      setRemovalReasons(removalReasons);
-
-      if (status === "FAILED") {
-        console.error("FAILED:", message);
-        console.error("FAILED REASONS:", removalReasons);
-        setResponse({
-          error: message || "Task failed with no additional message.",
-        });
-        setServerError(message);
-        setIsLoading(false);
-        return;
-      }
-
-      if (status === "COMPLETED") {
-        await fetchTaskResult(taskId, setResponse);
-        return;
-      }
-
-      // If still processing, wait and try again
-      await new Promise((resolve) => setTimeout(resolve, pollInterval));
-    }
   };
 
   const fetchTaskResult = useCallback(async (taskId, setResponse) => {
