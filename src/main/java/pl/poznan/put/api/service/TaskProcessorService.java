@@ -67,7 +67,7 @@ import pl.poznan.put.varna.model.StructureData;
 public class TaskProcessorService {
   private static final Logger logger = LoggerFactory.getLogger(TaskProcessorService.class);
   private static final Colormap COLORMAP = Colormaps.get("Algae");
-  private static final String RCHIE_REFERENCE_COLOR = "#808080"; // Gray
+  private static final String RCHIE_MARKED_RESIDUE_COLOR = "#FF0000"; // Red
   private final TaskRepository taskRepository;
   private final ObjectMapper objectMapper;
   private final AnalysisClient analysisClient;
@@ -1550,8 +1550,16 @@ public class TaskProcessorService {
                   // already sorts partners.
                   int rchieI = Math.min(index1, index2);
                   int rchieJ = Math.max(index1, index2);
-                  return new RChieInteraction(
-                      rchieI, rchieJ, Optional.of(getColorForConfidence(ci.probability())));
+
+                  String color;
+                  if (referenceStructure != null
+                      && (referenceStructure.markedResidues().contains(ci.partner1())
+                          || referenceStructure.markedResidues().contains(ci.partner2()))) {
+                    color = RCHIE_MARKED_RESIDUE_COLOR;
+                  } else {
+                    color = getColorForConfidence(ci.probability());
+                  }
+                  return new RChieInteraction(rchieI, rchieJ, Optional.of(color));
                 })
             .filter(Objects::nonNull)
             .sorted(
