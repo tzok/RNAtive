@@ -38,6 +38,10 @@ public class Task {
   @Column(name = "response_json", columnDefinition = "TEXT")
   private Map<String, String> molprobityResponses = new HashMap<>();
 
+  private int currentProgress;
+  private int totalProgressSteps;
+  private String progressMessage;
+
   public Task() {
     this.id = UUID.randomUUID().toString();
     this.status = TaskStatus.PENDING;
@@ -107,5 +111,29 @@ public class Task {
 
   public void addModelSvg(String modelName, String svgContent) {
     modelSvgs.put(modelName, svgContent);
+  }
+
+  public int getCurrentProgress() {
+    return currentProgress;
+  }
+
+  public void setCurrentProgress(int currentProgress) {
+    this.currentProgress = currentProgress;
+  }
+
+  public int getTotalProgressSteps() {
+    return totalProgressSteps;
+  }
+
+  public void setTotalProgressSteps(int totalProgressSteps) {
+    this.totalProgressSteps = totalProgressSteps;
+  }
+
+  public String getProgressMessage() {
+    return progressMessage;
+  }
+
+  public void setProgressMessage(String progressMessage) {
+    this.progressMessage = progressMessage;
   }
 }
