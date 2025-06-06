@@ -191,7 +191,10 @@ public class TaskProcessorService {
       logger.info("Creating task result");
       var taskResult =
           new TaskResult(
-              rankedModels, referenceStructure, consensusDotBracket.toStringWithStrands());
+              rankedModels,
+              referenceStructure,
+              consensusDotBracket.toStringWithStrands(),
+              request.consensusMode()); // Add requestedConsensusMode
       var resultJson = objectMapper.writeValueAsString(taskResult);
       task.setResult(resultJson);
 
@@ -1180,88 +1183,113 @@ public class TaskProcessorService {
       List<AnalyzedModel> analyzedModels,
       FullInteractionCollectionResult fullInteractionResult,
       ComputeRequest request) {
-    logger.info("Starting generation of ranked models (unified logic)");
+    logger.info("Starting generation of ranked models for all consensus modes");
     Integer confidenceLevel = request.confidenceLevel();
-    ConsensusMode consensusMode = request.consensusMode();
 
-    // 1. Determine the target consensus set based on the request's mode and consensus type
-    Set<ConsensusInteraction> targetConsensusSet =
-        determineConsensusSet(
-            fullInteractionResult.aggregatedResult().sortedInteractions(),
-            confidenceLevel,
-            consensusMode);
-    logger.debug(
-        "Prepared threshold target set with {} entries for scoring", targetConsensusSet.size());
+    // Temporary storage for per-model, per-mode scores and ranks
+    Map<String, Map<ConsensusMode, Double>> infScoresPerModel = new HashMap<>();
+    Map<String, Map<ConsensusMode, Double>> f1ScoresPerModel = new HashMap<>();
+    Map<String, Map<ConsensusMode, Integer>> ranksPerModel = new HashMap<>();
+    Map<String, DefaultDotBracketFromPdb> dotBracketsPerModel = new HashMap<>();
 
-    // 2. Create intermediate data holders for each model
-    record IntermediateRankData(
-        AnalyzedModel analyzedModel, double inf, double f1, DefaultDotBracketFromPdb dotBracket) {}
-
-    List<IntermediateRankData> intermediateDataList = new ArrayList<>();
+    // Initialize maps for each model
     for (AnalyzedModel model : analyzedModels) {
-      logger.debug("Processing model for ranking: {}", model.name());
-      List<ConsensusInteraction> modelConsensusInteractions =
+      infScoresPerModel.put(model.name(), new EnumMap<>(ConsensusMode.class));
+      f1ScoresPerModel.put(model.name(), new EnumMap<>(ConsensusMode.class));
+      ranksPerModel.put(model.name(), new EnumMap<>(ConsensusMode.class));
+
+      // Generate dot-bracket once per model (based on its canonical pairs)
+      // This is independent of the consensus mode used for scoring.
+      List<ConsensusInteraction> modelCanonicalConsensusInteractions =
           fullInteractionResult.perModelResults().get(model.name()).sortedInteractions();
-      Set<ConsensusInteraction> modelConsensusSet =
-          determineConsensusSet(modelConsensusInteractions, confidenceLevel, consensusMode);
-
-      double inf;
-      double f1;
-      if (confidenceLevel == null) { // Fuzzy mode
-        logger.debug("Calculating fuzzy INF and F1 scores for model {}", model.name());
-        Map<ConsensusInteraction, Double> targetConsensusMap =
-            consensusSetToFuzzyMap(targetConsensusSet);
-        inf = InteractionNetworkFidelity.calculateFuzzy(targetConsensusMap, modelConsensusSet);
-        f1 = F1score.calculateFuzzy(targetConsensusMap, modelConsensusSet);
-        logger.debug("Model {}: Fuzzy INF = {}, Fuzzy F1 = {}", model.name(), inf, f1);
-      } else { // Threshold mode
-        logger.debug("Calculating threshold INF and F1 scores for model {}", model.name());
-        inf = InteractionNetworkFidelity.calculate(targetConsensusSet, modelConsensusSet);
-        f1 = F1score.calculate(targetConsensusSet, modelConsensusSet);
-        logger.debug("Model {}: Threshold INF = {}, Threshold F1 = {}", model.name(), inf, f1);
-      }
-
       DefaultDotBracketFromPdb dotBracket =
           generateDotBracket(
               model,
               determineConsensusSet(
-                  modelConsensusInteractions, confidenceLevel, ConsensusMode.CANONICAL));
-      intermediateDataList.add(new IntermediateRankData(model, inf, f1, dotBracket));
+                  modelCanonicalConsensusInteractions, confidenceLevel, ConsensusMode.CANONICAL));
+      dotBracketsPerModel.put(model.name(), dotBracket);
     }
 
-    // 3. Determine ranks based on INF
-    logger.info(
-        "Determining ranks for {} models based on Interaction Network Fidelity",
-        intermediateDataList.size());
-    final List<Double> sortedInfs =
-        intermediateDataList.stream()
-            .map(IntermediateRankData::inf)
-            .sorted(Comparator.reverseOrder())
-            .toList();
+    // Iterate through each ConsensusMode to calculate scores and ranks
+    for (ConsensusMode modeToAnalyze : ConsensusMode.values()) {
+      logger.info("Processing models for ConsensusMode: {}", modeToAnalyze);
 
-    // 4. Create RankedModel records with all data including rank
-    List<RankedModel> rankedModels =
-        intermediateDataList.stream()
+      // 1. Determine the target consensus set for the current modeToAnalyze
+      Set<ConsensusInteraction> targetConsensusSet =
+          determineConsensusSet(
+              fullInteractionResult.aggregatedResult().sortedInteractions(),
+              confidenceLevel,
+              modeToAnalyze);
+      logger.debug(
+          "Mode {}: Prepared target consensus set with {} entries",
+          modeToAnalyze,
+          targetConsensusSet.size());
+
+      Map<String, Double> currentModeInfScores = new HashMap<>();
+
+      // 2. Calculate scores for each model for the current modeToAnalyze
+      for (AnalyzedModel model : analyzedModels) {
+        List<ConsensusInteraction> modelInteractions =
+            fullInteractionResult.perModelResults().get(model.name()).sortedInteractions();
+        Set<ConsensusInteraction> modelConsensusSet =
+            determineConsensusSet(modelInteractions, confidenceLevel, modeToAnalyze);
+
+        double inf, f1;
+        if (confidenceLevel == null) { // Fuzzy mode
+          Map<ConsensusInteraction, Double> targetConsensusMap =
+              consensusSetToFuzzyMap(targetConsensusSet);
+          inf = InteractionNetworkFidelity.calculateFuzzy(targetConsensusMap, modelConsensusSet);
+          f1 = F1score.calculateFuzzy(targetConsensusMap, modelConsensusSet);
+        } else { // Threshold mode
+          inf = InteractionNetworkFidelity.calculate(targetConsensusSet, modelConsensusSet);
+          f1 = F1score.calculate(targetConsensusSet, modelConsensusSet);
+        }
+        infScoresPerModel.get(model.name()).put(modeToAnalyze, inf);
+        f1ScoresPerModel.get(model.name()).put(modeToAnalyze, f1);
+        currentModeInfScores.put(model.name(), inf);
+        logger.debug(
+            "Model {}: Mode {}: INF = {}, F1 = {}", model.name(), modeToAnalyze, inf, f1);
+      }
+
+      // 3. Determine ranks for the current modeToAnalyze based on INF scores
+      final List<Double> sortedInfsForMode =
+          currentModeInfScores.values().stream().sorted(Comparator.reverseOrder()).toList();
+
+      for (AnalyzedModel model : analyzedModels) {
+        double modelInf = currentModeInfScores.get(model.name());
+        int rank = sortedInfsForMode.indexOf(modelInf) + 1;
+        ranksPerModel.get(model.name()).put(modeToAnalyze, rank);
+        logger.trace(
+            "Model {}: Mode {}: Assigned rank {}", model.name(), modeToAnalyze, rank);
+      }
+    }
+
+    // 4. Create RankedModel records
+    List<RankedModel> rankedModelsResult =
+        analyzedModels.stream()
             .map(
-                data -> {
-                  int rank = sortedInfs.indexOf(data.inf()) + 1;
-                  logger.trace("Model {} assigned rank {}", data.analyzedModel().name(), rank);
-                  return new RankedModel(
-                      data.analyzedModel().name(),
-                      data.analyzedModel().basePairsAndStackings(),
-                      data.analyzedModel().canonicalBasePairs(),
-                      data.analyzedModel().nonCanonicalBasePairs(),
-                      data.analyzedModel().stackings(),
-                      data.inf(),
-                      data.f1(),
-                      rank,
-                      data.dotBracket().toStringWithStrands());
-                })
-            .sorted(Comparator.comparingInt(RankedModel::rank)) // Sort by rank
-            .toList();
+                model ->
+                    new RankedModel(
+                        model.name(),
+                        model.basePairsAndStackings(),
+                        model.canonicalBasePairs(),
+                        model.nonCanonicalBasePairs(),
+                        model.stackings(),
+                        infScoresPerModel.get(model.name()),
+                        f1ScoresPerModel.get(model.name()),
+                        ranksPerModel.get(model.name()),
+                        dotBracketsPerModel.get(model.name()).toStringWithStrands()))
+            .collect(Collectors.toList());
 
-    logger.info("Finished generating ranked models");
-    return rankedModels;
+    // 5. Sort the final list based on the rank of the originally requested consensusMode
+    ConsensusMode requestedSortMode = request.consensusMode();
+    rankedModelsResult.sort(
+        Comparator.comparingInt(
+            rm -> rm.rank().getOrDefault(requestedSortMode, Integer.MAX_VALUE)));
+
+    logger.info(
+        "Finished generating ranked models, sorted by requested mode: {}", requestedSortMode);
+    return rankedModelsResult;
   }
 
   private String generateVisualization(

@@ -142,6 +142,7 @@ public class ComputeService {
     if (results == null || results.isEmpty()) {
       throw new IllegalStateException("No results available");
     }
+    var requestedMode = taskResult.requestedConsensusMode(); // Get the requested mode
 
     var totalModelCount = results.size();
     var allInteractions =
@@ -170,7 +171,7 @@ public class ComputeService {
             .collect(Collectors.toList());
 
     // Convert CSV data to structured tables
-    var rankingTable = generateRankingTable(results);
+    var rankingTable = generateRankingTable(results, requestedMode); // Pass requestedMode
     var canonicalTable =
         generatePairsTable(
             allCanonicalPairs, allInteractions, totalModelCount, taskResult.referenceStructure());
@@ -193,17 +194,18 @@ public class ComputeService {
         taskResult.dotBracket());
   }
 
-  private TableData generateRankingTable(List<RankedModel> models) {
+  private TableData generateRankingTable(
+      List<RankedModel> models, ConsensusMode requestedMode) {
     var headers = List.of("Rank", "File name", "INF", "F1");
     var rows =
         models.stream()
             .map(
                 model ->
                     List.<Object>of(
-                        model.rank(),
+                        model.rank().getOrDefault(requestedMode, -1),
                         model.name(),
-                        model.interactionNetworkFidelity(),
-                        model.f1score()))
+                        model.interactionNetworkFidelity().getOrDefault(requestedMode, Double.NaN),
+                        model.f1score().getOrDefault(requestedMode, Double.NaN)))
             .collect(Collectors.toList());
     return new TableData(headers, rows);
   }
@@ -322,7 +324,7 @@ public class ComputeService {
         generateStackingsTable(targetModel.stackings(), allInteractions, totalModelCount);
 
     return new ModelTablesResponse(
-        canonicalTable, nonCanonicalTable, stackingsTable, targetModel.dotBracket());
+        canonicalTable, nonCanonicalTable, stackingsTable, targetModel.dotBracket()); // Already correct
   }
 
   public JsonNode getTaskRequest(String taskId) throws IOException {
