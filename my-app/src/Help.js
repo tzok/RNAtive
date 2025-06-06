@@ -1,4 +1,4 @@
-import { Anchor, Col, Row, Typography, Button } from "antd";
+import { Anchor, Col, Row, Typography, Button, Image } from "antd";
 import { useEffect, useState } from "react"; // Removed useRef
 import flowDiff from "./assets/rnative-flow-diff.png";
 import uploadScreen from "./assets/upload.png";
@@ -134,14 +134,11 @@ const Help = () => {
             <Paragraph>
               The general idea of RNAtive is presented on the following diagram:
             </Paragraph>
-            <img
+            <Image
               src={flowDiff}
               alt="rnative flow"
               style={{
-                width: "auto",
                 maxWidth: "100%", // Prevents overflow
-                height: "auto",
-                display: "inline-block",
               }}
             />
             {/* <CustomTitle level={2}>How to use RNAtive</CustomTitle> */}
@@ -186,14 +183,11 @@ const Help = () => {
             <Paragraph>
               Structure visualization from the authors of the paper:
               <sup>[b]</sup>
-              <img
+              <Image
                 src={puzzles1}
                 alt="RNA Puzzles structure"
                 style={{
-                  width: "auto",
                   maxWidth: "100%", // Prevents overflow
-                  height: "auto",
-                  display: "inline-block",
                 }}
               />
             </Paragraph>
@@ -238,14 +232,11 @@ const Help = () => {
               your computer. You can also upload .zip, .tar.gz, or .tgz
               archives.
             </Paragraph>
-            <img
+            <Image
               src={uploadScreen}
               alt="Uploading example"
               style={{
-                width: "auto",
                 maxWidth: "600px", // Prevents overflow
-                height: "auto",
-                display: "inline-block",
               }}
             />
             <CustomTitle level={2}>3.1 Parameters</CustomTitle>
@@ -371,14 +362,11 @@ const Help = () => {
               thresholds. Disabling conditionally weighted consensus allows
               setting the prefered confidence level.
             </Paragraph>
-            <img
+            <Image
               src={fuzzyMode}
               alt="Fuzzy Mode and Confidence level"
               style={{
-                width: "auto",
                 maxWidth: "800px", // Prevents overflow
-                height: "auto",
-                display: "inline-block",
               }}
             />
             <CustomTitle level={3}>3.1.6 2D structure viewer</CustomTitle>
@@ -402,35 +390,26 @@ const Help = () => {
               id displayed after sending the files for evaluation: <br></br>
               https://rnative.cs.put.poznan.pl/[task id]{" "}
             </Paragraph>
-            <img
+            <Image
               src={task_id1}
               alt="task  id example"
               style={{
-                width: "auto",
                 maxWidth: "800px", // Prevents overflow
-                height: "auto",
-                display: "inline-block",
               }}
             />
-            <img
+            <Image
               src={task_id2}
               alt="task id example 2"
               style={{
-                width: "auto",
                 maxWidth: "800px", // Prevents overflow
-                height: "auto",
-                display: "inline-block",
               }}
             />
             <Paragraph>4.1 RNAtive returns the following:</Paragraph>
-            <img
+            <Image
               src={results0}
               alt="Results"
               style={{
-                width: "auto",
                 maxWidth: "800px", // Prevents overflow
-                height: "auto",
-                display: "inline-block",
               }}
             />
             <Paragraph>
@@ -438,14 +417,11 @@ const Help = () => {
               image above) containing the parameters chosen by the user when
               sending the request.
             </Paragraph>
-            <img
+            <Image
               src={results2}
               alt="Results"
               style={{
-                width: "auto",
                 maxWidth: "800px", // Prevents overflow
-                height: "auto",
-                display: "inline-block",
               }}
             />
             <Paragraph>
@@ -476,14 +452,11 @@ const Help = () => {
               right of the image, a set of buttons allowing to scroll through
               the table, if it is longer)
             </Paragraph>
-            <img
+            <Image
               src={results2b}
               alt="Results"
               style={{
-                width: "auto",
                 maxWidth: "800px", // Prevents overflow
-                height: "auto",
-                display: "inline-block",
               }}
             />
             <Paragraph>
@@ -511,74 +484,53 @@ const Help = () => {
               structure is displayed in selectable format, therefore it can be
               simply selected with mouse and copied.
             </Paragraph>
-            <img
+            <Image
               src={A1}
               alt="Results"
               style={{
-                width: "auto",
                 maxWidth: "800px", // Prevents overflow
-                height: "auto",
-                display: "inline-block",
               }}
             />
-            <img
+            <Image
               src={A2}
               alt="Results"
               style={{
-                width: "auto",
                 maxWidth: "800px", // Prevents overflow
-                height: "auto",
-                display: "inline-block",
               }}
             />
-            <img
+            <Image
               src={A3}
               alt="Results"
               style={{
-                width: "auto",
                 maxWidth: "800px", // Prevents overflow
-                height: "auto",
-                display: "inline-block",
               }}
             />
-            <img
+            <Image
               src={A4}
               alt="Results"
               style={{
-                width: "auto",
                 maxWidth: "800px", // Prevents overflow
-                height: "auto",
-                display: "inline-block",
               }}
             />
-            <img
+            <Image
               src={B1}
               alt="Results"
               style={{
-                width: "auto",
                 maxWidth: "800px", // Prevents overflow
-                height: "auto",
-                display: "inline-block",
               }}
             />
-            <img
+            <Image
               src={B3}
               alt="Results"
               style={{
-                width: "auto",
                 maxWidth: "800px", // Prevents overflow
-                height: "auto",
-                display: "inline-block",
               }}
             />
-            <img
+            <Image
               src={B4}
               alt="Results"
               style={{
-                width: "auto",
                 maxWidth: "800px", // Prevents overflow
-                height: "auto",
-                display: "inline-block",
               }}
             />
             <Paragraph>
@@ -592,14 +544,11 @@ const Help = () => {
               quality filter section (3.1.1 above), results provided by the
               filter will also be presented for each file analyzed.
             </Paragraph>
-            <img
+            <Image
               src={molProbityResults}
               alt="Mol probity Results"
               style={{
-                width: "auto",
                 maxWidth: "800px", // Prevents overflow
-                height: "auto",
-                display: "inline-block",
               }}
             />
             <CustomTitle level={1}>5. System requirements</CustomTitle>
