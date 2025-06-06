@@ -1006,7 +1006,7 @@ function Home() {
                 key="dotbracket"
                 style={{
                   whiteSpace: "pre-wrap",
-                  overflowWrap: "break-word",
+                  lineBreak: "anywhere",
                   fontFamily: "monospace",
                   marginTop: "16px",
                 }}
@@ -1161,7 +1161,7 @@ function Home() {
                     <pre
                       style={{
                         whiteSpace: "pre-wrap",
-                        overflowWrap: "break-word",
+                        lineBreak: "anywhere",
                         fontFamily: "monospace",
                         margin: 0, // Ensure pre tag doesn't add extra margin
                       }}
@@ -1511,7 +1511,7 @@ function Home() {
                     fontFamily: "monospace",
                     paddingRight: "30px",
                     whiteSpace: "pre-wrap",
-                    overflowWrap: "break-word",
+                    lineBreak: "anywhere",
                   }} // Make space for the "x"
                 />
                 {dotBracket && (
