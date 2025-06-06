@@ -53,9 +53,6 @@ export const getTableColumns = (headers, rows, fileCount = 100) => {
           }
           // Handle different number formats
           if (typeof text === "number" && !isNaN(text)) {
-            if (header.startsWith("Rank")) {
-              return Number(text);
-            }
             if (header === "Confidence") {
               return (
                 decimalToFraction(Number(text), fileCount) +
@@ -86,14 +83,12 @@ export const getGroupedRankingTableColumns = (headers, rows) => {
     dataIndex: 0,
     key: 0,
     sorter: (a, b) => String(a[0]).localeCompare(String(b[0])),
-    // fixed: 'left', // Optional: if table becomes too wide
+    fixed: 'left', // Optional: if table becomes too wide
   });
 
   // Process the rest of the headers which come in triplets
   for (let i = 1; i < headers.length; i += 3) {
     const rankHeader = headers[i]; // e.g., "Rank (ALL)"
-    const infHeader = headers[i + 1]; // e.g., "INF (ALL)"
-    const f1Header = headers[i + 2]; // e.g., "F1 (ALL)"
 
     // Extract mode from header, e.g., "ALL" from "Rank (ALL)"
     const modeMatch = rankHeader.match(/\(([^)]+)\)/);
