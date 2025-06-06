@@ -9,7 +9,6 @@ const FileDetails = ({
   serverAddress,
   filename,
   fileCount,
-  rchieSvgName, // Ensure this prop is accepted
 }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -74,7 +73,7 @@ const FileDetails = ({
           key="svg"
           serverAddress={serverAddress}
           taskId={taskId}
-          modelName={filename} // Pass the filename as modelName
+          svgName={filename} // Pass the filename as modelName
         />,
         <pre
           key="dotbracket"
@@ -96,7 +95,7 @@ const FileDetails = ({
           key="svg-rchie-model" // Unique key for this SvgImg instance
           serverAddress={serverAddress}
           taskId={taskId}
-          modelName={rchieSvgName} // Use the passed R-Chie SVG name
+          svgName={`rchie-${filename}`}
         />,
       ],
     },

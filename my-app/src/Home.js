@@ -1059,6 +1059,18 @@ function Home() {
           ],
         },
         {
+          key: "consensus-rchie-visualization",
+          label: "R-Chie Visualization",
+          children: [
+            <SvgImg
+                key="svg-rchie-consensus"
+                serverAddress={serverAddress}
+                taskId={taskIdComplete}
+                svgName={"rchie-consensus"} // Name of the R-Chie consensus SVG
+            />,
+          ],
+        },
+        {
           key: "consensus-base-pairs",
           label: "Canonical base pairs",
           children: (
@@ -1102,18 +1114,6 @@ function Home() {
               />
             </>
           ),
-        },
-        {
-          key: "consensus-rchie-visualization",
-          label: "R-Chie Visualization",
-          children: [
-            <SvgImg
-              key="svg-rchie-consensus"
-              serverAddress={serverAddress}
-              taskId={taskIdComplete}
-              svgName={"rchie-consensus"} // Name of the R-Chie consensus SVG
-            />,
-          ],
         },
       ];
       const usersRequestDotBracket = [
@@ -1183,7 +1183,6 @@ function Home() {
             serverAddress={serverAddress}
             filename={filename}
             fileCount={totalFiles}
-            rchieSvgName={`rchie-${filename}`} // Pass the R-Chie SVG name
           />
         ),
       }));

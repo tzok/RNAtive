@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Alert, Image, Spin } from "antd";
 
-const SvgImg = ({ serverAddress, taskId, modelName }) => {
+const SvgImg = ({ serverAddress, taskId, svgName }) => {
   const [svgContent, setSvgContent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const svgUrl = useMemo(() => {
     let url = `${serverAddress}/${taskId}/svg`;
-    if (modelName) {
-      url += `/${encodeURIComponent(modelName)}`;
+    if (svgName) {
+      url += `/${encodeURIComponent(svgName)}`;
     }
     return url;
-  }, [serverAddress, taskId, modelName]);
+  }, [serverAddress, taskId, svgName]);
 
   useEffect(() => {
     setLoading(true); // Reset loading state when props change
