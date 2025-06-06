@@ -94,7 +94,11 @@ public class TaskProcessorService {
   }
 
   private void updateTaskProgress(
-      Task task, AtomicInteger currentStepCounter, int totalSteps, String messageFormat, Object... args) {
+      Task task,
+      AtomicInteger currentStepCounter,
+      int totalSteps,
+      String messageFormat,
+      Object... args) {
     int currentStep = currentStepCounter.incrementAndGet();
     // Ensure currentStep does not visually exceed totalSteps if more updates than planned occur.
     task.setCurrentProgress(Math.min(currentStep, totalSteps));
@@ -157,7 +161,7 @@ public class TaskProcessorService {
       }
       // parseAndAnalyzeFiles block:
       totalSteps += initialFileCount; // 4. PDB Parsing (per file)
-      totalSteps += 1;                 // 5. Model Unification (block)
+      totalSteps += 1; // 5. Model Unification (block)
       totalSteps += initialFileCount; // 6. MolProbity Filtering (per file)
       totalSteps += initialFileCount; // 7. Secondary Structure Analysis (per file)
 
@@ -202,7 +206,6 @@ public class TaskProcessorService {
       // correctly handles not allocating a step for RNApolis if initialFileCount is 0.
       // Thus, no special handling is needed here if initialFileCount is 0.
 
-
       // Create a new request with the processed files
       ComputeRequest processedRequest =
           new ComputeRequest(
@@ -221,7 +224,8 @@ public class TaskProcessorService {
         // For now, assume parseAndAnalyzeFiles updates progress correctly for its scope.
         // If it returns nulls, it's an internal error not well-handled by progress steps.
         String failureMsg = "Internal error: Failed to parse one or more models.";
-        updateTaskProgress(task, currentStepCounter, totalSteps, failureMsg); // Consume a step for failure
+        updateTaskProgress(
+            task, currentStepCounter, totalSteps, failureMsg); // Consume a step for failure
         task.setStatus(TaskStatus.FAILED);
         task.setMessage(failureMsg);
         taskRepository.save(task);
@@ -229,14 +233,20 @@ public class TaskProcessorService {
       }
 
       var modelCount = analyzedModels.size();
-      if (modelCount < 2 && initialFileCount > 0) { // Check initialFileCount to ensure this is a meaningful failure
+      if (modelCount < 2
+          && initialFileCount
+              > 0) { // Check initialFileCount to ensure this is a meaningful failure
         String failureMsg =
             analyzedModels.isEmpty()
                 ? "All models were filtered out before comparison."
                 : "Only one model remained after filtering; comparison requires at least two.";
         // Consume remaining steps before failing
-        while(currentStepCounter.get() < totalSteps -1) { // -1 for the final "failed" step
-            updateTaskProgress(task, currentStepCounter, totalSteps, "Skipping remaining steps due to insufficient models.");
+        while (currentStepCounter.get() < totalSteps - 1) { // -1 for the final "failed" step
+          updateTaskProgress(
+              task,
+              currentStepCounter,
+              totalSteps,
+              "Skipping remaining steps due to insufficient models.");
         }
         updateTaskProgress(task, currentStepCounter, totalSteps, failureMsg);
         task.setStatus(TaskStatus.FAILED);
@@ -244,15 +254,15 @@ public class TaskProcessorService {
         taskRepository.saveAndFlush(task);
         return CompletableFuture.completedFuture(null);
       }
-       if (initialFileCount == 0) { // No files to process
+      if (initialFileCount == 0) { // No files to process
         String msg = "No input files provided for analysis.";
         updateTaskProgress(task, currentStepCounter, totalSteps, msg);
-        task.setStatus(TaskStatus.COMPLETED); // Or FAILED, depending on desired outcome for no input
+        task.setStatus(
+            TaskStatus.COMPLETED); // Or FAILED, depending on desired outcome for no input
         task.setMessage(msg);
         taskRepository.saveAndFlush(task);
         return CompletableFuture.completedFuture(null);
       }
-
 
       var firstModel = analyzedModels.get(0); // Assuming at least one model after previous checks
       ReferenceStructureUtil.ReferenceParseResult referenceStructure =
@@ -287,7 +297,8 @@ public class TaskProcessorService {
                   request.confidenceLevel(),
                   ConsensusMode.CANONICAL));
 
-      updateTaskProgress(task, currentStepCounter, totalSteps, "Preparing final task result object");
+      updateTaskProgress(
+          task, currentStepCounter, totalSteps, "Preparing final task result object");
       var taskResult =
           new TaskResult(
               rankedModels, referenceStructure, consensusDotBracket.toStringWithStrands());
@@ -295,7 +306,10 @@ public class TaskProcessorService {
       task.setResult(resultJson);
 
       updateTaskProgress(
-          task, currentStepCounter, totalSteps, "Generating 2D visualization for consensus (Varna)");
+          task,
+          currentStepCounter,
+          totalSteps,
+          "Generating 2D visualization for consensus (Varna)");
       var consensusSvg =
           generateVisualization(
               firstModel, // Use first model as template for consensus
@@ -336,10 +350,10 @@ public class TaskProcessorService {
       }
 
       // Generate model-specific SVGs. This block is estimated as (initialFileCount * 2) steps.
+      ReferenceStructureUtil.ReferenceParseResult finalReferenceStructure = referenceStructure;
       ConcurrentMap<String, String> modelSvgMap =
-          rankedModels
-              .parallelStream()
-              .flatMap( 
+          rankedModels.parallelStream()
+              .flatMap(
                   rankedModel -> {
                     List<Map.Entry<String, String>> svgEntries = new ArrayList<>();
                     AnalyzedModel correspondingAnalyzedModel =
@@ -359,7 +373,7 @@ public class TaskProcessorService {
                               determineConsensusSet(
                                   modelInteractionResult.sortedInteractions(),
                                   request.confidenceLevel(),
-                                  ConsensusMode.ALL); 
+                                  ConsensusMode.ALL);
 
                           String modelSvg =
                               generateVisualization(
@@ -375,13 +389,13 @@ public class TaskProcessorService {
 
                         // 2. Generate RChie SVG for the model
                         try {
-                          logger.debug( 
+                          logger.debug(
                               "Generating RChie visualization for model: {}", rankedModel.name());
                           RChieData rChieModelData =
                               prepareRChieData(
                                   correspondingAnalyzedModel,
-                                  modelInteractionResult, 
-                                  referenceStructure);
+                                  modelInteractionResult,
+                                  finalReferenceStructure);
 
                           org.w3c.dom.svg.SVGDocument rChieModelSvgDoc =
                               rChieClient.visualize(rChieModelData);
@@ -390,7 +404,7 @@ public class TaskProcessorService {
                           String rChieModelSvgString = new String(rChieModelSvgBytes);
                           String rChieSvgKey = "rchie-" + rankedModel.name();
                           svgEntries.add(Map.entry(rChieSvgKey, rChieModelSvgString));
-                          logger.debug( 
+                          logger.debug(
                               "Successfully generated RChie visualization SVG for model {}.",
                               rankedModel.name());
                         } catch (Exception e) {
@@ -406,10 +420,11 @@ public class TaskProcessorService {
                       }
                     } else {
                       logger.warn(
-                          "Could not find corresponding AnalyzedModel for RankedModel {} to generate SVGs.",
+                          "Could not find corresponding AnalyzedModel for RankedModel {} to"
+                              + " generate SVGs.",
                           rankedModel.name());
                     }
-                    return svgEntries.stream(); 
+                    return svgEntries.stream();
                   })
               .collect(Collectors.toConcurrentMap(Map.Entry::getKey, Map.Entry::getValue));
 
@@ -436,18 +451,23 @@ public class TaskProcessorService {
       }
       // Consume any remaining allocated steps if fewer models were ranked than initialFileCount
       int stepsConsumedForModelSVGs = actualRankedModelsCount * 2;
-      int stepsAllocatedForModelSVGs = initialFileCount * 2; 
+      int stepsAllocatedForModelSVGs = initialFileCount * 2;
       for (int i = stepsConsumedForModelSVGs; i < stepsAllocatedForModelSVGs; i++) {
         // Increment counter without specific message, or use a generic one
-        updateTaskProgress(task, currentStepCounter, totalSteps, "Adjusting progress for model SVG generation step.");
+        updateTaskProgress(
+            task,
+            currentStepCounter,
+            totalSteps,
+            "Adjusting progress for model SVG generation step.");
       }
-      
+
       updateTaskProgress(task, currentStepCounter, totalSteps, "Storing all generated SVGs");
       task.addModelSvg("consensus", consensusSvg);
       task.getModelSvgs().putAll(modelSvgMap);
       logger.debug("Stored consensus SVG and {} model-specific SVGs", modelSvgMap.size());
 
-      updateTaskProgress(task, currentStepCounter, totalSteps, "Task processing completed successfully");
+      updateTaskProgress(
+          task, currentStepCounter, totalSteps, "Task processing completed successfully");
       task.setStatus(TaskStatus.COMPLETED);
       taskRepository.saveAndFlush(task); // Final save for COMPLETED
     } catch (Exception e) {
@@ -462,9 +482,9 @@ public class TaskProcessorService {
         String finalMessage = "Task failed: " + e.getMessage();
         // Try to update progress one last time if system is initialized
         if (currentStepCounter != null && totalSteps > 0 && currentStepCounter.get() < totalSteps) {
-             updateTaskProgress(task, currentStepCounter, totalSteps, finalMessage);
-        } else { 
-            task.setProgressMessage(finalMessage);
+          updateTaskProgress(task, currentStepCounter, totalSteps, finalMessage);
+        } else {
+          task.setProgressMessage(finalMessage);
         }
         task.setStatus(TaskStatus.FAILED);
         task.setMessage(finalMessage); // Overwrites progressMessage if needed for final display
@@ -720,36 +740,39 @@ public class TaskProcessorService {
                   // to prevent concurrent DB updates. Logging is fine.
                   logger.debug("Attempting to parse file in parallel: {}", fileData.name());
                   try {
-                PdbModel structure3D =
-                    new PdbParser()
-                        .parse(fileData.content()).stream()
-                            .findFirst()
-                            .map(model -> model.filteredNewInstance(MoleculeType.RNA))
-                            .orElseThrow(
-                                () ->
-                                    new RuntimeException(
-                                        "No RNA structure found in file " + fileData.name()));
-                return new ParsedModel(fileData.name(), fileData.content(), structure3D);
-              } catch (Exception e) {
-                // Log and save problematic file content for debugging
-                String errorFileName = "error-" + fileData.name();
-                Path tempFilePath = Paths.get("/tmp", errorFileName);
-                try {
-                  logger.warn(
-                      "Failed to parse file {}, saving content to {}. Error: {}",
-                      fileData.name(),
-                      tempFilePath,
-                      e.getMessage());
-                  Files.writeString(
-                      tempFilePath,
-                      fileData.content(),
-                      StandardOpenOption.CREATE,
-                      StandardOpenOption.WRITE,
-                      StandardOpenOption.TRUNCATE_EXISTING);
-                } catch (IOException ioEx) {
-                  logger.error(
-                      "Failed to save content of {} to {}", fileData.name(), tempFilePath, ioEx);
-                }
+                    PdbModel structure3D =
+                        new PdbParser()
+                            .parse(fileData.content()).stream()
+                                .findFirst()
+                                .map(model -> model.filteredNewInstance(MoleculeType.RNA))
+                                .orElseThrow(
+                                    () ->
+                                        new RuntimeException(
+                                            "No RNA structure found in file " + fileData.name()));
+                    return new ParsedModel(fileData.name(), fileData.content(), structure3D);
+                  } catch (Exception e) {
+                    // Log and save problematic file content for debugging
+                    String errorFileName = "error-" + fileData.name();
+                    Path tempFilePath = Paths.get("/tmp", errorFileName);
+                    try {
+                      logger.warn(
+                          "Failed to parse file {}, saving content to {}. Error: {}",
+                          fileData.name(),
+                          tempFilePath,
+                          e.getMessage());
+                      Files.writeString(
+                          tempFilePath,
+                          fileData.content(),
+                          StandardOpenOption.CREATE,
+                          StandardOpenOption.WRITE,
+                          StandardOpenOption.TRUNCATE_EXISTING);
+                    } catch (IOException ioEx) {
+                      logger.error(
+                          "Failed to save content of {} to {}",
+                          fileData.name(),
+                          tempFilePath,
+                          ioEx);
+                    }
                     // Propagate the original parsing exception
                     throw new RuntimeException(
                         "Failed to parse file " + fileData.name() + ": " + e.getMessage(), e);
@@ -1083,24 +1106,24 @@ public class TaskProcessorService {
                 model -> {
                   logger.debug("Attempting to analyze 2D for model in parallel: {}", model.name());
                   try {
-                var jsonResult = analysisClient.analyze(model.name, model.content, analyzer);
-                var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
-                logger.debug("Successfully analyzed model: {}", model.name());
-                return new AnalyzedModel(model.name, model.structure3D, structure2D);
-              } catch (JsonProcessingException e) {
-                logger.error(
-                    "Failed to parse analysis result for file: {}. Error: {}",
-                    model.name(),
-                    e.getMessage());
-                throw new RuntimeException(
-                    "Failed to parse analysis result for file: " + model.name(), e);
-              } catch (Exception e) {
-                logger.error(
-                    "Analysis failed for model: {}. Error: {}", model.name(), e.getMessage());
-                throw new RuntimeException("Analysis failed for model: " + model.name(), e);
-              }
-            })
-        .toList();
+                    var jsonResult = analysisClient.analyze(model.name, model.content, analyzer);
+                    var structure2D = objectMapper.readValue(jsonResult, BaseInteractions.class);
+                    logger.debug("Successfully analyzed model: {}", model.name());
+                    return new AnalyzedModel(model.name, model.structure3D, structure2D);
+                  } catch (JsonProcessingException e) {
+                    logger.error(
+                        "Failed to parse analysis result for file: {}. Error: {}",
+                        model.name(),
+                        e.getMessage());
+                    throw new RuntimeException(
+                        "Failed to parse analysis result for file: " + model.name(), e);
+                  } catch (Exception e) {
+                    logger.error(
+                        "Analysis failed for model: {}. Error: {}", model.name(), e.getMessage());
+                    throw new RuntimeException("Analysis failed for model: " + model.name(), e);
+                  }
+                })
+            .toList();
 
     // After parallel processing, update progress for each model that was input to this stage.
     for (int i = 0; i < models.size(); i++) {
