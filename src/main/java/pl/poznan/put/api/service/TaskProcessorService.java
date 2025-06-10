@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import net.mahdilamb.colormap.Colormap;
@@ -325,23 +324,13 @@ public class TaskProcessorService {
       ReferenceStructureUtil.ReferenceParseResult finalReferenceStructure = referenceStructure;
       Set<ConsensusInteraction> consensusForbiddenInteractions =
           aggregatedInteractionResult.sortedInteractions().stream()
-              .filter(
-                  interaction ->
-                      finalReferenceStructure.markedResidues().contains(interaction.partner1())
-                          || finalReferenceStructure
-                              .markedResidues()
-                              .contains(interaction.partner2()))
+              .filter(ConsensusInteraction::forbiddenInReference)
               .collect(Collectors.toSet());
-
-      // Combine regular consensus interactions with forbidden ones
-      Set<ConsensusInteraction> allConsensusInteractionsToVisualize =
-          new HashSet<>(consensusInteractionsToVisualize);
-      allConsensusInteractionsToVisualize.addAll(consensusForbiddenInteractions);
 
       var consensusSvg =
           generateVisualization(
               firstModel, // Use first model as template for consensus
-              allConsensusInteractionsToVisualize,
+              consensusInteractionsToVisualize,
               consensusForbiddenInteractions, // Forbidden interactions for consensus
               referenceStructure.markedResidues()); // Marked residues for consensus
       logger.debug("Generated SVG for consensus");
@@ -404,25 +393,13 @@ public class TaskProcessorService {
                           // reference structure
                           Set<ConsensusInteraction> forbiddenInteractions =
                               modelInteractionResult.sortedInteractions().stream()
-                                  .filter(
-                                      interaction ->
-                                          finalReferenceStructure
-                                                  .markedResidues()
-                                                  .contains(interaction.partner1())
-                                              || finalReferenceStructure
-                                                  .markedResidues()
-                                                  .contains(interaction.partner2()))
+                                  .filter(ConsensusInteraction::forbiddenInReference)
                                   .collect(Collectors.toSet());
-
-                          // Combine regular interactions with forbidden ones
-                          Set<ConsensusInteraction> allInteractionsToVisualize =
-                              new HashSet<>(modelInteractionsToVisualize);
-                          allInteractionsToVisualize.addAll(forbiddenInteractions);
 
                           String modelSvg =
                               generateVisualization(
                                   correspondingAnalyzedModel,
-                                  allInteractionsToVisualize,
+                                  modelInteractionsToVisualize,
                                   forbiddenInteractions,
                                   finalReferenceStructure.markedResidues());
                           logger.debug("Generated standard SVG for model: {}", rankedModel.name());
@@ -1430,16 +1407,6 @@ public class TaskProcessorService {
   }
 
   /**
-   * Helper method to convert a Set of ConsensusInteraction (representing the fuzzy consensus) to a
-   * Map suitable for fuzzy scoring functions.
-   */
-  private Map<ConsensusInteraction, Double> consensusSetToFuzzyMap(
-      Set<ConsensusInteraction> consensusSet) {
-    return consensusSet.stream()
-        .collect(Collectors.toMap(Function.identity(), ConsensusInteraction::probability));
-  }
-
-  /**
    * Determines the final set of consensus interactions based on the specified mode (ALL, CANONICAL,
    * etc.), analysis type (fuzzy/threshold), and reference structure.
    *
@@ -1464,21 +1431,16 @@ public class TaskProcessorService {
             .filter(
                 interaction -> {
                   // Check if the interaction category matches the requested mode
-                  boolean categoryMatch =
-                      switch (consensusMode) {
-                        case CANONICAL -> interaction.category()
-                                == ConsensusInteraction.InteractionCategory.BASE_PAIR
-                            && interaction.isCanonical();
-                        case NON_CANONICAL -> interaction.category()
-                                == ConsensusInteraction.InteractionCategory.BASE_PAIR
-                            && !interaction.isCanonical();
-                        case STACKING -> interaction.category()
-                            == ConsensusInteraction.InteractionCategory.STACKING;
-                        case ALL -> true; // Include all categories
-                      };
-                  // Also check if it passes the basic fuzzy/threshold/reference filter
-                  return categoryMatch && isInteractionConsidered(interaction, confidenceLevel);
+                  return switch (consensusMode) {
+                    case CANONICAL -> interaction.category() == InteractionCategory.BASE_PAIR
+                        && interaction.isCanonical();
+                    case NON_CANONICAL -> interaction.category() == InteractionCategory.BASE_PAIR
+                        && !interaction.isCanonical();
+                    case STACKING -> interaction.category() == InteractionCategory.STACKING;
+                    case ALL -> true;
+                  };
                 })
+            .filter(interaction -> isInteractionConsidered(interaction, confidenceLevel))
             .toList(); // Collect to list first for logging/debugging if needed
 
     logger.debug(
@@ -1563,10 +1525,8 @@ public class TaskProcessorService {
 
         double inf, f1;
         if (confidenceLevel == null) { // Fuzzy mode
-          Map<ConsensusInteraction, Double> targetConsensusMap =
-              consensusSetToFuzzyMap(targetConsensusSet);
-          inf = InteractionNetworkFidelity.calculateFuzzy(targetConsensusMap, modelConsensusSet);
-          f1 = F1score.calculateFuzzy(targetConsensusMap, modelConsensusSet);
+          inf = InteractionNetworkFidelity.calculateFuzzy(targetConsensusSet, modelConsensusSet);
+          f1 = F1score.calculateFuzzy(targetConsensusSet, modelConsensusSet);
         } else { // Threshold mode
           inf = InteractionNetworkFidelity.calculate(targetConsensusSet, modelConsensusSet);
           f1 = F1score.calculate(targetConsensusSet, modelConsensusSet);
@@ -1871,21 +1831,92 @@ public class TaskProcessorService {
    */
   private boolean isInteractionConsidered(
       ConsensusInteraction interaction, Integer confidenceLevel) {
-    // Never consider interactions involving residues marked as unpaired in the reference
-    if (interaction.forbiddenInReference()) {
-      return false;
-    }
-
     if (confidenceLevel != null) {
       // Threshold Mode: Consider if present in reference OR meets the threshold count
-      return interaction.presentInReference() || interaction.modelCount() >= confidenceLevel;
-    } else {
-      // Fuzzy Mode: Consider if present in reference (implicit probability 1.0) or has positive
-      // probability
-      // Note: presentInReference implies probability 1.0 in fuzzy calculation,
-      // so checking probability > 0 covers both cases.
-      return interaction.probability() > 0.0;
+      return interaction.modelCount() >= confidenceLevel;
     }
+
+    // Fuzzy Mode: Consider if present in reference (implicit probability 1.0) or has positive
+    // probability
+    return interaction.probability() > 0.0;
+  }
+
+  /**
+   * Generates a Set of ConsensusInteraction objects from the reference structure containing only
+   * base pairs.
+   *
+   * @param referenceStructure The parsed reference structure from dot-bracket notation.
+   * @param totalModelCount The total number of models being analyzed (used for probability
+   *     calculation).
+   * @return A set of ConsensusInteraction objects representing the reference base pairs.
+   */
+  private Set<ConsensusInteraction> generateReferenceConsensusInteractions(
+      ReferenceStructureUtil.ReferenceParseResult referenceStructure, int totalModelCount) {
+    if (referenceStructure == null || referenceStructure.basePairs().isEmpty()) {
+      return Collections.emptySet();
+    }
+
+    return referenceStructure.basePairs().stream()
+        .map(
+            basePair -> {
+              // Ensure partner1 is always "less than" partner2 for consistent sorting
+              var p1 = basePair.left();
+              var p2 = basePair.right();
+              if (p1.compareTo(p2) > 0) {
+                var temp = p1;
+                p1 = p2;
+                p2 = temp;
+              }
+
+              // Create a ClassifiedBasePair to check if it's canonical
+              var classifiedBasePair =
+                  ImmutableAnalyzedBasePair.of(ImmutableBasePair.of(p1, p2));
+              boolean isCanonical = isCanonical(classifiedBasePair);
+
+              return new ConsensusInteraction(
+                  p1,
+                  p2,
+                  ConsensusInteraction.InteractionCategory.BASE_PAIR,
+                  Optional.of(LeontisWesthof.CWW), // Reference structure assumes Watson-Crick
+                  isCanonical,
+                  totalModelCount, // Reference interactions are present in all models conceptually
+                  1.0, // Reference has 100% probability
+                  true, // Present in reference by definition
+                  false // Not forbidden in reference by definition
+                  );
+            })
+        .collect(Collectors.toSet());
+  }
+
+  /**
+   * Generates a Set of ConsensusInteraction objects representing forbidden base pairs. These are
+   * interactions that involve residues marked as forbidden in the reference structure.
+   *
+   * @param fullInteractionResult The complete interaction results containing all discovered
+   *     interactions.
+   * @param referenceStructure The parsed reference structure containing marked (forbidden)
+   *     residues.
+   * @return A set of ConsensusInteraction objects representing forbidden base pairs.
+   */
+  private Set<ConsensusInteraction> generateForbiddenConsensusInteractions(
+      FullInteractionCollectionResult fullInteractionResult,
+      ReferenceStructureUtil.ReferenceParseResult referenceStructure) {
+    if (referenceStructure == null || referenceStructure.markedResidues().isEmpty()) {
+      return Collections.emptySet();
+    }
+
+    Set<PdbNamedResidueIdentifier> markedResidues =
+        new HashSet<>(referenceStructure.markedResidues());
+
+    return fullInteractionResult.aggregatedResult().sortedInteractions().stream()
+        .filter(
+            interaction ->
+                interaction.category() == ConsensusInteraction.InteractionCategory.BASE_PAIR)
+        .filter(
+            interaction ->
+                markedResidues.contains(interaction.partner1())
+                    || markedResidues.contains(interaction.partner2()))
+        .collect(Collectors.toSet());
   }
 
   private RChieData prepareRChieData(
