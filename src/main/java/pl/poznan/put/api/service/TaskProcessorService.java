@@ -735,6 +735,7 @@ public class TaskProcessorService {
         model.structure2D().basePairs().stream()
             .filter(BasePair::isCanonical)
             .map(model::basePairToAnalyzed)
+            .distinct()
             .collect(Collectors.toCollection(HashBag::new));
     logger.trace("Model {}: Found {} canonical base pairs", model.name(), canonicalPairsBag.size());
 
@@ -742,6 +743,7 @@ public class TaskProcessorService {
         model.structure2D().basePairs().stream()
             .filter(basePair -> !basePair.isCanonical())
             .map(model::basePairToAnalyzed)
+            .distinct()
             .collect(Collectors.toCollection(HashBag::new));
     logger.trace(
         "Model {}: Found {} non-canonical base pairs", model.name(), nonCanonicalPairsBag.size());
