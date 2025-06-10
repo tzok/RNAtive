@@ -88,33 +88,18 @@ services:
     deploy:
       replicas: 6
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import requests; requests.get('http://localhost:8000/health').raise_for_status()\" || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
 
   varna-tz:
     image: ghcr.io/tzok/cli2rest-varna-tz:1.5.0_0.9.5
     deploy:
       replicas: 6
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import requests; requests.get('http://localhost:8000/health').raise_for_status()\" || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
 
   rchie:
     image: ghcr.io/tzok/cli2rest-rchie:1.36.0_0.9.5
     deploy:
       replicas: 6
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import requests; requests.get('http://localhost:8000/health').raise_for_status()\" || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
 
   haproxy:
     image: haproxy:alpine
