@@ -357,21 +357,30 @@ public class TaskProcessorService {
                                   request.confidenceLevel(),
                                   ConsensusMode.ALL);
 
-                          // Add model-specific interactions that use forbidden residues from reference structure
-                          Set<ConsensusInteraction> forbiddenInteractions = 
+                          // Add model-specific interactions that use forbidden residues from
+                          // reference structure
+                          Set<ConsensusInteraction> forbiddenInteractions =
                               modelInteractionResult.sortedInteractions().stream()
-                                  .filter(interaction -> 
-                                      finalReferenceStructure.markedResidues().contains(interaction.partner1()) ||
-                                      finalReferenceStructure.markedResidues().contains(interaction.partner2()))
+                                  .filter(
+                                      interaction ->
+                                          finalReferenceStructure
+                                                  .markedResidues()
+                                                  .contains(interaction.partner1())
+                                              || finalReferenceStructure
+                                                  .markedResidues()
+                                                  .contains(interaction.partner2()))
                                   .collect(Collectors.toSet());
-                          
+
                           // Combine regular interactions with forbidden ones
-                          Set<ConsensusInteraction> allInteractionsToVisualize = new HashSet<>(modelInteractionsToVisualize);
+                          Set<ConsensusInteraction> allInteractionsToVisualize =
+                              new HashSet<>(modelInteractionsToVisualize);
                           allInteractionsToVisualize.addAll(forbiddenInteractions);
 
                           String modelSvg =
                               generateVisualization(
-                                  correspondingAnalyzedModel, allInteractionsToVisualize, forbiddenInteractions);
+                                  correspondingAnalyzedModel,
+                                  allInteractionsToVisualize,
+                                  forbiddenInteractions);
                           logger.debug("Generated standard SVG for model: {}", rankedModel.name());
                           svgEntries.add(Map.entry(rankedModel.name(), modelSvg));
                         } catch (Exception e) {
@@ -1566,10 +1575,13 @@ public class TaskProcessorService {
   }
 
   private String generateVisualization(
-      AnalyzedModel model, Set<ConsensusInteraction> interactionsToVisualize, Set<ConsensusInteraction> forbiddenInteractions) {
+      AnalyzedModel model,
+      Set<ConsensusInteraction> interactionsToVisualize,
+      Set<ConsensusInteraction> forbiddenInteractions) {
     try {
       logger.info("Generating visualization using VarnaTzClient (remote varna-tz service)");
-      var structureData = createStructureData(model, interactionsToVisualize, forbiddenInteractions);
+      var structureData =
+          createStructureData(model, interactionsToVisualize, forbiddenInteractions);
       var svgDoc = varnaTzClient.visualize(structureData);
       var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
       return new String(svgBytes);
@@ -1585,7 +1597,9 @@ public class TaskProcessorService {
   }
 
   private StructureData createStructureData(
-      AnalyzedModel model, Set<ConsensusInteraction> interactionsToVisualize, Set<ConsensusInteraction> forbiddenInteractions) {
+      AnalyzedModel model,
+      Set<ConsensusInteraction> interactionsToVisualize,
+      Set<ConsensusInteraction> forbiddenInteractions) {
     logger.debug("Creating StructureData for VarnaTzClient with confidence coloring");
     var structureData = new StructureData();
     var nucleotides = new ArrayList<Nucleotide>();

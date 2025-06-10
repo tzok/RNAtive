@@ -691,10 +691,10 @@ function Home() {
       setDotBracket(
         ">strand_A\n" +
           "CCGCCGCGCCAUGCCUGUGGCGG\n" +
-          "((((((((.((((...(((((((\n" +
+          "((((((((.((((x.x(((((((\n" +
           ">strand_B\n" +
           "CCGCCGCGCCAUGCCUGUGGCGG\n" +
-          ")))))))..)))).).)))))))"
+          ")))))))x.)))).)x)))))))"
       );
     } catch (error) {
       console.error("Error loading example files:", error);
