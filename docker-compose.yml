@@ -16,7 +16,6 @@ services:
       - POSTGRES_DB=rnative
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - ANALYSIS_SERVICE_URL=https://rnative.cs.put.poznan.pl/adapters
     restart: unless-stopped
     depends_on:
       db:
