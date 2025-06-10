@@ -1748,10 +1748,9 @@ public class TaskProcessorService {
                   varnaStacking.id1 = String.valueOf(id1); // VARNA expects string IDs for stackings
                   varnaStacking.id2 = String.valueOf(id2);
 
-                  // Do not color stacking interactions
-                  // varnaStacking.color is left null (no coloring)
-                  // Thickness can be set if needed, e.g., based on confidence or a fixed value
-                  // varnaStacking.thickness = calculateThicknessForConfidence(confidence);
+                  // Calculate confidence and set color
+                  double confidence = interaction.probability();
+                  varnaStacking.color = getColorForConfidence(confidence);
 
                   logger.trace(
                       "Created Varna Stacking: id1={}, id2={}, color={}",
