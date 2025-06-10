@@ -1573,7 +1573,8 @@ public class TaskProcessorService {
 
   private String generateVisualization(
       AnalyzedModel model, Set<ConsensusInteraction> interactionsToVisualize) {
-    return generateVisualization(model, interactionsToVisualize, Collections.emptySet(), Collections.emptyList());
+    return generateVisualization(
+        model, interactionsToVisualize, Collections.emptySet(), Collections.emptyList());
   }
 
   private String generateVisualization(
@@ -1584,7 +1585,8 @@ public class TaskProcessorService {
     try {
       logger.info("Generating visualization using VarnaTzClient (remote varna-tz service)");
       var structureData =
-          createStructureData(model, interactionsToVisualize, forbiddenInteractions, markedResidues);
+          createStructureData(
+              model, interactionsToVisualize, forbiddenInteractions, markedResidues);
       var svgDoc = varnaTzClient.visualize(structureData);
       var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
       return new String(svgBytes);
@@ -1596,7 +1598,8 @@ public class TaskProcessorService {
 
   private StructureData createStructureData(
       AnalyzedModel model, Set<ConsensusInteraction> interactionsToVisualize) {
-    return createStructureData(model, interactionsToVisualize, Collections.emptySet(), Collections.emptyList());
+    return createStructureData(
+        model, interactionsToVisualize, Collections.emptySet(), Collections.emptyList());
   }
 
   private StructureData createStructureData(
@@ -1620,12 +1623,12 @@ public class TaskProcessorService {
               nucleotide.id = currentId;
               nucleotide.number = residueIdentifier.residueNumber();
               nucleotide.character = String.valueOf(residueIdentifier.oneLetterName());
-              
+
               // Set outline color for marked residues
               if (markedResidues.contains(residueIdentifier)) {
                 nucleotide.outlineColor = FORBIDDEN_INTERACTION_COLOR;
               }
-              
+
               nucleotides.add(nucleotide);
               residueToIdMap.put(residueIdentifier, currentId);
               logger.trace(
@@ -1751,10 +1754,9 @@ public class TaskProcessorService {
                   // varnaStacking.thickness = calculateThicknessForConfidence(confidence);
 
                   logger.trace(
-                      "Created Varna Stacking: id1={}, id2={}, confidence={}, color={}",
+                      "Created Varna Stacking: id1={}, id2={}, color={}",
                       varnaStacking.id1,
                       varnaStacking.id2,
-                      confidence,
                       varnaStacking.color);
                   return varnaStacking;
                 })
