@@ -21,6 +21,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      haproxy:
+        condition: service_started
 
   db:
     image: postgres:alpine
@@ -113,6 +115,22 @@ services:
       interval: 30s
       timeout: 5s
       retries: 5
+
+  haproxy:
+    image: haproxy:alpine
+    ports:
+      - "8001:8001"  # adapters
+      - "8002:8002"  # rnapolis
+      - "8003:8003"  # varna-tz
+      - "8004:8004"  # rchie
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - adapters
+      - rnapolis
+      - varna-tz
+      - rchie
+    restart: unless-stopped
 
 volumes:
   postgres_data:
