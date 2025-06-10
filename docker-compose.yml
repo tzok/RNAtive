@@ -39,8 +39,10 @@ services:
 
   adapters:
     image: rnapdbee-adapters-image
+    deploy:
+      replicas: 6
     environment:
-      - ADAPTERS_WORKERS=6
+      - ADAPTERS_WORKERS=1
       - ADAPTERS_THREADS=1
       - ADAPTERS_WORKER_TIMEOUT=1200
       - ADAPTERS_MAX_REQUESTS=10
@@ -81,6 +83,8 @@ services:
 
   rnapolis:
     image: ghcr.io/tzok/cli2rest-rnapolis:0.8.1
+    deploy:
+      replicas: 6
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import requests; requests.get('http://localhost:8000/health').raise_for_status()\" || exit 1"]
@@ -90,6 +94,8 @@ services:
 
   varna-tz:
     image: ghcr.io/tzok/cli2rest-varna-tz:1.5.0_0.9.5
+    deploy:
+      replicas: 6
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import requests; requests.get('http://localhost:8000/health').raise_for_status()\" || exit 1"]
@@ -99,6 +105,8 @@ services:
 
   rchie:
     image: ghcr.io/tzok/cli2rest-rchie:1.36.0_0.9.5
+    deploy:
+      replicas: 6
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import requests; requests.get('http://localhost:8000/health').raise_for_status()\" || exit 1"]
