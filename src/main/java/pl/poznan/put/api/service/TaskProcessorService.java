@@ -1843,18 +1843,37 @@ public class TaskProcessorService {
 
   /**
    * Generates a Set of ConsensusInteraction objects from the reference structure containing only
-   * base pairs.
+   * base pairs. Uses fullInteractionResult to get actual model counts and probabilities, but
+   * ensures all reference pairs are included (with zero probability if not found in models).
    *
    * @param referenceStructure The parsed reference structure from dot-bracket notation.
-   * @param totalModelCount The total number of models being analyzed (used for probability
-   *     calculation).
+   * @param fullInteractionResult The complete interaction results containing all discovered
+   *     interactions.
    * @return A set of ConsensusInteraction objects representing the reference base pairs.
    */
   private Set<ConsensusInteraction> generateReferenceConsensusInteractions(
-      ReferenceStructureUtil.ReferenceParseResult referenceStructure, int totalModelCount) {
+      ReferenceStructureUtil.ReferenceParseResult referenceStructure,
+      FullInteractionCollectionResult fullInteractionResult) {
     if (referenceStructure == null || referenceStructure.basePairs().isEmpty()) {
       return Collections.emptySet();
     }
+
+    // Create a map for quick lookup of existing interactions by partner pair
+    Map<String, ConsensusInteraction> existingInteractionsMap =
+        fullInteractionResult.aggregatedResult().sortedInteractions().stream()
+            .filter(
+                interaction ->
+                    interaction.category() == ConsensusInteraction.InteractionCategory.BASE_PAIR)
+            .collect(
+                Collectors.toMap(
+                    interaction -> {
+                      // Create a consistent key for partner pairs
+                      var p1 = interaction.partner1();
+                      var p2 = interaction.partner2();
+                      return p1.compareTo(p2) <= 0 ? p1 + ":" + p2 : p2 + ":" + p1;
+                    },
+                    interaction -> interaction,
+                    (existing, replacement) -> existing)); // Keep first if duplicates
 
     return referenceStructure.basePairs().stream()
         .map(
@@ -1868,22 +1887,42 @@ public class TaskProcessorService {
                 p2 = temp;
               }
 
-              // Create a ClassifiedBasePair to check if it's canonical
-              var classifiedBasePair =
-                  ImmutableAnalyzedBasePair.of(ImmutableBasePair.of(p1, p2));
-              boolean isCanonical = isCanonical(classifiedBasePair);
+              // Create lookup key
+              String lookupKey = p1 + ":" + p2;
 
-              return new ConsensusInteraction(
-                  p1,
-                  p2,
-                  ConsensusInteraction.InteractionCategory.BASE_PAIR,
-                  Optional.of(LeontisWesthof.CWW), // Reference structure assumes Watson-Crick
-                  isCanonical,
-                  totalModelCount, // Reference interactions are present in all models conceptually
-                  1.0, // Reference has 100% probability
-                  true, // Present in reference by definition
-                  false // Not forbidden in reference by definition
-                  );
+              // Check if this pair exists in the full interaction results
+              ConsensusInteraction existingInteraction = existingInteractionsMap.get(lookupKey);
+
+              if (existingInteraction != null) {
+                // Use the existing interaction data but mark as present in reference
+                return new ConsensusInteraction(
+                    existingInteraction.partner1(),
+                    existingInteraction.partner2(),
+                    existingInteraction.category(),
+                    existingInteraction.leontisWesthof(),
+                    existingInteraction.isCanonical(),
+                    existingInteraction.modelCount(),
+                    existingInteraction.probability(),
+                    true, // Present in reference by definition
+                    existingInteraction.forbiddenInReference());
+              } else {
+                // This reference pair was not found in any model - create with zero probability
+                var classifiedBasePair =
+                    ImmutableAnalyzedBasePair.of(ImmutableBasePair.of(p1, p2));
+                boolean isCanonical = isCanonical(classifiedBasePair);
+
+                return new ConsensusInteraction(
+                    p1,
+                    p2,
+                    ConsensusInteraction.InteractionCategory.BASE_PAIR,
+                    Optional.of(LeontisWesthof.CWW), // Reference structure assumes Watson-Crick
+                    isCanonical,
+                    0, // Not found in any model
+                    0.0, // Zero probability since not found in models
+                    true, // Present in reference by definition
+                    false // Not forbidden in reference by definition
+                    );
+              }
             })
         .collect(Collectors.toSet());
   }
