@@ -149,24 +149,6 @@ const FileDetails = ({
                 ></div>
                 <span>Forbidden interactions</span>
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  marginTop: "5px",
-                }}
-              >
-                <div
-                  style={{
-                    width: "15px",
-                    height: "15px",
-                    backgroundColor: "#FF0000",
-                    marginRight: "8px",
-                    border: "1px solid #ccc",
-                  }}
-                ></div>
-                <span>Forbidden interactions</span>
-              </div>
             </div>
           }
         >
