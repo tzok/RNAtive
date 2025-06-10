@@ -291,16 +291,32 @@ public class TaskProcessorService {
           currentStepCounter,
           totalSteps,
           "Generating 2D visualization for consensus (Varna)");
+      
+      // Determine consensus interactions and forbidden interactions for consensus visualization
+      Set<ConsensusInteraction> consensusInteractionsToVisualize =
+          determineConsensusSet(
+              aggregatedInteractionResult.sortedInteractions(),
+              request.confidenceLevel(),
+              ConsensusMode.ALL);
+      
+      // Add consensus-specific interactions that use forbidden residues from reference structure
+      Set<ConsensusInteraction> consensusForbiddenInteractions = 
+          aggregatedInteractionResult.sortedInteractions().stream()
+              .filter(interaction -> 
+                  referenceStructure.markedResidues().contains(interaction.partner1()) ||
+                  referenceStructure.markedResidues().contains(interaction.partner2()))
+              .collect(Collectors.toSet());
+      
+      // Combine regular consensus interactions with forbidden ones
+      Set<ConsensusInteraction> allConsensusInteractionsToVisualize = new HashSet<>(consensusInteractionsToVisualize);
+      allConsensusInteractionsToVisualize.addAll(consensusForbiddenInteractions);
+      
       var consensusSvg =
           generateVisualization(
               firstModel, // Use first model as template for consensus
-              // Use the overall consensus dot-bracket
-              determineConsensusSet( // Use aggregated interactions for consensus visualization
-                  aggregatedInteractionResult.sortedInteractions(),
-                  request.confidenceLevel(),
-                  ConsensusMode.ALL),
-              Collections.emptySet(), // No forbidden interactions for consensus
-              Collections.emptyList()); // No marked residues for consensus
+              allConsensusInteractionsToVisualize,
+              consensusForbiddenInteractions, // Forbidden interactions for consensus
+              referenceStructure.markedResidues()); // Marked residues for consensus
       logger.debug("Generated SVG for consensus");
 
       // Prepare RChieData
