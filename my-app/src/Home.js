@@ -784,15 +784,9 @@ function Home() {
       }));
 
       resetFileList();
-      setSequenceToCheck(
-        "CCUUCCGGCGUCCCAGGCGGGGCGCCGCGGGACCGCCCUCGUGUCUGUGGCGGUGGGAUCCCGCGGCCGUGUUUUCCUGGUGGCCCGGCC"
-      );
+      setSequenceToCheck("");
       setFileList(newFiles); // Replace current files with examples
-      setDotBracket(
-        ">strand_A\n" +
-          "CCUUCCGGCGUCCCAGGCGGGGCGCCGCGGGACCGCCCUCGUGUCUGUGGCGGUGGGAUCCCGCGGCCGUGUUUUCCUGGUGGCCCGGCC\n" +
-          "....((((..(((((((.((.(((((((((((((((((........).))))).....))))))))).)).))..))))).)).)))).."
-      );
+      setDotBracket("");
     } catch (error) {
       console.error("Error loading example files:", error);
     }
