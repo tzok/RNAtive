@@ -53,6 +53,7 @@ import pl.poznan.put.rna.InteractionType;
 import pl.poznan.put.rnalyzer.MolProbityResponse;
 import pl.poznan.put.rnalyzer.RnalyzerClient;
 import pl.poznan.put.structure.AnalyzedBasePair;
+import pl.poznan.put.structure.ClassifiedBasePair;
 import pl.poznan.put.structure.ImmutableAnalyzedBasePair;
 import pl.poznan.put.structure.ImmutableBasePair;
 import pl.poznan.put.structure.formats.*;
@@ -75,18 +76,19 @@ public class TaskProcessorService {
    * @param basePair The base pair to check
    * @return true if the base pair is canonical, false otherwise
    */
-  private static boolean isCanonical(BasePair basePair) {
-    if (basePair.lw() != LeontisWesthof.cWW) {
+  private static boolean isCanonical(ClassifiedBasePair basePair) {
+    if (basePair.leontisWesthof() != LeontisWesthof.CWW) {
       return false;
     }
-    
-    char leftNt = basePair.nt1().auth().map(auth -> auth.name().toUpperCase().charAt(0)).orElse('X');
-    char rightNt = basePair.nt2().auth().map(auth -> auth.name().toUpperCase().charAt(0)).orElse('X');
-    
+
+    char leftNt = basePair.basePair().left().oneLetterName();
+    char rightNt = basePair.basePair().right().oneLetterName();
+
     String sequence = leftNt < rightNt ? "" + leftNt + rightNt : "" + rightNt + leftNt;
-    
+
     return "AU".equals(sequence) || "CG".equals(sequence) || "GU".equals(sequence);
   }
+
   private final TaskRepository taskRepository;
   private final ObjectMapper objectMapper;
   private final AnalysisClient analysisClient;
@@ -614,7 +616,7 @@ public class TaskProcessorService {
                           (category == InteractionCategory.BASE_PAIR)
                               ? Optional.of(analyzedPair.leontisWesthof())
                               : Optional.<LeontisWesthof>empty();
-                      boolean isCanonical = isCanonical(analyzedPair.basePair());
+                      boolean isCanonical = isCanonical(analyzedPair);
                       int count =
                           combinedAllBag.getCount(analyzedPair); // Use combined bag for count
                       boolean presentInRef =
@@ -731,14 +733,14 @@ public class TaskProcessorService {
 
     var canonicalPairsBag =
         model.structure2D().basePairs().stream()
-            .filter(TaskProcessorService::isCanonical)
+            .filter(BasePair::isCanonical)
             .map(model::basePairToAnalyzed)
             .collect(Collectors.toCollection(HashBag::new));
     logger.trace("Model {}: Found {} canonical base pairs", model.name(), canonicalPairsBag.size());
 
     var nonCanonicalPairsBag =
         model.structure2D().basePairs().stream()
-            .filter(basePair -> !isCanonical(basePair))
+            .filter(basePair -> !basePair.isCanonical())
             .map(model::basePairToAnalyzed)
             .collect(Collectors.toCollection(HashBag::new));
     logger.trace(

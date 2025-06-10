@@ -5,16 +5,8 @@ services:
         - REACT_APP_SERVER_ADDRESS=http://localhost/api/compute
 
   backend:
-    environment:
-      - ANALYSIS_SERVICE_URL=http://adapters
     volumes:
       - /mnt:/mnt
-
-  adapters:
-    deploy:
-      replicas: 12
-    environment:
-      - ADAPTERS_WORKERS=1
 
   nginx:
     ports:
@@ -26,18 +18,6 @@ services:
       - backend
       - adapters
     command: nginx -g "daemon off;"
-
-  rnapolis:
-    deploy:
-      replicas: 12
-
-  varna-tz:
-    deploy:
-      replicas: 12
-
-  rchie:
-    deploy:
-      replicas: 12
 
   # Remove HTTPS-related services that aren't needed locally
   certbot:
