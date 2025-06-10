@@ -67,6 +67,26 @@ public class TaskProcessorService {
   private static final Logger logger = LoggerFactory.getLogger(TaskProcessorService.class);
   private static final Colormap COLORMAP = Colormaps.get("Algae");
   private static final String FORBIDDEN_INTERACTION_COLOR = "#FF0000"; // Red
+
+  /**
+   * Determines if a base pair is canonical by checking if it has cWW Leontis-Westhof classification
+   * and the nucleotides form one of the canonical pairs: CG, AU, or GU.
+   *
+   * @param basePair The base pair to check
+   * @return true if the base pair is canonical, false otherwise
+   */
+  private static boolean isCanonical(BasePair basePair) {
+    if (basePair.lw() != LeontisWesthof.cWW) {
+      return false;
+    }
+    
+    char leftNt = basePair.nt1().auth().map(auth -> auth.name().toUpperCase().charAt(0)).orElse('X');
+    char rightNt = basePair.nt2().auth().map(auth -> auth.name().toUpperCase().charAt(0)).orElse('X');
+    
+    String sequence = leftNt < rightNt ? "" + leftNt + rightNt : "" + rightNt + leftNt;
+    
+    return "AU".equals(sequence) || "CG".equals(sequence) || "GU".equals(sequence);
+  }
   private final TaskRepository taskRepository;
   private final ObjectMapper objectMapper;
   private final AnalysisClient analysisClient;
@@ -594,7 +614,7 @@ public class TaskProcessorService {
                           (category == InteractionCategory.BASE_PAIR)
                               ? Optional.of(analyzedPair.leontisWesthof())
                               : Optional.<LeontisWesthof>empty();
-                      boolean isCanonical = analyzedPair.isCanonical();
+                      boolean isCanonical = isCanonical(analyzedPair.basePair());
                       int count =
                           combinedAllBag.getCount(analyzedPair); // Use combined bag for count
                       boolean presentInRef =
@@ -711,14 +731,14 @@ public class TaskProcessorService {
 
     var canonicalPairsBag =
         model.structure2D().basePairs().stream()
-            .filter(BasePair::isCanonical)
+            .filter(TaskProcessorService::isCanonical)
             .map(model::basePairToAnalyzed)
             .collect(Collectors.toCollection(HashBag::new));
     logger.trace("Model {}: Found {} canonical base pairs", model.name(), canonicalPairsBag.size());
 
     var nonCanonicalPairsBag =
         model.structure2D().basePairs().stream()
-            .filter(basePair -> !basePair.isCanonical())
+            .filter(basePair -> !isCanonical(basePair))
             .map(model::basePairToAnalyzed)
             .collect(Collectors.toCollection(HashBag::new));
     logger.trace(
