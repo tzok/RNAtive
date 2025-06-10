@@ -103,18 +103,13 @@ services:
 
   haproxy:
     image: haproxy:alpine
-    ports:
-      - "8001:8001"  # adapters
-      - "8002:8002"  # rnapolis
-      - "8003:8003"  # varna-tz
-      - "8004:8004"  # rchie
     volumes:
       - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     depends_on:
-      - adapters
-      - rnapolis
-      - varna-tz
-      - rchie
+      - adapters # 8001
+      - rnapolis # 8002
+      - varna-tz # 8003
+      - rchie # 8004
     restart: unless-stopped
 
 volumes:
