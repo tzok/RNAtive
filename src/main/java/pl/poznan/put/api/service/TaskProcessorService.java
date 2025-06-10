@@ -291,26 +291,31 @@ public class TaskProcessorService {
           currentStepCounter,
           totalSteps,
           "Generating 2D visualization for consensus (Varna)");
-      
+
       // Determine consensus interactions and forbidden interactions for consensus visualization
       Set<ConsensusInteraction> consensusInteractionsToVisualize =
           determineConsensusSet(
               aggregatedInteractionResult.sortedInteractions(),
               request.confidenceLevel(),
               ConsensusMode.ALL);
-      
+
       // Add consensus-specific interactions that use forbidden residues from reference structure
-      Set<ConsensusInteraction> consensusForbiddenInteractions = 
+      ReferenceStructureUtil.ReferenceParseResult finalReferenceStructure = referenceStructure;
+      Set<ConsensusInteraction> consensusForbiddenInteractions =
           aggregatedInteractionResult.sortedInteractions().stream()
-              .filter(interaction -> 
-                  referenceStructure.markedResidues().contains(interaction.partner1()) ||
-                  referenceStructure.markedResidues().contains(interaction.partner2()))
+              .filter(
+                  interaction ->
+                      finalReferenceStructure.markedResidues().contains(interaction.partner1())
+                          || finalReferenceStructure
+                              .markedResidues()
+                              .contains(interaction.partner2()))
               .collect(Collectors.toSet());
-      
+
       // Combine regular consensus interactions with forbidden ones
-      Set<ConsensusInteraction> allConsensusInteractionsToVisualize = new HashSet<>(consensusInteractionsToVisualize);
+      Set<ConsensusInteraction> allConsensusInteractionsToVisualize =
+          new HashSet<>(consensusInteractionsToVisualize);
       allConsensusInteractionsToVisualize.addAll(consensusForbiddenInteractions);
-      
+
       var consensusSvg =
           generateVisualization(
               firstModel, // Use first model as template for consensus
@@ -349,7 +354,6 @@ public class TaskProcessorService {
       }
 
       // Generate model-specific SVGs. This block is estimated as (initialFileCount * 2) steps.
-      ReferenceStructureUtil.ReferenceParseResult finalReferenceStructure = referenceStructure;
       ConcurrentMap<String, String> modelSvgMap =
           rankedModels.parallelStream()
               .flatMap(
