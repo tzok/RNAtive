@@ -749,6 +749,7 @@ public class TaskProcessorService {
     var stackingsBag =
         model.structure2D().stackings().stream()
             .map(model::stackingToAnalyzed)
+            .distinct()
             .collect(Collectors.toCollection(HashBag::new));
     logger.trace("Model {}: Found {} stackings", model.name(), stackingsBag.size());
 
