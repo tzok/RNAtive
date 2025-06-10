@@ -66,7 +66,7 @@ import pl.poznan.put.varna.model.StructureData;
 public class TaskProcessorService {
   private static final Logger logger = LoggerFactory.getLogger(TaskProcessorService.class);
   private static final Colormap COLORMAP = Colormaps.get("Algae");
-  private static final String RCHIE_MARKED_RESIDUE_COLOR = "#FF0000"; // Red
+  private static final String FORBIDDEN_INTERACTION_COLOR = "#FF0000"; // Red
   private final TaskRepository taskRepository;
   private final ObjectMapper objectMapper;
   private final AnalysisClient analysisClient;
@@ -298,7 +298,8 @@ public class TaskProcessorService {
               determineConsensusSet( // Use aggregated interactions for consensus visualization
                   aggregatedInteractionResult.sortedInteractions(),
                   request.confidenceLevel(),
-                  ConsensusMode.ALL));
+                  ConsensusMode.ALL),
+              Collections.emptySet()); // No forbidden interactions for consensus
       logger.debug("Generated SVG for consensus");
 
       // Prepare RChieData
@@ -356,9 +357,21 @@ public class TaskProcessorService {
                                   request.confidenceLevel(),
                                   ConsensusMode.ALL);
 
+                          // Add model-specific interactions that use forbidden residues from reference structure
+                          Set<ConsensusInteraction> forbiddenInteractions = 
+                              modelInteractionResult.sortedInteractions().stream()
+                                  .filter(interaction -> 
+                                      finalReferenceStructure.markedResidues().contains(interaction.partner1()) ||
+                                      finalReferenceStructure.markedResidues().contains(interaction.partner2()))
+                                  .collect(Collectors.toSet());
+                          
+                          // Combine regular interactions with forbidden ones
+                          Set<ConsensusInteraction> allInteractionsToVisualize = new HashSet<>(modelInteractionsToVisualize);
+                          allInteractionsToVisualize.addAll(forbiddenInteractions);
+
                           String modelSvg =
                               generateVisualization(
-                                  correspondingAnalyzedModel, modelInteractionsToVisualize);
+                                  correspondingAnalyzedModel, allInteractionsToVisualize, forbiddenInteractions);
                           logger.debug("Generated standard SVG for model: {}", rankedModel.name());
                           svgEntries.add(Map.entry(rankedModel.name(), modelSvg));
                         } catch (Exception e) {
@@ -1549,9 +1562,14 @@ public class TaskProcessorService {
 
   private String generateVisualization(
       AnalyzedModel model, Set<ConsensusInteraction> interactionsToVisualize) {
+    return generateVisualization(model, interactionsToVisualize, Collections.emptySet());
+  }
+
+  private String generateVisualization(
+      AnalyzedModel model, Set<ConsensusInteraction> interactionsToVisualize, Set<ConsensusInteraction> forbiddenInteractions) {
     try {
       logger.info("Generating visualization using VarnaTzClient (remote varna-tz service)");
-      var structureData = createStructureData(model, interactionsToVisualize);
+      var structureData = createStructureData(model, interactionsToVisualize, forbiddenInteractions);
       var svgDoc = varnaTzClient.visualize(structureData);
       var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
       return new String(svgBytes);
@@ -1563,6 +1581,11 @@ public class TaskProcessorService {
 
   private StructureData createStructureData(
       AnalyzedModel model, Set<ConsensusInteraction> interactionsToVisualize) {
+    return createStructureData(model, interactionsToVisualize, Collections.emptySet());
+  }
+
+  private StructureData createStructureData(
+      AnalyzedModel model, Set<ConsensusInteraction> interactionsToVisualize, Set<ConsensusInteraction> forbiddenInteractions) {
     logger.debug("Creating StructureData for VarnaTzClient with confidence coloring");
     var structureData = new StructureData();
     var nucleotides = new ArrayList<Nucleotide>();
@@ -1642,7 +1665,11 @@ public class TaskProcessorService {
 
                   // Calculate confidence and set color
                   double confidence = interaction.probability();
-                  varnaBp.color = getColorForConfidence(confidence);
+                  if (forbiddenInteractions.contains(interaction)) {
+                    varnaBp.color = FORBIDDEN_INTERACTION_COLOR;
+                  } else {
+                    varnaBp.color = getColorForConfidence(confidence);
+                  }
 
                   logger.trace(
                       "Created Varna BasePair: id1={}, id2={}, edge5={}, edge3={}, stericity={},"
@@ -1697,7 +1724,11 @@ public class TaskProcessorService {
 
                   // Calculate confidence and set color
                   double confidence = interaction.probability();
-                  varnaStacking.color = getColorForConfidence(confidence);
+                  if (forbiddenInteractions.contains(interaction)) {
+                    varnaStacking.color = FORBIDDEN_INTERACTION_COLOR;
+                  } else {
+                    varnaStacking.color = getColorForConfidence(confidence);
+                  }
                   // Thickness can be set if needed, e.g., based on confidence or a fixed value
                   // varnaStacking.thickness = calculateThicknessForConfidence(confidence);
 
@@ -1795,7 +1826,7 @@ public class TaskProcessorService {
 
   private RChieData prepareRChieData(
       AnalyzedModel firstModel,
-      InteractionCollectionResult aggregatedInteractionResult,
+      InteractionCollectionResult interactionCollectionResult,
       ReferenceStructureUtil.ReferenceParseResult referenceStructure) {
     logger.info("Preparing RChieData");
 
@@ -1813,7 +1844,7 @@ public class TaskProcessorService {
 
     // Prepare top interactions (aggregated consensus canonical)
     List<RChieInteraction> topInteractions =
-        aggregatedInteractionResult.sortedInteractions().stream()
+        interactionCollectionResult.sortedInteractions().stream()
             .filter(
                 ci ->
                     ci.category() == ConsensusInteraction.InteractionCategory.BASE_PAIR
@@ -1837,7 +1868,7 @@ public class TaskProcessorService {
                   if (referenceStructure != null
                       && (referenceStructure.markedResidues().contains(ci.partner1())
                           || referenceStructure.markedResidues().contains(ci.partner2()))) {
-                    color = RCHIE_MARKED_RESIDUE_COLOR;
+                    color = FORBIDDEN_INTERACTION_COLOR;
                   } else {
                     color = getColorForConfidence(ci.probability());
                   }
