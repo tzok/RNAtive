@@ -990,7 +990,7 @@ function Home() {
                     >
                       Algae colormap
                     </a>{" "}
-                    is used:
+                    is used, with red color for forbidden interactions:
                   </p>
                   <div
                     style={{
