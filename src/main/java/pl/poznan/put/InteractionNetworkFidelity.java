@@ -2,8 +2,6 @@ package pl.poznan.put;
 
 import java.util.HashSet;
 import java.util.Set;
-import org.apache.commons.collections4.CollectionUtils;
-import pl.poznan.put.InteractionMetricsUtils;
 import org.apache.commons.math3.util.FastMath;
 
 public class InteractionNetworkFidelity {

@@ -287,7 +287,17 @@ public class TaskProcessorService {
       var aggregatedInteractionResult = fullInteractionResult.aggregatedResult();
 
       updateTaskProgress(task, currentStepCounter, totalSteps, "Ranking models");
-      var rankedModels = generateRankedModels(analyzedModels, fullInteractionResult, request);
+      Set<ConsensusInteraction> requiredInteractionSet =
+          generateReferenceConsensusInteractions(referenceStructure, fullInteractionResult);
+      Set<ConsensusInteraction> forbiddenInteractionSet =
+          generateForbiddenConsensusInteractions(referenceStructure, fullInteractionResult);
+      var rankedModels =
+          generateRankedModels(
+              analyzedModels,
+              fullInteractionResult,
+              request,
+              requiredInteractionSet,
+              forbiddenInteractionSet);
 
       updateTaskProgress(
           task, currentStepCounter, totalSteps, "Generating dot-bracket for consensus structure");
@@ -1466,12 +1476,16 @@ public class TaskProcessorService {
    * @param analyzedModels The list of models to rank.
    * @param fullInteractionResult The complete interaction results (aggregated and per-model).
    * @param request The original compute request containing parameters.
+   * @param requiredInteractionSet
+   * @param forbiddenInteractionSet
    * @return A list of RankedModel objects, sorted by rank.
    */
   private List<RankedModel> generateRankedModels(
       List<AnalyzedModel> analyzedModels,
       FullInteractionCollectionResult fullInteractionResult,
-      ComputeRequest request) {
+      ComputeRequest request,
+      Set<ConsensusInteraction> requiredInteractionSet,
+      Set<ConsensusInteraction> forbiddenInteractionSet) {
     logger.info("Starting generation of ranked models for all consensus modes");
     Integer confidenceLevel = request.confidenceLevel();
 
@@ -1525,11 +1539,31 @@ public class TaskProcessorService {
 
         double inf, f1;
         if (confidenceLevel == null) { // Fuzzy mode
-          inf = InteractionNetworkFidelity.calculateFuzzy(targetConsensusSet, modelConsensusSet);
-          f1 = F1score.calculateFuzzy(targetConsensusSet, modelConsensusSet);
+          inf =
+              InteractionNetworkFidelity.calculateFuzzy(
+                  targetConsensusSet,
+                  modelConsensusSet,
+                  requiredInteractionSet,
+                  forbiddenInteractionSet);
+          f1 =
+              F1score.calculateFuzzy(
+                  targetConsensusSet,
+                  modelConsensusSet,
+                  requiredInteractionSet,
+                  forbiddenInteractionSet);
         } else { // Threshold mode
-          inf = InteractionNetworkFidelity.calculate(targetConsensusSet, modelConsensusSet);
-          f1 = F1score.calculate(targetConsensusSet, modelConsensusSet);
+          inf =
+              InteractionNetworkFidelity.calculate(
+                  targetConsensusSet,
+                  modelConsensusSet,
+                  requiredInteractionSet,
+                  forbiddenInteractionSet);
+          f1 =
+              F1score.calculate(
+                  targetConsensusSet,
+                  modelConsensusSet,
+                  requiredInteractionSet,
+                  forbiddenInteractionSet);
         }
         infScoresPerModel.get(model.name()).put(modeToAnalyze, inf);
         f1ScoresPerModel.get(model.name()).put(modeToAnalyze, f1);
@@ -1907,8 +1941,7 @@ public class TaskProcessorService {
                     existingInteraction.forbiddenInReference());
               } else {
                 // This reference pair was not found in any model - create with zero probability
-                var classifiedBasePair =
-                    ImmutableAnalyzedBasePair.of(ImmutableBasePair.of(p1, p2));
+                var classifiedBasePair = ImmutableAnalyzedBasePair.of(ImmutableBasePair.of(p1, p2));
                 boolean isCanonical = isCanonical(classifiedBasePair);
 
                 return new ConsensusInteraction(
@@ -1931,15 +1964,15 @@ public class TaskProcessorService {
    * Generates a Set of ConsensusInteraction objects representing forbidden base pairs. These are
    * interactions that involve residues marked as forbidden in the reference structure.
    *
-   * @param fullInteractionResult The complete interaction results containing all discovered
-   *     interactions.
    * @param referenceStructure The parsed reference structure containing marked (forbidden)
    *     residues.
+   * @param fullInteractionResult The complete interaction results containing all discovered
+   *     interactions.
    * @return A set of ConsensusInteraction objects representing forbidden base pairs.
    */
   private Set<ConsensusInteraction> generateForbiddenConsensusInteractions(
-      FullInteractionCollectionResult fullInteractionResult,
-      ReferenceStructureUtil.ReferenceParseResult referenceStructure) {
+      ReferenceStructureUtil.ReferenceParseResult referenceStructure,
+      FullInteractionCollectionResult fullInteractionResult) {
     if (referenceStructure == null || referenceStructure.markedResidues().isEmpty()) {
       return Collections.emptySet();
     }

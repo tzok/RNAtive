@@ -2,8 +2,6 @@ package pl.poznan.put;
 
 import java.util.HashSet;
 import java.util.Set;
-import org.apache.commons.collections4.CollectionUtils;
-import pl.poznan.put.InteractionMetricsUtils;
 
 public class F1score {
   private F1score() {
