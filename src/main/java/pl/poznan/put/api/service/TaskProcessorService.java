@@ -299,7 +299,8 @@ public class TaskProcessorService {
                   aggregatedInteractionResult.sortedInteractions(),
                   request.confidenceLevel(),
                   ConsensusMode.ALL),
-              Collections.emptySet()); // No forbidden interactions for consensus
+              Collections.emptySet(), // No forbidden interactions for consensus
+              Collections.emptyList()); // No marked residues for consensus
       logger.debug("Generated SVG for consensus");
 
       // Prepare RChieData
@@ -380,7 +381,8 @@ public class TaskProcessorService {
                               generateVisualization(
                                   correspondingAnalyzedModel,
                                   allInteractionsToVisualize,
-                                  forbiddenInteractions);
+                                  forbiddenInteractions,
+                                  finalReferenceStructure.markedResidues());
                           logger.debug("Generated standard SVG for model: {}", rankedModel.name());
                           svgEntries.add(Map.entry(rankedModel.name(), modelSvg));
                         } catch (Exception e) {
@@ -1571,17 +1573,18 @@ public class TaskProcessorService {
 
   private String generateVisualization(
       AnalyzedModel model, Set<ConsensusInteraction> interactionsToVisualize) {
-    return generateVisualization(model, interactionsToVisualize, Collections.emptySet());
+    return generateVisualization(model, interactionsToVisualize, Collections.emptySet(), Collections.emptyList());
   }
 
   private String generateVisualization(
       AnalyzedModel model,
       Set<ConsensusInteraction> interactionsToVisualize,
-      Set<ConsensusInteraction> forbiddenInteractions) {
+      Set<ConsensusInteraction> forbiddenInteractions,
+      List<PdbNamedResidueIdentifier> markedResidues) {
     try {
       logger.info("Generating visualization using VarnaTzClient (remote varna-tz service)");
       var structureData =
-          createStructureData(model, interactionsToVisualize, forbiddenInteractions);
+          createStructureData(model, interactionsToVisualize, forbiddenInteractions, markedResidues);
       var svgDoc = varnaTzClient.visualize(structureData);
       var svgBytes = SVGHelper.export(svgDoc, Format.SVG);
       return new String(svgBytes);
@@ -1593,13 +1596,14 @@ public class TaskProcessorService {
 
   private StructureData createStructureData(
       AnalyzedModel model, Set<ConsensusInteraction> interactionsToVisualize) {
-    return createStructureData(model, interactionsToVisualize, Collections.emptySet());
+    return createStructureData(model, interactionsToVisualize, Collections.emptySet(), Collections.emptyList());
   }
 
   private StructureData createStructureData(
       AnalyzedModel model,
       Set<ConsensusInteraction> interactionsToVisualize,
-      Set<ConsensusInteraction> forbiddenInteractions) {
+      Set<ConsensusInteraction> forbiddenInteractions,
+      List<PdbNamedResidueIdentifier> markedResidues) {
     logger.debug("Creating StructureData for VarnaTzClient with confidence coloring");
     var structureData = new StructureData();
     var nucleotides = new ArrayList<Nucleotide>();
@@ -1616,7 +1620,12 @@ public class TaskProcessorService {
               nucleotide.id = currentId;
               nucleotide.number = residueIdentifier.residueNumber();
               nucleotide.character = String.valueOf(residueIdentifier.oneLetterName());
-              // Colors are left null for now
+              
+              // Set outline color for marked residues
+              if (markedResidues.contains(residueIdentifier)) {
+                nucleotide.outlineColor = FORBIDDEN_INTERACTION_COLOR;
+              }
+              
               nucleotides.add(nucleotide);
               residueToIdMap.put(residueIdentifier, currentId);
               logger.trace(
@@ -1736,13 +1745,8 @@ public class TaskProcessorService {
                   varnaStacking.id1 = String.valueOf(id1); // VARNA expects string IDs for stackings
                   varnaStacking.id2 = String.valueOf(id2);
 
-                  // Calculate confidence and set color
-                  double confidence = interaction.probability();
-                  if (forbiddenInteractions.contains(interaction)) {
-                    varnaStacking.color = FORBIDDEN_INTERACTION_COLOR;
-                  } else {
-                    varnaStacking.color = getColorForConfidence(confidence);
-                  }
+                  // Do not color stacking interactions
+                  // varnaStacking.color is left null (no coloring)
                   // Thickness can be set if needed, e.g., based on confidence or a fixed value
                   // varnaStacking.thickness = calculateThicknessForConfidence(confidence);
 
