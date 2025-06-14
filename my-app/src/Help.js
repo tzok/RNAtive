@@ -19,6 +19,7 @@ import A2 from "./assets/a2.png";
 import A3 from "./assets/a3.png";
 import A4 from "./assets/a4.png";
 import B1 from "./assets/B1.png";
+import B2 from "./assets/B2.png";
 import B3 from "./assets/B3.png";
 import B4 from "./assets/B4.png";
 const { Title, Paragraph, Text, Link } = Typography;
@@ -70,14 +71,23 @@ const Help = () => {
                 }}
               >
                 <Anchor
-                affix={false}
-                items={headings.map((heading) => ({
-                  key: heading.id,
-                  href: `#${heading.id}`,
-                  title: <span style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>{heading.text}</span>,
-                  style: { paddingLeft: `${(heading.level - 1) * 15}px` },
-                }))}
-              />
+                  affix={false}
+                  items={headings.map((heading) => ({
+                    key: heading.id,
+                    href: `#${heading.id}`,
+                    title: (
+                      <span
+                        style={{
+                          whiteSpace: "normal",
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {heading.text}
+                      </span>
+                    ),
+                    style: { paddingLeft: `${(heading.level - 1) * 15}px` },
+                  }))}
+                />
               </div>
             </Typography>
           )}
@@ -326,7 +336,7 @@ const Help = () => {
               interactions available: MC-Annotate, BARNABA, RNAview, FR3D,
               BPnet, RNApolis.
             </Paragraph>
-            <CustomTitle level={3}>
+            {/* <CustomTitle level={3}>
               3.1.4 Consensus structure based on
             </CustomTitle>
             <Paragraph>
@@ -339,9 +349,9 @@ const Help = () => {
             <Paragraph>
               It is worth noting that RNAtive considers both Watson-Crick and
               U-G wobble to be canonical base pairs.
-            </Paragraph>
+            </Paragraph> */}
             <CustomTitle level={3}>
-              3.1.5 Conditionally weighted consensus and Confidence level
+              3.1.4 Conditionally weighted consensus and Confidence level
             </CustomTitle>
             {/* <Paragraph>
               In fuzzy mode, every nucleotide interaction within the specified
@@ -369,12 +379,12 @@ const Help = () => {
                 maxWidth: "800px", // Prevents overflow
               }}
             />
-            <CustomTitle level={3}>3.1.6 2D structure viewer</CustomTitle>
+            {/* <CustomTitle level={3}>3.1.6 2D structure viewer</CustomTitle>
             <Paragraph>
               RNAtive will return a 2D visualization of the consensus structure.
               There are four visualizers available: VARNA, RNApuzzler,
               PseudoViewer and R-Chie.
-            </Paragraph>
+            </Paragraph> */}
             {/* <CustomTitle level={2}>
               Getting already submitted results
             </CustomTitle>
@@ -438,12 +448,19 @@ const Help = () => {
               src={results1}
               alt="Results"
               style={{
+                maxWidth: "800px", // Prevents overflow
+              }}
+            />
+            {/* <Image
+              src={results1}
+              alt="Results"
+              style={{
                 width: "auto",
                 maxWidth: "800px", // Prevents overflow
                 height: "auto",
                 display: "inline-block", // Keep display style if needed, or Image default might suffice
               }}
-            />
+            /> */}
             <Paragraph>
               <b>Model ranking by similarity to the consensus</b> (as seen in an
               image above. Note a "download" button in the left bottom corner
@@ -514,6 +531,13 @@ const Help = () => {
             />
             <Image
               src={B1}
+              alt="Results"
+              style={{
+                maxWidth: "800px", // Prevents overflow
+              }}
+            />
+            <Image
+              src={B2}
               alt="Results"
               style={{
                 maxWidth: "800px", // Prevents overflow
