@@ -347,7 +347,11 @@ public class TaskProcessorService {
 
       // Prepare RChieData
       RChieData rChieData =
-          prepareRChieData(firstModel, aggregatedInteractionResult, referenceStructure, request.confidenceLevel());
+          prepareRChieData(
+              firstModel,
+              aggregatedInteractionResult,
+              referenceStructure,
+              request.confidenceLevel());
       // At this point, rChieData is prepared.
       updateTaskProgress(
           task, currentStepCounter, totalSteps, "Preparing RChie data for consensus structure");
