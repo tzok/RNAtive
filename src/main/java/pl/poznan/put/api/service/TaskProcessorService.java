@@ -347,7 +347,7 @@ public class TaskProcessorService {
 
       // Prepare RChieData
       RChieData rChieData =
-          prepareRChieData(firstModel, aggregatedInteractionResult, referenceStructure);
+          prepareRChieData(firstModel, aggregatedInteractionResult, referenceStructure, request.confidenceLevel());
       // At this point, rChieData is prepared.
       updateTaskProgress(
           task, currentStepCounter, totalSteps, "Preparing RChie data for consensus structure");
@@ -429,7 +429,8 @@ public class TaskProcessorService {
                               prepareRChieData(
                                   correspondingAnalyzedModel,
                                   modelInteractionResult,
-                                  finalReferenceStructure);
+                                  finalReferenceStructure,
+                                  request.confidenceLevel());
 
                           org.w3c.dom.svg.SVGDocument rChieModelSvgDoc =
                               rChieClient.visualize(rChieModelData);
@@ -1994,7 +1995,8 @@ public class TaskProcessorService {
   private RChieData prepareRChieData(
       AnalyzedModel firstModel,
       InteractionCollectionResult interactionCollectionResult,
-      ReferenceStructureUtil.ReferenceParseResult referenceStructure) {
+      ReferenceStructureUtil.ReferenceParseResult referenceStructure,
+      Integer confidenceLevel) {
     logger.info("Preparing RChieData");
 
     List<PdbNamedResidueIdentifier> modelResidues = firstModel.residueIdentifiers();
@@ -2016,6 +2018,7 @@ public class TaskProcessorService {
                 ci ->
                     ci.category() == ConsensusInteraction.InteractionCategory.BASE_PAIR
                         && ci.isCanonical())
+            .filter(ci -> isInteractionConsidered(ci, confidenceLevel))
             .map(
                 ci -> {
                   Integer index1 = residueToIndexMap.get(ci.partner1());
