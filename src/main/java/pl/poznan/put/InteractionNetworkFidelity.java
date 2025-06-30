@@ -1,46 +1,141 @@
 package pl.poznan.put;
 
-import java.util.Collection;
-import java.util.Map;
-import org.apache.commons.collections4.CollectionUtils;
+import java.util.HashSet;
+import java.util.Set;
 import org.apache.commons.math3.util.FastMath;
-import pl.poznan.put.structure.AnalyzedBasePair;
-import pl.poznan.put.structure.ClassifiedBasePair;
 
 public class InteractionNetworkFidelity {
   private InteractionNetworkFidelity() {
     super();
   }
 
+  /**
+   * Calculates the Interaction Network Fidelity (INF) between a reference set and a model set. INF
+   * is the geometric mean of Matthews Correlation Coefficient (MCC) components: Positive Predictive
+   * Value (PPV) and Sensitivity (STY).
+   *
+   * @param referenceSet The collection representing the 'correct' or reference interactions.
+   * @param modelSet The collection representing the interactions found in the model being
+   *     evaluated.
+   * @return The Interaction Network Fidelity score (between 0.0 and 1.0).
+   */
   public static double calculate(
-      Iterable<? extends ClassifiedBasePair> correctBasePairs,
-      Iterable<? extends ClassifiedBasePair> modelBasePairs) {
-    var tp = CollectionUtils.intersection(correctBasePairs, modelBasePairs).size();
-    var fp = CollectionUtils.subtract(modelBasePairs, correctBasePairs).size();
-    var fn = CollectionUtils.subtract(correctBasePairs, modelBasePairs).size();
-    var ppv = tp / (tp + fp);
-    var sty = tp / (tp + fn);
-    return FastMath.sqrt(ppv * sty);
-  }
+      Set<ConsensusInteraction> referenceSet,
+      Set<ConsensusInteraction> modelSet,
+      Set<ConsensusInteraction> requiredSet,
+      Set<ConsensusInteraction> forbiddenSet) {
+    InteractionMetricsUtils.validateRequiredForbidden(requiredSet, forbiddenSet);
 
-  public static double calculateFuzzy(
-      Map<AnalyzedBasePair, Double> fuzzyInteractions,
-      Collection<AnalyzedBasePair> modelBasePairs) {
-    var tp = 0.0;
-    var fp = 0.0;
-    var fn = 0.0;
+    Set<ConsensusInteraction> truePositiveSet = new HashSet<>();
+    Set<ConsensusInteraction> falsePositiveSet = new HashSet<>();
+    Set<ConsensusInteraction> falseNegativeSet = new HashSet<>();
 
-    for (var entry : fuzzyInteractions.entrySet()) {
-      if (modelBasePairs.contains(entry.getKey())) {
-        tp += entry.getValue();
-        fp += 1.0 - entry.getValue();
-      } else {
-        fn += entry.getValue();
+    Set<ConsensusInteraction> allInteractions =
+        InteractionMetricsUtils.buildAllInteractions(
+            referenceSet, modelSet, requiredSet, forbiddenSet);
+
+    for (ConsensusInteraction interaction : allInteractions) {
+      boolean isInReference = referenceSet.contains(interaction);
+      boolean isInModel = modelSet.contains(interaction);
+      boolean isRequired = requiredSet.contains(interaction);
+      boolean isForbidden = forbiddenSet.contains(interaction);
+
+      if (isForbidden) {
+        if (isInModel) {
+          falsePositiveSet.add(interaction); // Predicted forbidden -> False Positive
+        }
+        // Forbidden not predicted -> OK, does not affect metrics
+      } else if (isRequired) { // Required interaction (not forbidden)
+        if (isInModel) {
+          truePositiveSet.add(interaction); // Predicted required -> True Positive
+        } else {
+          falseNegativeSet.add(interaction); // Not predicted required -> False Negative
+        }
+      } else if (isInReference) { // Interaction in reference (not required, not forbidden)
+        if (isInModel) {
+          truePositiveSet.add(interaction); // Predicted from reference -> True Positive
+        } else {
+          falseNegativeSet.add(interaction); // Not predicted from reference -> False Negative
+        }
+      } else { // Interaction not in reference, not required, not forbidden
+        if (isInModel) {
+          falsePositiveSet.add(interaction); // Predicted unexpected -> False Positive
+        }
+        // Not predicted unexpected -> OK, does not affect metrics
       }
     }
 
-    var ppv = tp / (tp + fp);
-    var sty = tp / (tp + fn);
-    return FastMath.sqrt(ppv * sty);
+    double tp = truePositiveSet.size();
+    double fp = falsePositiveSet.size();
+    double fn = falseNegativeSet.size();
+
+    double ppvDenominator = tp + fp;
+    double styDenominator = tp + fn;
+
+    double ppv = (ppvDenominator == 0) ? 0.0 : tp / ppvDenominator;
+    double sty = (styDenominator == 0) ? 0.0 : tp / styDenominator;
+
+    // If either ppv or sty is 0, the geometric mean is 0
+    return (ppv == 0 || sty == 0) ? 0.0 : FastMath.sqrt(ppv * sty);
+  }
+
+  /**
+   * Calculates the Interaction Network Fidelity (INF) using a fuzzy reference set (where each item
+   * has a probability) against a crisp model set.
+   *
+   * @param referenceSet A map where keys are the reference interactions and values are their
+   *     probabilities (between 0.0 and 1.0).
+   * @param modelSet The collection representing the interactions found in the model being
+   *     evaluated.
+   * @return The fuzzy Interaction Network Fidelity score (between 0.0 and 1.0).
+   */
+  public static double calculateFuzzy(
+      Set<ConsensusInteraction> referenceSet,
+      Set<ConsensusInteraction> modelSet,
+      Set<ConsensusInteraction> requiredSet,
+      Set<ConsensusInteraction> forbiddenSet) {
+    InteractionMetricsUtils.validateRequiredForbidden(requiredSet, forbiddenSet);
+
+    Set<ConsensusInteraction> allInteractions =
+        InteractionMetricsUtils.buildAllInteractions(
+            referenceSet, modelSet, requiredSet, forbiddenSet);
+
+    double tp = 0.0;
+    double fp = 0.0;
+    double fn = 0.0;
+
+    for (ConsensusInteraction interaction : allInteractions) {
+      double probability = interaction.probability();
+      double predictedDegree = modelSet.contains(interaction) ? probability : 0.0;
+
+      if (forbiddenSet.contains(interaction)) {
+        // If the interaction is forbidden and predicted, it's a false positive
+        fp += predictedDegree;
+        continue;
+      }
+
+      if (requiredSet.contains(interaction)) {
+        tp += predictedDegree; // True positive for required interaction
+        fn += (1.0 - predictedDegree); // False negative for required interaction
+        continue;
+      }
+
+      if (referenceSet.contains(interaction)) {
+        tp += predictedDegree; // True positive for reference interaction
+        fn += (probability - predictedDegree); // False negative for reference interaction
+        continue;
+      }
+
+      fp += predictedDegree; // False positive for unexpected interaction
+    }
+
+    double ppvDenominator = tp + fp;
+    double styDenominator = tp + fn;
+
+    double ppv = (ppvDenominator == 0) ? 0.0 : tp / ppvDenominator;
+    double sty = (styDenominator == 0) ? 0.0 : tp / styDenominator;
+
+    // If either ppv or sty is 0, the geometric mean is 0
+    return (ppv == 0 || sty == 0) ? 0.0 : FastMath.sqrt(ppv * sty);
   }
 }

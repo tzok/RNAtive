@@ -1,15 +1,27 @@
-import React, { useState, useEffect } from "react";
-import "./SvgImg.css";
+import React, { useState, useEffect, useMemo } from "react";
+import { Alert, Image, Spin } from "antd";
 
-const SvgImg = ({ serverAddress, taskId }) => {
+const SvgImg = ({ serverAddress, taskId, svgName }) => {
   const [svgContent, setSvgContent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const svgUrl = useMemo(() => {
+    let url = `${serverAddress}/${taskId}/svg`;
+    if (svgName) {
+      url += `/${encodeURIComponent(svgName)}`;
+    }
+    return url;
+  }, [serverAddress, taskId, svgName]);
+
   useEffect(() => {
+    setLoading(true); // Reset loading state when props change
+    setError(null); // Reset error state
+    setSvgContent(null); // Reset content
+
     const fetchSvg = async () => {
       try {
-        const response = await fetch(`${serverAddress}/${taskId}/svg`, {
+        const response = await fetch(svgUrl, {
           method: "GET",
         });
 
@@ -28,45 +40,20 @@ const SvgImg = ({ serverAddress, taskId }) => {
     };
 
     fetchSvg();
-  }, [serverAddress, taskId]);
+  }, [svgUrl]); // Depend on the memoized URL
 
   if (loading) {
-    return (
-      <div className="loading-indicator">
-        <div className="spinner"></div> {/* Add a spinner style in your CSS */}
-        <p>Loading SVG...</p>
-      </div>
-    );
+    return <Spin />;
+  }
+  if (error) {
+    return <Alert type={"error"} message={error.message} />;
   }
 
-  if (error) {
-    return <p className="error">Error: {error}</p>;
-  }
   // Create a blob for the SVG content to use for downloading
   const blob = new Blob([svgContent], { type: "image/svg+xml" });
   const blobUrl = URL.createObjectURL(blob);
 
-  return (
-    <div
-      style={{ backgroundColor: "white", padding: "20px", borderRadius: "5px" }}
-    >
-      <a
-        href={blobUrl}
-        download={`${taskId}.svg`}
-        className="svg-download-link"
-        title="Right-click to download"
-      >
-        <div
-          className="svg-container"
-          style={{
-            width: "15vw",
-            height: "auto",
-          }}
-          dangerouslySetInnerHTML={{ __html: svgContent }}
-        />
-      </a>
-    </div>
-  );
+  return <Image src={blobUrl} />;
 };
 
 export default SvgImg;

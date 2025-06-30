@@ -1,0 +1,23 @@
+# Certbot
+certbot/
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# Build artifacts
+my-app/node_modules/
+my-app/build/
+my-app/coverage/
+
+# Logs and temp files
+*.log
+.DS_Store

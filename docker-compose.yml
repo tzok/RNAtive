@@ -1,15 +1,13 @@
-version: '3.8'
-
 services:
   frontend:
-    build: my-app
-    ports:
-      - "3000:3000"
+    build:
+      context: my-app
+      args:
+        - REACT_APP_SERVER_ADDRESS=https://rnative.cs.put.poznan.pl/api/compute
+    restart: unless-stopped
 
-  app:
+  backend:
     build: .
-    ports:
-      - "8080:8080"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/rnative
       - SPRING_DATASOURCE_USERNAME=postgres
@@ -18,14 +16,15 @@ services:
       - POSTGRES_DB=rnative
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
+      haproxy:
+        condition: service_started
 
   db:
     image: postgres:alpine
-    ports:
-      - "5432:5432"
     environment:
       - POSTGRES_DB=rnative
       - POSTGRES_USER=postgres
@@ -37,11 +36,14 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   adapters:
     image: rnapdbee-adapters-image
+    deploy:
+      replicas: 6
     environment:
-      - ADAPTERS_WORKERS=24
+      - ADAPTERS_WORKERS=1
       - ADAPTERS_THREADS=1
       - ADAPTERS_WORKER_TIMEOUT=1200
       - ADAPTERS_MAX_REQUESTS=10
@@ -52,10 +54,62 @@ services:
       - ADAPTERS_SUBPROCESS_TIMEOUT=600
       - ADAPTERS_PSEUDOVIEWER_TIMEOUT=40
       - ADAPTERS_FLASK_LOG_LEVEL=INFO
+    restart: unless-stopped
     volumes:
       - adapters_cache:/var/tmp/adapters_cache
+
+  nginx:
+    image: nginx:alpine
     ports:
-      - "8000:80"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    depends_on:
+      - frontend
+      - backend
+      - adapters
+    restart: unless-stopped
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    restart: unless-stopped
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+  rnapolis:
+    image: ghcr.io/tzok/cli2rest-rnapolis:0.8.1
+    deploy:
+      replicas: 6
+    restart: unless-stopped
+
+  varna-tz:
+    image: ghcr.io/tzok/cli2rest-varna-tz:1.5.0_0.9.5
+    deploy:
+      replicas: 6
+    restart: unless-stopped
+
+  rchie:
+    image: ghcr.io/tzok/cli2rest-rchie:1.36.0_0.9.5
+    deploy:
+      replicas: 6
+    restart: unless-stopped
+
+  haproxy:
+    image: haproxy:alpine
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - adapters # 8001
+      - rnapolis # 8002
+      - varna-tz # 8003
+      - rchie # 8004
+    restart: unless-stopped
 
 volumes:
   postgres_data:

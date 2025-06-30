@@ -3,6 +3,7 @@ package pl.poznan.put.api.model;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Entity
 public class Task {
@@ -17,15 +18,29 @@ public class Task {
 
   @Lob private String result;
 
-  @Lob private String svg;
-
   @Lob private String message;
+
+  @ElementCollection(fetch = FetchType.LAZY)
+  @CollectionTable(name = "model_svgs", joinColumns = @JoinColumn(name = "task_id"))
+  @MapKeyColumn(name = "model_name")
+  @Column(name = "svg_content", columnDefinition = "TEXT")
+  private Map<String, String> modelSvgs = new ConcurrentHashMap<>(); // Use ConcurrentHashMap
 
   @ElementCollection(fetch = FetchType.EAGER)
   @CollectionTable(name = "removal_reasons", joinColumns = @JoinColumn(name = "task_id"))
   @MapKeyColumn(name = "model_name")
   @Column(name = "reason", length = 1000)
   private Map<String, List<String>> removalReasons = new HashMap<>();
+
+  @ElementCollection(fetch = FetchType.LAZY)
+  @CollectionTable(name = "molprobity_responses", joinColumns = @JoinColumn(name = "task_id"))
+  @MapKeyColumn(name = "model_name")
+  @Column(name = "response_json", columnDefinition = "TEXT")
+  private Map<String, String> molprobityResponses = new HashMap<>();
+
+  private int currentProgress;
+  private int totalProgressSteps;
+  private String progressMessage;
 
   public Task() {
     this.id = UUID.randomUUID().toString();
@@ -66,14 +81,6 @@ public class Task {
     this.result = result;
   }
 
-  public String getSvg() {
-    return svg;
-  }
-
-  public void setSvg(String svg) {
-    this.svg = svg;
-  }
-
   public String getMessage() {
     return message;
   }
@@ -88,5 +95,45 @@ public class Task {
 
   public void addRemovalReason(String modelName, String reason) {
     removalReasons.computeIfAbsent(modelName, k -> new ArrayList<>()).add(reason);
+  }
+
+  public Map<String, String> getMolprobityResponses() {
+    return molprobityResponses;
+  }
+
+  public void addMolProbityResponse(String modelName, String responseJson) {
+    molprobityResponses.put(modelName, responseJson);
+  }
+
+  public Map<String, String> getModelSvgs() {
+    return modelSvgs;
+  }
+
+  public void addModelSvg(String modelName, String svgContent) {
+    modelSvgs.put(modelName, svgContent);
+  }
+
+  public int getCurrentProgress() {
+    return currentProgress;
+  }
+
+  public void setCurrentProgress(int currentProgress) {
+    this.currentProgress = currentProgress;
+  }
+
+  public int getTotalProgressSteps() {
+    return totalProgressSteps;
+  }
+
+  public void setTotalProgressSteps(int totalProgressSteps) {
+    this.totalProgressSteps = totalProgressSteps;
+  }
+
+  public String getProgressMessage() {
+    return progressMessage;
+  }
+
+  public void setProgressMessage(String progressMessage) {
+    this.progressMessage = progressMessage;
   }
 }

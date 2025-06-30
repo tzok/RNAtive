@@ -11,12 +11,20 @@ import pl.poznan.put.structure.formats.DefaultDotBracket;
 import pl.poznan.put.structure.formats.ImmutableDefaultDotBracketFromPdb;
 
 public class ReferenceStructureUtil {
-  public static List<BasePair> readReferenceStructure(String dotBracket, AnalyzedModel model) {
-    if (dotBracket == null || dotBracket.isEmpty()) {
-      return Collections.emptyList();
+  public record ReferenceParseResult(
+      List<BasePair> basePairs, List<PdbNamedResidueIdentifier> markedResidues) {}
+
+  public static ReferenceParseResult readReferenceStructure(
+      String dotBracketInput, AnalyzedModel model) {
+    if (dotBracketInput == null || dotBracketInput.isBlank()) {
+      return new ReferenceParseResult(Collections.emptyList(), Collections.emptyList());
     }
 
-    var dotBracketObj = DefaultDotBracket.fromString(dotBracket);
+    // Replace 'x' or 'X' with '-' which signifies a missing residue in DotBracketSymbol
+    String modifiedDotBracketInput = dotBracketInput.replace('x', '-').replace('X', '-');
+
+    // DefaultDotBracket.fromString handles the multi-line format
+    var dotBracketObj = DefaultDotBracket.fromString(modifiedDotBracketInput);
     int modelResidueCount = model.structure3D().residues().size();
 
     if (dotBracketObj.sequence().length() != modelResidueCount) {
@@ -39,16 +47,29 @@ public class ReferenceStructureUtil {
         ImmutableDefaultDotBracketFromPdb.of(
             dotBracketObj.sequence(), dotBracketObj.structure(), model.structure3D());
 
-    return structure.pairs().keySet().stream()
-        .map(
-            symbol -> {
-              DotBracketSymbol paired = structure.pairs().get(symbol);
-              PdbNamedResidueIdentifier left =
-                  model.findResidue(structure.identifier(symbol)).namedResidueIdentifier();
-              PdbNamedResidueIdentifier right =
-                  model.findResidue(structure.identifier(paired)).namedResidueIdentifier();
-              return ImmutableBasePair.of(left, right);
-            })
-        .collect(Collectors.toList());
+    List<BasePair> basePairs =
+        structure.pairs().keySet().stream()
+            .map(
+                symbol -> {
+                  DotBracketSymbol paired = structure.pairs().get(symbol);
+                  PdbNamedResidueIdentifier left =
+                      model.findResidue(structure.identifier(symbol)).namedResidueIdentifier();
+                  PdbNamedResidueIdentifier right =
+                      model.findResidue(structure.identifier(paired)).namedResidueIdentifier();
+                  return ImmutableBasePair.of(left, right);
+                })
+            .collect(Collectors.toList());
+
+    List<PdbNamedResidueIdentifier> markedResidues =
+        structure.symbols().stream()
+            .filter(DotBracketSymbol::isMissing)
+            .map(
+                dotBracketSymbol ->
+                    model
+                        .findResidue(structure.identifier(dotBracketSymbol))
+                        .namedResidueIdentifier())
+            .toList();
+
+    return new ReferenceParseResult(basePairs, markedResidues);
   }
 }

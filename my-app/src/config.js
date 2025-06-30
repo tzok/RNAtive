@@ -1,3 +1,3 @@
-let SERVER_ADDRESS = "http://localhost:8080/api/compute";
+const SERVER_ADDRESS = process.env.REACT_APP_SERVER_ADDRESS || "http://localhost/api/compute";
 
 export default { SERVER_ADDRESS };

@@ -1,0 +1,7 @@
+.ant-input-number-status-error .ant-input-number-input {
+    color: inherit !important;  /* Keeps default text color */
+  }
+  .ant-input-number .ant-input-number-input {
+    color: inherit !important;  /* Keeps default text color */
+    border-color: inherit !important; /* Prevents red border */
+  }  

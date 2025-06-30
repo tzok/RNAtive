@@ -16,5 +16,8 @@ RUN chmod +x /wait-for-it.sh
 # Expose port 8080
 EXPOSE 8080
 
-# Run the application with wait-for-it and explicit properties file
-CMD ["/wait-for-it.sh", "db", "java", "-jar", "app.jar", "--spring.config.location=file:/app/application.properties"]
+# Set environment variable (defaults to web mode)
+ENV APP_MODE=web
+
+# Set entrypoint that includes configuration
+ENTRYPOINT ["/wait-for-it.sh", "db", "java", "-jar", "app.jar", "--spring.config.location=file:/app/application.properties"]

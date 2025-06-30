@@ -10,7 +10,7 @@ from typing import List, Optional
 import requests
 from tabulate import tabulate
 
-API_BASE = "http://localhost:8080/api/compute"
+API_BASE = "http://localhost/api/compute"
 
 
 def submit_job(files: List[Path], args, dot_bracket: Optional[str] = None) -> str:
@@ -183,9 +183,9 @@ def main():
     )
     submit_parser.add_argument(
         "--molprobity-filter",
-        choices=["GOOD_ONLY", "GOOD_AND_CAUTION", "ALL"],
-        default="GOOD_AND_CAUTION",
-        help="MolProbity filtering level (default: GOOD_AND_CAUTION)",
+        choices=["ALL", "CLASHSCORE", "CLASHSCORE_BONDS_ANGLES"],
+        default="ALL",  # Default to no filtering
+        help="MolProbity filtering level (default: ALL)",
     )
     submit_parser.add_argument(
         "--analyzer",

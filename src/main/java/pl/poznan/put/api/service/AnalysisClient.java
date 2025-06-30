@@ -14,10 +14,8 @@ public class AnalysisClient {
   private final String baseUrl;
   private final RestClient restClient;
 
-  public AnalysisClient(
-      @Value("${analysis.service.host:localhost}") String host,
-      @Value("${analysis.service.port:8000}") int port) {
-    this.baseUrl = String.format("http://%s:%d/analysis-api/v1", host, port);
+  public AnalysisClient(@Value("${analysis.service.url}") String serviceUrl) {
+    this.baseUrl = serviceUrl + "/analysis-api/v1";
     this.restClient = RestClient.create();
   }
 

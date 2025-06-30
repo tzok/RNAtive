@@ -67,7 +67,7 @@ function SendingTest() {
           uploadedFiles.map(async (fileObj) => ({
             name: fileObj.file.name,
             content: await fileObj.file.text(), // Reads file content as text
-          }))
+          })),
         );
 
         // Prepare the payload
@@ -122,9 +122,7 @@ function SendingTest() {
       });
 
       if (!statusResponse.ok) {
-        throw new Error(
-          `Failed to get status. Status: ${statusResponse.status}`
-        );
+        throw new Error(`Failed to get status. Status: ${statusResponse.status}`);
       }
 
       const statusData = await statusResponse.json();
@@ -159,9 +157,7 @@ function SendingTest() {
       });
 
       if (!resultResponse.ok) {
-        throw new Error(
-          `Failed to get result. Status: ${resultResponse.status}`
-        );
+        throw new Error(`Failed to get result. Status: ${resultResponse.status}`);
       }
 
       const resultData = await resultResponse.json();
@@ -215,12 +211,7 @@ function SendingTest() {
           <h1>Result Table</h1>
           <ResultTable ranking={response.ranking} />
           {response.fileNames.map((filename, index) => (
-            <FileDetails
-              key={index}
-              taskId={taskIdComplete}
-              serverAddress={serverAddress}
-              filename={filename}
-            />
+            <FileDetails key={index} taskId={taskIdComplete} serverAddress={serverAddress} filename={filename} />
           ))}
           {/* {response.filenames.map((filename, index) => (
             <FileDetails
@@ -250,11 +241,7 @@ function SendingTest() {
         <div className="home-container">
           <div className="dropzone-container" {...getRootProps()}>
             <input {...getInputProps()} />
-            {isDragActive ? (
-              <p>Drop the files here ...</p>
-            ) : (
-              <p>Drag & drop files here, or click to select files</p>
-            )}
+            {isDragActive ? <p>Drop the files here ...</p> : <p>Drag & drop files here, or click to select files</p>}
           </div>
 
           <div className="file-list">
@@ -262,19 +249,14 @@ function SendingTest() {
               <div key={fileWrapper.id} className="file-item">
                 <span
                   style={{
-                    fontSize:
-                      "18px" /* This font size is set using a 'string value' */,
+                    fontSize: "18px" /* This font size is set using a 'string value' */,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                  }}
-                >
+                  }}>
                   {fileWrapper.file.name}
                 </span>
-                <button
-                  className="delete-button"
-                  onClick={() => removeFile(fileWrapper.id)}
-                >
+                <button className="delete-button" onClick={() => removeFile(fileWrapper.id)}>
                   X
                 </button>
               </div>

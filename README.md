@@ -22,7 +22,19 @@ mvn clean package
 docker-compose up --build
 ```
 
-The application will be available at `http://localhost:8080`.
+By default, Docker Compose reads both `docker-compose.yml` and `docker-compose.override.yml` files. The override file configures the application for local development without HTTPS, making it available at `http://localhost`.
+
+### Running with HTTPS (Production Mode)
+
+To run the application in production mode with HTTPS support:
+
+```bash
+docker-compose -f docker-compose.yml up --build
+```
+
+This command explicitly uses only the base configuration file, ignoring the override file, which enables the HTTPS configuration and certbot service for SSL certificate management.
+
+The production deployment will be available at `https://rnative.cs.put.poznan.pl` (or your configured domain).
 
 ## Configuration
 
@@ -35,6 +47,50 @@ Key configurations include:
 
 For development, the application connects to a PostgreSQL database and analysis service containers
 defined in the Docker Compose configuration.
+
+### Docker Compose Configuration
+
+The project uses two Docker Compose configuration files:
+
+1. `docker-compose.yml` - Base configuration for all environments, including production settings with HTTPS
+2. `docker-compose.override.yml` - Local development overrides that:
+   - Configure services for local access without HTTPS
+   - Map local ports appropriately
+   - Mount additional volumes for development
+   - Disable production-only services like certbot
+
+When you run `docker-compose up` without specifying a file, Docker Compose automatically merges both files, with settings in the override file taking precedence.
+
+## Adapters Service
+
+The application uses the `rnapdbee-adapters-image` which is built from the [RNApdbee-adapters](https://github.com/rnapdbee/rnapdbee-adapters) repository. This service provides RNA structure analysis tools that are essential for the application's functionality.
+
+## Running in CLI Mode
+
+The application can be run in CLI mode for command-line processing. To use the CLI:
+
+1. Start the required services:
+```bash
+docker-compose up --build
+```
+
+2. Access the backend container:
+```bash
+docker exec -it rnative-backend-1 bash
+```
+
+3. Run the application in CLI mode:
+```bash
+APP_MODE=cli java -jar app.jar [options]
+```
+
+Available options:
+- `--help`: Show help message
+- `--mol-probity <filter>`: Set MolProbity filter (ALL, CLASHSCORE, CLASHSCORE_BONDS_ANGLES)
+- `--analyzer <analyzer>`: Set analyzer (BARNABA, BPNET, FR3D, MCANNOTATE, RNAPOLIS, RNAVIEW)
+- `--consensus <mode>`: Set consensus mode (CANONICAL, NON_CANONICAL, STACKING, ALL)
+- `--confidence <level>`: Set confidence level (0.0-1.0)
+- `--dot-bracket <structure>`: Set expected 2D structure
 
 ## Testing API
 
@@ -51,6 +107,7 @@ Options:
 - `--wait`: Wait for analysis completion and show results
 - `--consensus-mode`: Analysis mode (ALL, CANONICAL, NON_CANONICAL, STACKING)
 - `--confidence`: Confidence level (0.0-1.0)
+- `--molprobity-filter`: MolProbity filter (ALL, CLASHSCORE, CLASHSCORE_BONDS_ANGLES)
 - `--analyzer`: Analysis tool (BARNABA, BPNET, FR3D, MCANNOTATE, RNAPOLIS, RNAVIEW)
 - `--visualization`: Visualization tool (PSEUDOVIEWER, VARNA, RCHIE, RNAPUZZLER)
 

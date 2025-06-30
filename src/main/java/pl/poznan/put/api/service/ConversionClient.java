@@ -13,11 +13,9 @@ public class ConversionClient {
   private final String serviceUrl;
 
   public ConversionClient(
-      RestTemplate restTemplate,
-      @Value("${analysis.service.host}") String host,
-      @Value("${analysis.service.port}") int port) {
+      RestTemplate restTemplate, @Value("${analysis.service.url}") String serviceUrl) {
     this.restTemplate = restTemplate;
-    this.serviceUrl = String.format("http://%s:%d/conversion-api/v1/bpseq2dbn", host, port);
+    this.serviceUrl = serviceUrl + "/conversion-api/v1/bpseq2dbn";
   }
 
   public String convertBpseqToDotBracket(String bpseq) {
