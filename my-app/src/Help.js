@@ -142,7 +142,8 @@ const Help = () => {
               former one in a textual and graphical way.{" "}
             </Paragraph>
             <Paragraph>
-              The general idea of RNAtive is presented on the following diagram:
+              The general idea of RNAtive is presented on the following diagram
+              (Fig. 1):
             </Paragraph>
             <Image
               src={flowDiff}
@@ -151,6 +152,9 @@ const Help = () => {
                 maxWidth: "100%", // Prevents overflow
               }}
             />
+            <p style={{ textAlign: "center" }}>
+              <i>Fig. 1. RNAtive flow diagram.</i>
+            </p>
             {/* <CustomTitle level={2}>How to use RNAtive</CustomTitle> */}
             <CustomTitle level={1}>2. Example mode</CustomTitle>
             <Paragraph>
@@ -167,11 +171,11 @@ const Help = () => {
               2.1 What files are used in the example mode
             </CustomTitle>
             <Paragraph>
-              The <b>RNA-Puzzles 1</b> will use 13 pdb files provided by the
-              competitors of RNA-Puzzles <sup>[1] </sup>
-              for their Puzzle 1, that being a dimer molecule of the PDB ID{" "}
-              <i>"3mei"</i>. The task provided to the participants, according to
-              the RNA-Puzzles paper<sup>[a]</sup> was:
+              The <b>RNA-Puzzles 1</b> uses 13 pdb files provided by the
+              competitors of RNA-Puzzles<sup>[1] </sup>
+              for their Puzzle 1 (dimer molecule of the PDB ID <i>"3mei"</i>).
+              The task provided to the participants, according to the
+              RNA-Puzzles paper<sup>[14] </sup> was:
             </Paragraph>
             <Paragraph>
               <i>
@@ -191,8 +195,6 @@ const Help = () => {
               to be discarded.{" "}
             </Paragraph>
             <Paragraph>
-              Structure visualization from the authors of the paper:
-              <sup>[b]</sup>
               <Image
                 src={puzzles1}
                 alt="RNA Puzzles structure"
@@ -200,16 +202,22 @@ const Help = () => {
                   maxWidth: "100%", // Prevents overflow
                 }}
               />
+              <p style={{ textAlign: "center" }}>
+                <i>
+                  Fig. 2. Structure visualization from the authors of the paper
+                  <sup>[b]</sup>.
+                </i>
+              </p>
             </Paragraph>
             <Paragraph>
-              The <b>Decoys</b> will use nine pdb files from the <i>1a9nR</i>{" "}
-              target in the Decoys<sup>[2] </sup>
+              The <b>Decoys</b> uses nine pdb files from the <i>1a9nR</i> target
+              in the Decoys<sup>[2] </sup>
               dataset.
             </Paragraph>
             <Paragraph>
-              The <b>miRNA mir-663</b> will provide 10 models of miRNA mir-663
-              from Rfam: RF00957<sup>[d] </sup>, predicted by RNAComposer
-              <sup>[c] </sup> from a secondary structure predicted by
+              The <b>miRNA mir-663</b> provides 10 models of miRNA mir-663 from
+              Rfam: RF009570<sup>[16] </sup>, predicted by RNAComposer
+              <sup>[15] </sup> from a secondary structure predicted by
               centroidfold.<br></br>
               The following sequence was being predicted:
               <br></br>
@@ -249,11 +257,14 @@ const Help = () => {
                 maxWidth: "600px", // Prevents overflow
               }}
             />
+            <p style={{ textAlign: "center" }}>
+              <i>Fig. 3. Uploading options.</i>
+            </p>
             <CustomTitle level={2}>3.1 Parameters</CustomTitle>
             <CustomTitle level={3}>3.1.1 Model quality filter</CustomTitle>
             <Paragraph>
               When enabled, individual models undergo MolProbity evaluation,
-              receiving ratings of 'good', 'caution', or 'warning' across four
+              receiving ratings of "good", "caution", or "warning" across four
               key metrics: clashscore, backbone conformation, bonds, and angles.
               Based on the selected filter, models failing to meet quality
               standards will be excluded from subsequent evaluation.
@@ -322,13 +333,13 @@ const Help = () => {
               Constraint match indicates whether a base pair complies with the
               secondary structure constraints defined at input:
               <br />
-              '+': means the base pair was explicitly required in the input
+              "+": means the base pair was explicitly required in the input
               constraints,
               <br />
-              '-': indicates that at least one nucleotide in the pair was
+              "-": indicates that at least one nucleotide in the pair was
               specified as unpaired
               <br />
-              'n/a': means no constraint was provided for this base pair.
+              "n/a": means no constraint was provided for this base pair.
             </Paragraph>
             <CustomTitle level={3}>3.1.3 Base pair analyzer</CustomTitle>
             <Paragraph>
@@ -379,6 +390,11 @@ const Help = () => {
                 maxWidth: "800px", // Prevents overflow
               }}
             />
+            <p style={{ textAlign: "center" }}>
+              <i>
+                Fig. 4. Conditionally weighted consensus and Confidence level.
+              </i>
+            </p>
             {/* <CustomTitle level={3}>3.1.6 2D structure viewer</CustomTitle>
             <Paragraph>
               RNAtive will return a 2D visualization of the consensus structure.
@@ -407,6 +423,9 @@ const Help = () => {
                 maxWidth: "800px", // Prevents overflow
               }}
             />
+            <p style={{ textAlign: "center" }}>
+              <i>Fig. 5. Processing of a task.</i>
+            </p>
             <Image
               src={task_id2}
               alt="task id example 2"
@@ -414,6 +433,12 @@ const Help = () => {
                 maxWidth: "800px", // Prevents overflow
               }}
             />
+            <p style={{ textAlign: "center" }}>
+              <i>
+                Fig. 6. Link to copy to open the task in a different
+                tab/browser.
+              </i>
+            </p>
             <Paragraph>4.1 RNAtive returns the following:</Paragraph>
             <Image
               src={results0}
@@ -422,6 +447,9 @@ const Help = () => {
                 maxWidth: "800px", // Prevents overflow
               }}
             />
+            <p style={{ textAlign: "center" }}>
+              <i>Fig. 7. Overview of input parameters and constraints.</i>
+            </p>
             <Paragraph>
               <b>Overview of input parameters and constraints:</b> (seen in the
               image above) containing the parameters chosen by the user when
@@ -434,6 +462,9 @@ const Help = () => {
                 maxWidth: "800px", // Prevents overflow
               }}
             />
+            <p style={{ textAlign: "center" }}>
+              <i>Fig. 8. Consensus 2D structure.</i>
+            </p>
             <Paragraph>
               <b>Consensus 2D structure:</b> (section A in the image above)
             </Paragraph>
@@ -451,6 +482,9 @@ const Help = () => {
                 maxWidth: "800px", // Prevents overflow
               }}
             />
+            <p style={{ textAlign: "center" }}>
+              <i>Fig. 9. Model ranking by similarity to the consensus.</i>
+            </p>
             {/* <Image
               src={results1}
               alt="Results"
@@ -476,9 +510,12 @@ const Help = () => {
                 maxWidth: "800px", // Prevents overflow
               }}
             />
+            <p style={{ textAlign: "center" }}>
+              <i>Fig. 10. Model-specific 2D structure analysis results.</i>
+            </p>
             <Paragraph>
               <b>Model-specific 2D structure analysis results</b> contains, for
-              each file sent, the following: (section B in the image above)
+              each file sent, the following (section B in the image above):
             </Paragraph>
             <ol>
               <li>Dot bracket (B1)</li>
@@ -508,6 +545,12 @@ const Help = () => {
                 maxWidth: "800px", // Prevents overflow
               }}
             />
+            <p style={{ textAlign: "center" }}>
+              <i>
+                Fig. 11.&nbsp;&nbsp;A1: Consensus structure, secondary structure
+                section.
+              </i>
+            </p>
             <Image
               src={A2}
               alt="Results"
@@ -515,6 +558,12 @@ const Help = () => {
                 maxWidth: "800px", // Prevents overflow
               }}
             />
+            <p style={{ textAlign: "center" }}>
+              <i>
+                Fig. 12.&nbsp;&nbsp;A2: Consensus structure, canonical base
+                pairs section.
+              </i>
+            </p>
             <Image
               src={A3}
               alt="Results"
@@ -522,6 +571,12 @@ const Help = () => {
                 maxWidth: "800px", // Prevents overflow
               }}
             />
+            <p style={{ textAlign: "center" }}>
+              <i>
+                Fig. 13.&nbsp;&nbsp;A3: Consensus structure, non-canonical base
+                pairs section.
+              </i>
+            </p>
             <Image
               src={A4}
               alt="Results"
@@ -529,6 +584,12 @@ const Help = () => {
                 maxWidth: "800px", // Prevents overflow
               }}
             />
+            <p style={{ textAlign: "center" }}>
+              <i>
+                Fig. 14.&nbsp;&nbsp;A4: Consensus structure, stacking
+                interactions section.
+              </i>
+            </p>
             <Image
               src={B1}
               alt="Results"
@@ -536,6 +597,12 @@ const Help = () => {
                 maxWidth: "800px", // Prevents overflow
               }}
             />
+            <p style={{ textAlign: "center" }}>
+              <i>
+                Fig. 15.&nbsp;&nbsp;B1: Model-specific 2D structure analysis
+                results, secondary structure section.
+              </i>
+            </p>
             <Image
               src={B2}
               alt="Results"
@@ -543,6 +610,12 @@ const Help = () => {
                 maxWidth: "800px", // Prevents overflow
               }}
             />
+            <p style={{ textAlign: "center" }}>
+              <i>
+                Fig. 16.&nbsp;&nbsp;B2: Model-specific 2D structure analysis
+                results, canonical base pairs section.
+              </i>
+            </p>
             <Image
               src={B3}
               alt="Results"
@@ -550,6 +623,12 @@ const Help = () => {
                 maxWidth: "800px", // Prevents overflow
               }}
             />
+            <p style={{ textAlign: "center" }}>
+              <i>
+                Fig. 17.&nbsp;&nbsp;B3: Model-specific 2D structure analysis
+                results, non-canonical base pairs section.
+              </i>
+            </p>
             <Image
               src={B4}
               alt="Results"
@@ -557,6 +636,12 @@ const Help = () => {
                 maxWidth: "800px", // Prevents overflow
               }}
             />
+            <p style={{ textAlign: "center" }}>
+              <i>
+                Fig. 18.&nbsp;&nbsp;B4: Model-specific 2D structure analysis
+                results, stacking interactions section.
+              </i>
+            </p>
             <Paragraph>
               <br></br>
             </Paragraph>
@@ -575,6 +660,9 @@ const Help = () => {
                 maxWidth: "800px", // Prevents overflow
               }}
             />
+            <p style={{ textAlign: "center" }}>
+              <i>Fig. 19. Model quality filter results.</i>
+            </p>
             <CustomTitle level={1}>5. System requirements</CustomTitle>
             <Paragraph>
               RNAtive works with the following browsers:
