@@ -1516,7 +1516,7 @@ function Home() {
                 >
                   <span>
                     Model quality filter{" "}
-                    <Tooltip title="Filter input models based on structural quality assessed by MolProbity. Choose ‘No filtering’ to include all models, ‘Clashscore only’ to exclude models with poor clash scores, or ‘Strict’ to accept only models with good scores for clashes, bonds, and angles.">
+                    <Tooltip title="Filter input models based on structural quality assessed by MolProbity. Choose ‘No filte’ to include all models, ‘Clashscore filter’ to exclude models with poor clash scores, or ‘Strict filter’ to accept only models with good scores for clashes, bonds, and angles.">
                       <QuestionCircleOutlined
                         style={{ position: "relative", zIndex: 999 }}
                       />
