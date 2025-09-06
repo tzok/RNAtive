@@ -451,9 +451,9 @@ const Help = () => {
               <i>Fig. 7. Overview of input parameters and constraints.</i>
             </p>
             <Paragraph>
-              <b>Overview of input parameters and constraints:</b> (seen in the
-              image above) containing the parameters chosen by the user when
-              sending the request.
+              <b>Overview of input parameters and constraints:</b> (Fig. 7.)
+              containing the parameters chosen by the user when sending the
+              request.
             </Paragraph>
             <Image
               src={results2}
@@ -466,7 +466,7 @@ const Help = () => {
               <i>Fig. 8. Consensus 2D structure.</i>
             </p>
             <Paragraph>
-              <b>Consensus 2D structure:</b> (section A in the image above)
+              <b>Consensus 2D structure:</b> (section A in Fig. 8. )
             </Paragraph>
             <ol>
               <li>Visualization by the selected visualizer (A1)</li>
@@ -496,12 +496,12 @@ const Help = () => {
               }}
             /> */}
             <Paragraph>
-              <b>Model ranking by similarity to the consensus</b> (as seen in an
-              image above. Note a "download" button in the left bottom corner
-              (marked in red in the image), that allows to download the entirety
-              of the table as a txt file, as well as, visible in the bottom
-              right of the image, a set of buttons allowing to scroll through
-              the table, if it is longer)
+              <b>Model ranking by similarity to the consensus</b> (as seen in
+              Fig. 9. Note a "download" button in the left bottom corner (marked
+              in red in the image), that allows to download the entirety of the
+              table as a txt file, as well as, visible in the bottom right of
+              the image, a set of buttons allowing to scroll through the table,
+              if it is longer)
             </Paragraph>
             <Image
               src={results2b}
@@ -515,7 +515,7 @@ const Help = () => {
             </p>
             <Paragraph>
               <b>Model-specific 2D structure analysis results</b> contains, for
-              each file sent, the following (section B in the image above):
+              each file sent, the following (section B in in Fig. 10.):
             </Paragraph>
             <ol>
               <li>Dot bracket (B1)</li>
@@ -524,19 +524,19 @@ const Help = () => {
               <li>Stackings (B4)</li>
             </ol>
             Note that file displayed can be switched using the list on the left
-            (section C in the image above).
+            (section C in Fig. 10.).
             <Paragraph>
               Sections A1-A4 and B1-B4 can be opened by clicking on the given
-              tile, to reveal their contents, as shown in the images below.
-              Note, that the content of the tables can be downloaded using the
-              download button, in the same way as it was for the result table.
-              To download the visualization, click on it with the left mouse
-              button, and an image viewer will appear, then, clicking on the
-              image with right mouse button shall open a menu with an option
-              "save image as". Picking this option will allow the user to
-              download the .svg file with the visualization. The dot-bracket
-              structure is displayed in selectable format, therefore it can be
-              simply selected with mouse and copied.
+              tile, to reveal their contents, as shown in the images below (Fig.
+              11 - Fig. 18.). Note, that the content of the tables can be
+              downloaded using the download button, in the same way as it was
+              for the result table. To download the visualization, click on it
+              with the left mouse button, and an image viewer will appear, then,
+              clicking on the image with right mouse button shall open a menu
+              with an option "save image as". Picking this option will allow the
+              user to download the .svg file with the visualization. The
+              dot-bracket structure is displayed in selectable format, therefore
+              it can be simply selected with mouse and copied.
             </Paragraph>
             <Image
               src={A1}
