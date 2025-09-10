@@ -1,6 +1,6 @@
 # RNAtive
 
-A Spring Boot application for reference-free ranking of RNA 3D models.
+RNAtive is a consensus-based RNA structure analysis system designed to process multiple structural models sharing the same sequence and to identify reliable base pairs and stacking interactions. It supports model validation, improves structural predictions, and facilitates studies of RNA structure evolution. The tool accepts a minimum of two RNA 3D structure models in PDB or mmCIF format (with a total file size limit of 100 MB), and analyzes them using state-of-the-art base-pair annotation tools. Comparing annotations across all input models, it generates a consensus structure that highlights recurrent interactions, which are more likely to reflect stable, native-like folds. It then evaluates and ranks the input models based on their consistency with the derived consensus.
 
 ## Prerequisites
 

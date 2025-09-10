@@ -59,11 +59,27 @@ const About = () => {
           </Typography>
         </Card>
 
-        <Card title="Acknowledgements and Funding">
+        <Card
+          title="Acknowledgements and Funding"
+          style={{ marginBottom: "24px" }}
+        >
           <Typography>
             <Paragraph>
               RNAtive project has been supported by grant 2023/51/D/ST6/01207
               from the National Science Centre, Poland.
+            </Paragraph>
+          </Typography>
+        </Card>
+
+        <Card title="RNAtive source code">
+          <Typography>
+            <Paragraph>
+              RNAtive source code is available at the following link:
+            </Paragraph>
+            <Paragraph>
+              <a href="https://github.com/put-rnative/RNAtive">
+                https://github.com/put-rnative/RNAtive
+              </a>
             </Paragraph>
           </Typography>
         </Card>
