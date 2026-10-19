@@ -9,7 +9,9 @@ const Cite = () => {
         <Card title="Cite Us">
           <Typography>
             <Paragraph>Any published work which has made use of RNAtive should cite the following paper:</Paragraph>
-            <Paragraph>J. Pielesiak, M. Antczak, M. Szachniuk, T. Zok. RNAtive to recognize native-like structure in a set of RNA 3D models.</Paragraph>
+            <Paragraph>
+              J. Pielesiak, M. Antczak, M. Szachniuk, T. Zok. RNAtive to recognize native-like structure in a set of RNA 3D models. <i>Bioinformatics</i>. 2025;41(11):btaf601. DOI: <a href="https://doi.org/10.1093/bioinformatics/btaf601">10.1093/bioinformatics/btaf601</a>.
+            </Paragraph>
           </Typography>
         </Card>
       </Col>

@@ -19,3 +19,25 @@ authors:
   - family-names: Zok
     given-names: Tomasz
     orcid: "https://orcid.org/0000-0003-4103-9238"
+preferred-citation:
+  type: article
+  authors:
+    - family-names: Pielesiak
+      given-names: Jan
+      orcid: "https://orcid.org/0009-0007-3791-9482"
+    - family-names: Antczak
+      given-names: Maciej
+      orcid: "https://orcid.org/0000-0002-5320-2023"
+    - family-names: Szachniuk
+      given-names: Marta
+      orcid: "https://orcid.org/0000-0002-8724-7908"
+    - family-names: Zok
+      given-names: Tomasz
+      orcid: "https://orcid.org/0000-0003-4103-9238"
+  title: "RNAtive to recognize native-like structure in a set of RNA 3D models"
+  journal: Bioinformatics
+  year: 2025
+  volume: 41
+  issue: 11
+  doi: "10.1093/bioinformatics/btaf601"
+  url: "https://doi.org/10.1093/bioinformatics/btaf601"
