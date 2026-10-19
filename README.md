@@ -70,21 +70,25 @@ The application uses the `rnapdbee-adapters-image` which is built from the [RNAp
 The application can be run in CLI mode for command-line processing. To use the CLI:
 
 1. Start the required services:
+
 ```bash
 docker-compose up --build
 ```
 
 2. Access the backend container:
+
 ```bash
 docker exec -it rnative-backend-1 bash
 ```
 
 3. Run the application in CLI mode:
+
 ```bash
 APP_MODE=cli java -jar app.jar [options]
 ```
 
 Available options:
+
 - `--help`: Show help message
 - `--mol-probity <filter>`: Set MolProbity filter (ALL, CLASHSCORE, CLASHSCORE_BONDS_ANGLES)
 - `--analyzer <analyzer>`: Set analyzer (BARNABA, BPNET, FR3D, MCANNOTATE, RNAPOLIS, RNAVIEW)
@@ -124,3 +128,7 @@ python scripts/test-api.py results <task-id>
 ```
 
 The script will generate visualization output in SVG format and display detailed analysis results in tabular format.
+
+## Funding
+
+This work was supported by the National Science Centre, Poland (Narodowe Centrum Nauki) under grant No. 2023/51/D/ST6/01207, "Exploring Multiple Loop Motifs in RNA Structures".
