@@ -1,5 +1,5 @@
 # Use OpenJDK 17 as the base image
-FROM eclipse-temurin:17-jdk-jammy
+FROM eclipse-temurin:25-jdk-jammy
 
 # Install PostgreSQL client
 RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
